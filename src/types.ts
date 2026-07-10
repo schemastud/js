@@ -8,7 +8,8 @@ export type SchemaNode = Record<string, unknown>;
  * component RJSF mounts directly. `undefined` means "RJSF's own default is
  * already right — emit nothing".
  */
-export type WidgetResolution = string | React.ComponentType<never> | undefined;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type WidgetResolution = string | React.ComponentType<any> | undefined;
 
 /**
  * Data-valued widget configuration attached at registration time: an object, or
