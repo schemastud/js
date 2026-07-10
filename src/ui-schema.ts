@@ -4,7 +4,7 @@ type UiSchema = Record<string, unknown>;
 
 /**
  * Walk a (pre-dereferenced) JSON Schema and emit an RJSF uiSchema from the
- * predicate registry — this is how the Splicewire widget-resolution contract
+ * predicate registry — this is how the predicate widget-resolution contract
  * layers over RJSF's name-based widget model. Only fields whose resolution
  * differs from RJSF's own default get a `ui:widget`; `x-placeholder` maps to
  * `ui:placeholder`.
