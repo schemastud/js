@@ -39,6 +39,7 @@ export function SchemaForm({
     schemaFetcher,
     validator,
     formData,
+    formContext,
     ...rest
 }: SchemaFormProps) {
     const contextRegistry = useContext(WidgetRegistryContext);
@@ -93,6 +94,14 @@ export function SchemaForm({
             uiSchema={mergeUiSchema(generatedUiSchema, uiSchema) as UiSchema}
             validator={validator ?? defaultValidator}
             formData={safeFormData}
+            // The injected fetcher rides formContext so fields that resolve
+            // their own refs (rich-content manifests among them) share the
+            // host's transport without extra plumbing.
+            formContext={
+                schemaFetcher
+                    ? { ...(formContext as Record<string, unknown> | undefined), schemaFetcher }
+                    : formContext
+            }
             {...rest}
         />
     );
