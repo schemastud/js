@@ -24,7 +24,7 @@ forms) belong in adapter packages that depend on this one.
 ## Install
 
 ```sh
-npm install @stephenr85/rjsf-registry
+npm install @rushing/rjsf-registry
 ```
 
 Peer dependencies: `@rjsf/core`, `@rjsf/shadcn`, `@rjsf/utils`, `@rjsf/validator-ajv8` (all ^6),
@@ -33,7 +33,7 @@ Peer dependencies: `@rjsf/core`, `@rjsf/shadcn`, `@rjsf/utils`, `@rjsf/validator
 ## Usage
 
 ```tsx
-import { SchemaForm, createWidgetRegistry } from '@stephenr85/rjsf-registry';
+import { SchemaForm, createWidgetRegistry } from '@rushing/rjsf-registry';
 
 const registry = createWidgetRegistry();
 registry.registerWidget((s) => s['x-widget'] === 'citation', CitationWidget);

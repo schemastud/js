@@ -1,7 +1,7 @@
 {
-    "name": "@stephenr85/rjsf-registry",
+    "name": "@rushing/rjsf-registry",
     "version": "0.1.0",
-    "description": "Generally-useful additions over react-jsonschema-form: predicate-based widget resolution, uiSchema derivation from schema-carried hints, configurable extension-keyword tolerance, an injected $ref fetcher seam, and a base SchemaForm. Host-agnostic — no vendor vocabulary.",
+    "description": "Generally-useful additions over react-jsonschema-form: predicate-based widget resolution, uiSchema derivation from schema-carried hints, configurable extension-keyword tolerance, an injected $ref fetcher seam, and a base SchemaForm. Host-agnostic \u2014 no vendor vocabulary.",
     "license": "MIT",
     "type": "module",
     "main": "dist/index.js",
@@ -18,7 +18,8 @@
         "README.md"
     ],
     "publishConfig": {
-        "registry": "https://npm.pkg.github.com"
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
     },
     "repository": {
         "type": "git",
