@@ -7,8 +7,10 @@ export type {
     KeywordVocabulary,
     KeywordVocabularyConfig,
     RegistryEntry,
+    ResolvedWidget,
     SchemaFetcher,
     SchemaNode,
+    WidgetConfig,
     WidgetRegistry,
     WidgetResolution,
 } from './types';

@@ -10,23 +10,44 @@ export type SchemaNode = Record<string, unknown>;
  */
 export type WidgetResolution = string | React.ComponentType<never> | undefined;
 
+/**
+ * Data-valued widget configuration attached at registration time: an object, or
+ * a function computing one from the schema node. Emitted into `ui:options` by
+ * the uiSchema walker with the lowest precedence — the schema's own
+ * `x-widget-options` wins over it, and the caller uiSchema wins last.
+ */
+export type WidgetConfig =
+    | Record<string, unknown>
+    | ((schema: SchemaNode) => Record<string, unknown> | undefined);
+
 export interface RegistryEntry {
     predicate: (schema: SchemaNode) => boolean;
     widget: WidgetResolution;
+    config?: WidgetConfig;
+}
+
+/** A resolution result: the widget plus the matched entry's computed config. */
+export interface ResolvedWidget {
+    widget: WidgetResolution;
+    config?: Record<string, unknown>;
 }
 
 export interface WidgetRegistry {
     /**
      * Register a widget. A function argument is a predicate over the schema node;
      * a string argument matches `schema.type === key || schema['x-widget'] === key`.
-     * Later registrations take precedence (they are consulted first).
+     * Later registrations take precedence (they are consulted first). The optional
+     * third argument attaches data-valued config (see WidgetConfig).
      */
     registerWidget: (
         predicateOrKey: string | ((schema: SchemaNode) => boolean),
         widget: WidgetResolution,
+        config?: WidgetConfig,
     ) => void;
     /** First matching entry wins; falls through to `undefined` (RJSF default). */
     resolveWidget: (schema: SchemaNode) => WidgetResolution;
+    /** Like resolveWidget, but also computes the matched entry's config. */
+    resolveEntry: (schema: SchemaNode) => ResolvedWidget;
 }
 
 /**

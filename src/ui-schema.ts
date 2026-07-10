@@ -12,12 +12,26 @@ type UiSchema = Record<string, unknown>;
 export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiSchema {
     const ui: UiSchema = {};
 
-    const widget = registry.resolveWidget(schema);
+    const { widget, config } = registry.resolveEntry(schema);
     if (widget !== undefined) {
         ui['ui:widget'] = widget;
     }
     if (typeof schema['x-placeholder'] === 'string') {
         ui['ui:placeholder'] = schema['x-placeholder'];
+    }
+
+    // The widget-config pipe: the matched registry entry's config (lowest
+    // precedence) deep-merged under the schema's own x-widget-options; the
+    // caller uiSchema still wins last through mergeUiSchema.
+    const declaredOptions = schema['x-widget-options'];
+    const options = mergeOptions(
+        config,
+        declaredOptions && typeof declaredOptions === 'object' && !Array.isArray(declaredOptions)
+            ? (declaredOptions as Record<string, unknown>)
+            : undefined,
+    );
+    if (options && Object.keys(options).length > 0) {
+        ui['ui:options'] = options;
     }
 
     // Arrays without an items definition can't be rendered generically (RJSF
@@ -48,6 +62,16 @@ export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiS
     }
 
     return ui;
+}
+
+/** Deep-merge b over a (b wins on leaves); undefined operands pass through. */
+function mergeOptions(
+    a?: Record<string, unknown>,
+    b?: Record<string, unknown>,
+): Record<string, unknown> | undefined {
+    if (!a) return b;
+    if (!b) return a;
+    return mergeUiSchema(a, b);
 }
 
 /**

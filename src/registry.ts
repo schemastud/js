@@ -1,4 +1,11 @@
-import type { RegistryEntry, SchemaNode, WidgetRegistry, WidgetResolution } from './types';
+import type {
+    RegistryEntry,
+    ResolvedWidget,
+    SchemaNode,
+    WidgetConfig,
+    WidgetRegistry,
+    WidgetResolution,
+} from './types';
 
 const FORMAT_INPUTS = ['date', 'date-time', 'email', 'uri'];
 
@@ -38,6 +45,7 @@ export function createWidgetRegistry(): WidgetRegistry {
     function registerWidget(
         predicateOrKey: string | ((schema: SchemaNode) => boolean),
         widget: WidgetResolution,
+        config?: WidgetConfig,
     ): void {
         const predicate =
             typeof predicateOrKey === 'function'
@@ -45,17 +53,24 @@ export function createWidgetRegistry(): WidgetRegistry {
                 : (s: SchemaNode) =>
                       s.type === predicateOrKey || s['x-widget'] === predicateOrKey;
         // Later registrations take precedence.
-        entries.unshift({ predicate, widget });
+        entries.unshift({ predicate, widget, config });
+    }
+
+    function resolveEntry(schema: SchemaNode): ResolvedWidget {
+        for (const { predicate, widget, config } of entries) {
+            if (predicate(schema)) {
+                const computed = typeof config === 'function' ? config(schema) : config;
+                return { widget, config: computed };
+            }
+        }
+        return { widget: undefined };
     }
 
     function resolveWidget(schema: SchemaNode): WidgetResolution {
-        for (const { predicate, widget } of entries) {
-            if (predicate(schema)) return widget;
-        }
-        return undefined;
+        return resolveEntry(schema).widget;
     }
 
-    return { registerWidget, resolveWidget };
+    return { registerWidget, resolveWidget, resolveEntry };
 }
 
 /**
