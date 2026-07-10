@@ -1,4 +1,10 @@
 export { createKeywordVocabulary, FORM_KEYWORDS } from './vocabulary';
+export {
+    createFormIntentBus,
+    type FormIntent,
+    type FormIntentBus,
+    type FormIntentHandler,
+} from './intent-bus';
 export { createWidgetRegistry, defaultRegistry, registerWidget, resolveWidget } from './registry';
 export { resolveExternalRefs } from './refs';
 export { relaxNullableRequired } from './relax';
