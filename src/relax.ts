@@ -6,13 +6,23 @@ import type { SchemaNode } from './types';
  * null defaults — which makes RJSF block submission on fields the API happily
  * accepts as absent. A property whose type union includes 'null' is treated as
  * optional at the form layer; the write path stays the validation authority.
+ *
+ * Nullable `$ref`s (`{$ref, nullable: true}` — the OpenAPI idiom the schema
+ * generator emits for nullable nested Data) are re-expressed as
+ * `anyOf[$ref, null]`: AJV rejects `nullable` without a `type` sibling, the
+ * same transform the server applies for opis.
  */
 export function relaxNullableRequired(schema: SchemaNode): SchemaNode {
     function walk(node: unknown): unknown {
         if (Array.isArray(node)) return node.map(walk);
         if (!node || typeof node !== 'object') return node;
 
-        const record = { ...(node as SchemaNode) };
+        let record = { ...(node as SchemaNode) };
+
+        if (typeof record.$ref === 'string' && record.nullable === true) {
+            const { $ref, nullable: _nullable, ...siblings } = record;
+            record = { anyOf: [{ $ref }, { type: 'null' }], ...siblings };
+        }
 
         const properties = record.properties as Record<string, SchemaNode> | undefined;
         if (properties && Array.isArray(record.required)) {

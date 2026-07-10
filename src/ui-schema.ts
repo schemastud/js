@@ -13,6 +13,26 @@ export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiS
     return walkUiSchema(schema, registry, schema);
 }
 
+/** The effective type of a nullable anyOf node: its first non-null branch's (ref-resolved) type. */
+function compositeTypeOf(node: SchemaNode, root: SchemaNode): unknown {
+    const resolved = resolveLocalRef(node, root);
+    if (resolved.type !== undefined) {
+        return resolved.type;
+    }
+
+    const branches = (node.anyOf ?? node.oneOf) as SchemaNode[] | undefined;
+    if (Array.isArray(branches)) {
+        for (const branch of branches) {
+            if (branch && typeof branch === 'object' && branch.type !== 'null') {
+                const branchType = resolveLocalRef(branch, root).type;
+                if (branchType !== undefined) return branchType;
+            }
+        }
+    }
+
+    return undefined;
+}
+
 /** Resolve a local '#/$defs/…' / '#/definitions/…' ref against the root schema. */
 function resolveLocalRef(node: SchemaNode, root: SchemaNode): SchemaNode {
     const ref = node.$ref;
@@ -33,11 +53,13 @@ function walkUiSchema(schema: SchemaNode, registry: WidgetRegistry, root: Schema
     const ui: UiSchema = {};
 
     const { widget, config } = registry.resolveEntry(schema);
+    let fieldReplacesAnyOrOneOf = false;
     if (widget !== undefined) {
         // RJSF routes ui:widget only on primitive fields; a component resolved
         // for an object/array node takes over the whole subtree as ui:field.
-        // A local $ref node borrows its target's type for the check.
-        const nodeType = schema.type ?? resolveLocalRef(schema, root).type;
+        // A local $ref node borrows its target's type; a nullable anyOf
+        // ([$ref|type, null]) borrows its first non-null branch's.
+        const nodeType = schema.type ?? compositeTypeOf(schema, root);
         const isComposite =
             nodeType === 'object' ||
             nodeType === 'array' ||
@@ -45,6 +67,9 @@ function walkUiSchema(schema: SchemaNode, registry: WidgetRegistry, root: Schema
                 (nodeType.includes('object') || nodeType.includes('array')));
         if (typeof widget !== 'string' && isComposite) {
             ui['ui:field'] = widget;
+            // An anyOf node would ALSO render RJSF's option selector beside the
+            // custom field unless the field declares it replaces the anyOf.
+            fieldReplacesAnyOrOneOf = Array.isArray(schema.anyOf) || Array.isArray(schema.oneOf);
         } else {
             ui['ui:widget'] = widget;
         }
@@ -58,7 +83,7 @@ function walkUiSchema(schema: SchemaNode, registry: WidgetRegistry, root: Schema
     // caller uiSchema still wins last through mergeUiSchema.
     const declaredOptions = schema['x-widget-options'];
     const options = mergeOptions(
-        config,
+        mergeOptions(config, fieldReplacesAnyOrOneOf ? { fieldReplacesAnyOrOneOf: true } : undefined),
         declaredOptions && typeof declaredOptions === 'object' && !Array.isArray(declaredOptions)
             ? (declaredOptions as Record<string, unknown>)
             : undefined,
