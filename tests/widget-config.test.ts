@@ -158,3 +158,24 @@ describe('composite-node component resolution', () => {
         expect(ui).toEqual({ 'ui:widget': 'special-widget' });
     });
 });
+
+describe('local $ref composite resolution', () => {
+    it('a component widget on a local-$ref object node emits ui:field', () => {
+        const registry = createWidgetRegistry();
+        const RichContent = () => null;
+        registry.registerWidget('rich-content', RichContent);
+
+        const ui = buildUiSchema(
+            {
+                type: 'object',
+                properties: {
+                    bodyDoc: { $ref: '#/$defs/Doc', nullable: true, 'x-widget': 'rich-content' },
+                },
+                $defs: { Doc: { type: 'object', properties: { type: { type: 'string' } } } },
+            },
+            registry,
+        );
+
+        expect(ui.bodyDoc).toEqual({ 'ui:field': RichContent });
+    });
+});

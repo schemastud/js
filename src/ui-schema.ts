@@ -10,13 +10,34 @@ type UiSchema = Record<string, unknown>;
  * `ui:placeholder`.
  */
 export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiSchema {
+    return walkUiSchema(schema, registry, schema);
+}
+
+/** Resolve a local '#/$defs/…' / '#/definitions/…' ref against the root schema. */
+function resolveLocalRef(node: SchemaNode, root: SchemaNode): SchemaNode {
+    const ref = node.$ref;
+    if (typeof ref !== 'string' || !ref.startsWith('#/')) {
+        return node;
+    }
+
+    let target: unknown = root;
+    for (const segment of ref.slice(2).split('/')) {
+        if (!target || typeof target !== 'object') return node;
+        target = (target as Record<string, unknown>)[segment];
+    }
+
+    return target && typeof target === 'object' ? (target as SchemaNode) : node;
+}
+
+function walkUiSchema(schema: SchemaNode, registry: WidgetRegistry, root: SchemaNode): UiSchema {
     const ui: UiSchema = {};
 
     const { widget, config } = registry.resolveEntry(schema);
     if (widget !== undefined) {
         // RJSF routes ui:widget only on primitive fields; a component resolved
         // for an object/array node takes over the whole subtree as ui:field.
-        const nodeType = schema.type;
+        // A local $ref node borrows its target's type for the check.
+        const nodeType = schema.type ?? resolveLocalRef(schema, root).type;
         const isComposite =
             nodeType === 'object' ||
             nodeType === 'array' ||
@@ -58,7 +79,7 @@ export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiS
     const properties = schema.properties as Record<string, SchemaNode> | undefined;
     if (properties) {
         for (const [key, child] of Object.entries(properties)) {
-            const childUi = buildUiSchema(child, registry);
+            const childUi = walkUiSchema(child, registry, root);
             if (Object.keys(childUi).length > 0) {
                 ui[key] = childUi;
             }
@@ -67,7 +88,7 @@ export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiS
 
     const items = schema.items as SchemaNode | undefined;
     if (items && typeof items === 'object' && !Array.isArray(items)) {
-        const itemsUi = buildUiSchema(items, registry);
+        const itemsUi = walkUiSchema(items, registry, root);
         if (Object.keys(itemsUi).length > 0) {
             ui.items = itemsUi;
         }
