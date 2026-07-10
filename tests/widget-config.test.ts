@@ -131,3 +131,30 @@ describe('walker ui:options emission', () => {
         expect(ui).toEqual({ notes: { 'ui:options': { rows: 12 } } });
     });
 });
+
+describe('composite-node component resolution', () => {
+    it('a component widget on an object node emits ui:field, not ui:widget', () => {
+        const registry = createWidgetRegistry();
+        const RichContent = () => null;
+        registry.registerWidget('rich-content', RichContent);
+
+        const ui = buildUiSchema(
+            {
+                type: 'object',
+                properties: { body: { type: 'object', 'x-widget': 'rich-content' } },
+            },
+            registry,
+        );
+
+        expect(ui).toEqual({ body: { 'ui:field': RichContent } });
+    });
+
+    it('a string widget name on an object node still emits ui:widget', () => {
+        const registry = createWidgetRegistry();
+        registry.registerWidget('special-object', 'special-widget');
+
+        const ui = buildUiSchema({ type: 'object', 'x-widget': 'special-object' }, registry);
+
+        expect(ui).toEqual({ 'ui:widget': 'special-widget' });
+    });
+});

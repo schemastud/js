@@ -14,7 +14,19 @@ export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiS
 
     const { widget, config } = registry.resolveEntry(schema);
     if (widget !== undefined) {
-        ui['ui:widget'] = widget;
+        // RJSF routes ui:widget only on primitive fields; a component resolved
+        // for an object/array node takes over the whole subtree as ui:field.
+        const nodeType = schema.type;
+        const isComposite =
+            nodeType === 'object' ||
+            nodeType === 'array' ||
+            (Array.isArray(nodeType) &&
+                (nodeType.includes('object') || nodeType.includes('array')));
+        if (typeof widget !== 'string' && isComposite) {
+            ui['ui:field'] = widget;
+        } else {
+            ui['ui:widget'] = widget;
+        }
     }
     if (typeof schema['x-placeholder'] === 'string') {
         ui['ui:placeholder'] = schema['x-placeholder'];

@@ -1,0 +1,31 @@
+# Reusable npm publish pipeline for the @stephenr85 JS packages (the ship
+# contract behind splicewire-editor issue 02). Sibling package repos call this
+# via `uses: stephenr85/rjsf-registry/.github/workflows/npm-publish.yml@main`
+# from their own tag-triggered workflow — the pattern, not per-repo copy-paste.
+name: npm-publish
+
+on:
+  workflow_call: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@stephenr85'
+      - run: npm install --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm test --if-present
+      - run: npm run typecheck --if-present
+      - run: npm run build
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
