@@ -5,7 +5,10 @@
 name: npm-publish
 
 on:
-  workflow_call: {}
+  workflow_call:
+    secrets:
+      NPM_TOKEN:
+        required: true
 
 jobs:
   publish:
