@@ -11,7 +11,8 @@ is an optional per-medium widget peer, a plug in the same socket.
   envelope, streaming fold, roster, transport binding, and session capabilities. No React reachable
   from here (enforced by test).
 - **`@schemastud/chat/react`** — the view: `useChat`, the one slotted `<ChatView>`, the fixed slot
-  sockets, and (CH-05) the named presets. May depend on `./core`; the arrow never inverts.
+  sockets, the four named presets, and the standard `<Composer>`. May depend on `./core`; the arrow
+  never inverts.
 
 ```ts
 import { createChatCore } from '@schemastud/chat/core';
@@ -40,10 +41,51 @@ render. Two HITL affordances stay distinct: `participantBanner` (transport-fed l
 `adjudicationPanel` (the `@schemastud/verdict` shell) — the latter's socket exists but **ships unfilled**
 (`Verdict = unknown`; the verdict shell is a separate effort).
 
+## Presets + the standard `<Composer>`
+
+The four named presets are plain-code `{ layout?, slots }` bundles a host spreads onto `<ChatView>` and
+overrides any slot on top of — one component, config-only variants:
+
+```tsx
+import { ChatView, useChat, presets, viewport } from '@schemastud/chat/react';
+
+// One line — the preset carries the layout + its slot fills.
+function SiteAskPopover({ transport }) {
+  const chat = useChat(transport);
+  return <ChatView chat={chat} {...presets.siteAsk} />;
+}
+
+// Spread a preset, override just the slots this surface needs.
+function ThreadsViewport({ transport }) {
+  const chat = useChat(transport);
+  return (
+    <ChatView
+      chat={chat}
+      {...viewport}
+      slots={{ ...viewport.slots, messageToolbar: (m) => <ThreadsMsgActions msg={m} /> }}
+    />
+  );
+}
+```
+
+| Preset | `layout` | HITL affordance | Composer | Participants |
+|---|---|---|---|---|
+| `viewport` (threads) | `viewport` | adjudication panel (**wired, unfilled**) | standard `<Composer>` | roster |
+| `popover` | `popover` | participant banner | standard `<Composer>` | none |
+| `siteAsk` | `site-ask` | participant banner | standard `<Composer>` | none |
+| `support` | `support` | banner + escalated state (+ request-human) | standard `<Composer>` | roster |
+
+The standard **`<Composer>`** is a preset **fill** for the flat `composer(api)` slot — never baked into
+`<ChatView>`. Swapping it for a bespoke input UX (e.g. the threads 3-tab rich composer) is a one-slot
+override: `slots={{ ...viewport.slots, composer: (api) => <Rich {...api} /> }}`. It is host-agnostic (a
+plain input + labeled Send, reflecting `streaming`/`escalated`, optional `allowRequestHuman`) — no native
+`<select>`, no app vocabulary.
+
 ## Status
 
-Core (CH-02) + `<ChatView>` + slots + `useChat` (CH-04) landed. The four presets + the standard
-`<Composer>` land in CH-05 as `Partial<ChatSlots>` bundles spread onto `<ChatView>`.
+Core (CH-02) + `<ChatView>` + slots + `useChat` (CH-04) + the four presets + the standard `<Composer>`
+(CH-05) landed. The `viewport` preset wires the `adjudicationPanel` socket but ships it unfilled until the
+`@schemastud/verdict` shell exists.
 
 ## Dependency arrows (ADR-0078)
 
