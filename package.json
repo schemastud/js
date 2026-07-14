@@ -1,0 +1,53 @@
+{
+    "name": "@schemastud/facets",
+    "version": "0.1.0",
+    "description": "The schema-driven facets surface: a resource-agnostic filter/sort bar over the x-filter / x-sort vendor keywords, with injected transport, injected UI primitives, and an injected URL-state seam. Host-agnostic and grammar-blind — no vendor vocabulary, no bundled router or HTTP client. A frame-rung tracer for @schemastud/frame.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/facets.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "@tanstack/react-query": "^5.0.0",
+        "lucide-react": ">=0.4.0",
+        "react": ">=18"
+    },
+    "devDependencies": {
+        "@tanstack/react-query": "^5.62.0",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.3.2",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.2.3",
+        "jsdom": "^29.1.1",
+        "lucide-react": "^0.525.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.2.7",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0",
+        "vitest": "^4.1.10"
+    }
+}
