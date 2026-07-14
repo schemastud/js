@@ -1,15 +1,31 @@
 /**
- * `@schemastud/chat/react` — the view layer: `<ChatView>`, the slot sockets,
- * and the named presets. Depends on `@schemastud/chat/core`; consumers of the
- * headless engine never pull this in.
+ * `@schemastud/chat/react` — the view layer: `<ChatView>`, the fixed slot
+ * sockets, and the `useChat` hook. Depends on `@schemastud/chat/core` (one-way);
+ * consumers of the headless engine never pull this in, and the core never
+ * imports React (the `no-react-in-core` guard).
  *
- * SCAFFOLD (CH-01): `<ChatView>` + slots land in CH-04, the presets +
- * `<Composer>` in CH-05. The react subpath may depend on core (re-exported
- * here to prove the arrow), but core must never depend on react.
+ * CH-04 lands `<ChatView>` + the slot inventory + default render + `useChat`.
+ * The four presets + the standard `<Composer>` land in CH-05 as `Partial<ChatSlots>`
+ * bundles spread onto `<ChatView>`; the `adjudicationPanel` socket exists here
+ * but ships UNFILLED (the `@schemastud/verdict` shell is a separate effort).
  */
 import { CHAT_CORE } from '../core/index';
 
-/** Package identity marker. The smoke test asserts this trivial export. */
+// The React↔core binding.
+export type { UseChat, UseChatOptions } from './use-chat';
+export { useChat } from './use-chat';
+
+// The slotted view.
+export type { ChatViewProps } from './chat-view';
+export { ChatView } from './chat-view';
+
+// The fixed slot inventory + composer render-prop contract.
+export type { ChatSlots, ComposerApi, RenderSegmentMap, Verdict } from './slots';
+
+// The default render primitives (for presets/hosts that compose on top).
+export { renderMessageBody, renderSegment } from './default-render';
+
+/** Package identity marker. The smoke test asserts this trivial symbol. */
 export const CHAT_REACT = 'schemastud-chat-react' as const;
 
 /** Proves the ./react → ./core dependency arrow (ADR-0078). */

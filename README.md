@@ -10,18 +10,40 @@ is an optional per-medium widget peer, a plug in the same socket.
 - **`@schemastud/chat/core`** — the headless, framework-agnostic state machine. Owns the message
   envelope, streaming fold, roster, transport binding, and session capabilities. No React reachable
   from here (enforced by test).
-- **`@schemastud/chat/react`** — the view: `<ChatView>`, the slot sockets, and the named presets. May
-  depend on `./core`; the arrow never inverts.
+- **`@schemastud/chat/react`** — the view: `useChat`, the one slotted `<ChatView>`, the fixed slot
+  sockets, and (CH-05) the named presets. May depend on `./core`; the arrow never inverts.
 
 ```ts
-import { CHAT_CORE } from '@schemastud/chat/core';
-import { CHAT_REACT } from '@schemastud/chat/react';
+import { createChatCore } from '@schemastud/chat/core';
+import { ChatView, useChat, type ChatSlots } from '@schemastud/chat/react';
+
+function ThreadsViewport({ transport }) {
+  const chat = useChat(transport); // subscribes to core snapshots; exposes send/hydrate/requestHuman
+  const slots: ChatSlots = {
+    header: () => <ThreadHeader />,
+    messageToolbar: (m) => <ThreadsMsgActions msg={m} />,
+    renderSegment: { tool_call: ToolStep, tool_result: ToolStep },
+    citationChrome: (cites) => <ThreadCitations items={cites} />,
+    composer: (api) => <RichComposer onSend={api.send} disabled={api.streaming} />,
+  };
+  return <ChatView chat={chat} layout="viewport" slots={slots} />;
+}
 ```
+
+`useChat(transport)` (or `useChat({ core })`) wraps `createChatCore` in `useSyncExternalStore` and
+returns `{ snapshot, send, hydrate, requestHuman, core }`. `<ChatView>` renders the message list from
+the envelope — flat `content` when a message has no `segments`, the interleaved segments otherwise — and
+exposes the **fixed slot inventory** (`ChatSlots`): `header` · `participants` · `messageToolbar` ·
+`renderSegment[type]` · `citationChrome` · `adjudicationPanel` · `participantBanner` · `composer` ·
+`emptyState` / `loadingState` / `escalatedState`. An unfilled slot uses the minimal, unstyled default
+render. Two HITL affordances stay distinct: `participantBanner` (transport-fed live-takeover) and
+`adjudicationPanel` (the `@schemastud/verdict` shell) — the latter's socket exists but **ships unfilled**
+(`Verdict = unknown`; the verdict shell is a separate effort).
 
 ## Status
 
-Scaffold (CH-01). The envelope + wire union + fold engine land in CH-02; `<ChatView>` + slots in CH-04;
-the four presets + `<Composer>` in CH-05.
+Core (CH-02) + `<ChatView>` + slots + `useChat` (CH-04) landed. The four presets + the standard
+`<Composer>` land in CH-05 as `Partial<ChatSlots>` bundles spread onto `<ChatView>`.
 
 ## Dependency arrows (ADR-0078)
 
