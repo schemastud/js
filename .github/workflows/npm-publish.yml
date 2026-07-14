@@ -1,6 +1,6 @@
 # Reusable npm publish pipeline for the schemastud/splicewire JS packages (the ship
 # contract behind splicewire-editor issue 02). Sibling package repos call this
-# via `uses: schemastud/rjsf-registry/.github/workflows/npm-publish.yml@main`
+# via `uses: schemastud/seam/.github/workflows/npm-publish.yml@main`
 # from their own tag-triggered workflow — the pattern, not per-repo copy-paste.
 name: npm-publish
 

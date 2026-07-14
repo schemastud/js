@@ -1,10 +1,20 @@
-# rjsf-registry
+# seam
+
+The medium-neutral **editing socket** for the schemastud constellation: a widget registry, a form
+intent bus, a base `SchemaForm`, and the uniform `SelectionChrome` primitive — the socket that any
+skin, dialect, or document model plugs into. (Renamed from `@schemastud/rjsf-registry`: the old name
+described one widget flavor riding the socket, not the socket itself.)
 
 Generally-useful additions over [react-jsonschema-form](https://rjsf-team.github.io/react-jsonschema-form/) — none of which RJSF core has:
 
 - **Predicate widget registry** — `registerWidget(predicateOrKey, widget)` resolves widgets by
   predicate over the schema node instead of RJSF's name-based model; first match wins, later
   registrations take precedence.
+- **Form intent bus** — `createFormIntentBus()` is the medium-neutral channel a form emits edit
+  intents on, decoupled from any host transport.
+- **Uniform `SelectionChrome`** — the grammar-blind selection/presence chrome primitive: it draws the
+  same ring/handle/badge/outline around *any* skin (rides `selectedNodeId`, never a document model),
+  so a skin ships zero chrome code. Extracted here from blockdoc so every medium reuses it.
 - **uiSchema derivation** — `buildUiSchema(schema, registry)` walks a schema and emits an RJSF
   uiSchema from schema-carried hints (`x-widget`, `x-placeholder`), so a form's behavior is
   declared where its shape is declared.
@@ -24,7 +34,7 @@ forms) belong in adapter packages that depend on this one.
 ## Install
 
 ```sh
-npm install @schemastud/rjsf-registry
+npm install @schemastud/seam
 ```
 
 Peer dependencies: `@rjsf/core`, `@rjsf/shadcn`, `@rjsf/utils`, `@rjsf/validator-ajv8` (all ^6),
@@ -33,7 +43,7 @@ Peer dependencies: `@rjsf/core`, `@rjsf/shadcn`, `@rjsf/utils`, `@rjsf/validator
 ## Usage
 
 ```tsx
-import { SchemaForm, createWidgetRegistry } from '@schemastud/rjsf-registry';
+import { SchemaForm, createWidgetRegistry } from '@schemastud/seam';
 
 const registry = createWidgetRegistry();
 registry.registerWidget((s) => s['x-widget'] === 'citation', CitationWidget);
