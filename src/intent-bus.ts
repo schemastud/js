@@ -29,6 +29,29 @@ export interface FormIntentBus {
     flushCommits: () => void;
 }
 
+/**
+ * Read the host formContext from a widget/field's RJSF props, insulated from an
+ * RJSF-version difference that is otherwise invisible: RJSF v5 delivers the form's
+ * `formContext` as a widget prop, but v6 dropped that prop and exposes it only as
+ * `props.registry.formContext`. Frame widgets that ride the FormIntentBus (or any
+ * other formContext sidecar) read it through here rather than a version-specific
+ * prop, so the enrich affordance keeps working across the bump.
+ */
+export function widgetFormContext<T extends object = Record<string, unknown>>(props: {
+    formContext?: unknown;
+    registry?: { formContext?: unknown };
+}): T {
+    const fromProp = props.formContext;
+    if (fromProp && typeof fromProp === 'object' && Object.keys(fromProp).length > 0) {
+        return fromProp as T;
+    }
+    const fromRegistry = props.registry?.formContext;
+    if (fromRegistry && typeof fromRegistry === 'object') {
+        return fromRegistry as T;
+    }
+    return (fromProp ?? {}) as T;
+}
+
 export function createFormIntentBus(): FormIntentBus {
     const handlers = new Set<FormIntentHandler>();
     const flushers = new Set<() => void>();

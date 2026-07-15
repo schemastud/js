@@ -1,6 +1,7 @@
 export { createKeywordVocabulary, FORM_KEYWORDS } from './vocabulary';
 export {
     createFormIntentBus,
+    widgetFormContext,
     type FormIntent,
     type FormIntentBus,
     type FormIntentHandler,
