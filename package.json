@@ -1,0 +1,77 @@
+{
+    "name": "@schemastud/beam-mdx",
+    "version": "0.1.0",
+    "description": "The file-driven MDX content rung: a build-time draft-exclusion Vite plugin + MDX preset, a module-map content resolver (resolveContent / essaysList), a cross-property citation kit (Ref / Receipts), a frontmatter-driven JSON-LD builder, an embed-by-reference <Content>, a parameterized <ContentShow> renderer, and a token-driven .site-prose base stylesheet. Satellites keep their own references manifest and brand tokens; everything else rides the package.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./vite": {
+            "types": "./dist/vite.d.ts",
+            "import": "./dist/vite.js"
+        },
+        "./css": "./dist/site-prose.css"
+    },
+    "sideEffects": [
+        "**/*.css"
+    ],
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/beam-mdx.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "@inertiajs/react": ">=2",
+        "@mdx-js/rollup": "^3",
+        "react": ">=18",
+        "remark-frontmatter": "^5",
+        "remark-mdx-frontmatter": "^5",
+        "vite": ">=5"
+    },
+    "peerDependenciesMeta": {
+        "@mdx-js/rollup": {
+            "optional": true
+        },
+        "remark-frontmatter": {
+            "optional": true
+        },
+        "remark-mdx-frontmatter": {
+            "optional": true
+        },
+        "vite": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@inertiajs/react": "^3.0.0",
+        "@mdx-js/rollup": "^3.1.1",
+        "@types/node": "^22.20.1",
+        "@types/react": "^19.0.0",
+        "react": "^19.2.0",
+        "remark-frontmatter": "^5.0.0",
+        "remark-mdx-frontmatter": "^5.2.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.2",
+        "vite": "^8.0.0",
+        "vitest": "^4.1.10"
+    }
+}
