@@ -1,6 +1,8 @@
+import type { SchemaNode } from '@schemastud/seam';
 import { ListFilters, useListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
 import { resolveColumns } from './resolveColumns';
+import { EditableCell } from './EditableCell';
 import {
     DefaultCell,
     DefaultEmpty,
@@ -10,7 +12,8 @@ import {
     DefaultToolbar,
 } from './slots/defaults';
 import { useResourceList } from './data';
-import type { ListShellProps, Row } from './types';
+import type { ContextManifest } from './contexts';
+import type { FrameColumn, ListShellProps, Row } from './types';
 
 /**
  * The list surface, generalized from the app substrate. Renders any resource from
@@ -18,14 +21,21 @@ import type { ListShellProps, Row } from './types';
  * is fully schema-driven (rides FilterSchemaController where a filter schema
  * exists), pagination is transport-driven, columns resolve through the columns seam.
  */
-export function ListShell({ resource, columns, onOpen, slots }: ListShellProps) {
-    const { useUrlState, can } = useFrameInjection();
+export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCommit }: ListShellProps) {
+    const { useUrlState, can, registry } = useFrameInjection();
     const filters = useListFilters(resource);
     const [searchParams, setSearchParams] = useUrlState();
 
     const query = useResourceList(resource, filters.requestParams);
 
-    const resolvedColumns = resolveColumns(resource, filters.schema, columns);
+    // Manifest folds list-column participation into the columns; absent → passthrough.
+    const resolvedColumns = withEditableCells(
+        resolveColumns(resource, filters.schema, columns, manifest),
+        manifest,
+        filters.schema,
+        registry,
+        onCellCommit,
+    );
     const canCreate = can('create', resource);
 
     const Toolbar = slots?.Toolbar ?? DefaultToolbar;
@@ -80,4 +90,51 @@ export function ListShell({ resource, columns, onOpen, slots }: ListShellProps) 
             )}
         </div>
     );
+}
+
+/**
+ * FC-23 wiring: turn a resolved column into an editable-in-place cell ONLY when
+ *   (a) a manifest is present (absent ⇒ untouched — not a gate),
+ *   (b) the field participates in `row-cell`, AND
+ *   (c) the host supplied no `cell` override (host-closure-wins-by-field).
+ * The EditableCell inherits the `edit` binding per FC-03 and renders a read-only
+ * projection for suppressed-heavyweight / unbound-non-heavyweight fields. Every
+ * other column passes through unchanged.
+ */
+function withEditableCells(
+    resolved: FrameColumn[],
+    manifest: ContextManifest | undefined,
+    schema: unknown,
+    registry: ReturnType<typeof useFrameInjection>['registry'],
+    onCellCommit: ListShellProps['onCellCommit'],
+): FrameColumn[] {
+    if (!manifest) return resolved;
+
+    const properties = ((schema as SchemaNode | undefined)?.properties ?? {}) as Record<string, SchemaNode>;
+
+    return resolved.map((col) => {
+        // Host override wins for its field — never wrap it.
+        if (col.cell) return col;
+
+        const byCtx = manifest.byNode[col.field];
+        const rowCell = byCtx?.['row-cell'];
+        if (!rowCell?.participates) return col;
+
+        const edit = byCtx?.edit;
+        const node: SchemaNode = properties[col.field] ?? { type: 'string' };
+
+        return {
+            ...col,
+            cell: (record: Row) => (
+                <EditableCell
+                    node={node}
+                    rowCell={rowCell}
+                    edit={edit}
+                    value={record[col.field]}
+                    registry={registry}
+                    onCommit={(value) => onCellCommit?.(record, col.field, value)}
+                />
+            ),
+        };
+    });
 }

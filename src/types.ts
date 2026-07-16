@@ -146,6 +146,20 @@ export interface ListShellProps {
     columns: FrameColumn[];
     onOpen?: (record: Row) => void;
     slots?: Partial<ListSlots>;
+    /**
+     * The resource's ContextManifest. When present, `list-column` participation folds
+     * into the columns (sort/label) AND `row-cell`-participating fields with no host
+     * `cell` override become editable-in-place (FC-23). When ABSENT the list is a pure
+     * passthrough — exactly today's behavior (zero migration; not a gate).
+     */
+    manifest?: import('./contexts').ContextManifest;
+    /**
+     * Per-field commit hook for the editable `row-cell` runtime. Called with
+     * (record, field, value) when an in-cell edit commits; the host wires it to a
+     * per-field save (e.g. `transport.save` / a narrow PATCH). Required only to make
+     * row-cell cells actually persist; without it an edited cell commits to a no-op.
+     */
+    onCellCommit?: (record: Row, field: string, value: unknown) => void;
 }
 
 export interface FormBodySlotProps {

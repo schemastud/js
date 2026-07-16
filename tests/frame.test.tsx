@@ -288,3 +288,98 @@ describe('resolveColumns seam', () => {
         expect(resolveColumns('widgets', undefined, columns)).toBe(columns);
     });
 });
+
+describe('ListShell — editable row-cell wiring (FC-23)', () => {
+    // A registry carrying a controllable `email-input` so a row-cell-participating
+    // field can become editable-in-place.
+    const EmailInput = ({ value, onChange }: any) => (
+        <input data-testid="cell-input" value={String(value ?? '')} onChange={(e) => onChange(e.target.value)} />
+    );
+
+    function injectionWithWidget(transport: FrameTransport): FrameInjection {
+        const registry = createWidgetRegistry();
+        registry.registerWidget('email-input', EmailInput);
+        return { ...makeInjection(transport), registry };
+    }
+
+    const manifest = {
+        byNode: {
+            title: {
+                edit: { participates: true, widget: 'email-input' },
+                'row-cell': { participates: true, inheritsBinding: true },
+                'list-column': { participates: true, label: 'Title' },
+            },
+        },
+        inherits: { 'row-cell': ['edit'] as const },
+        known: ['edit', 'row-cell', 'list-column'],
+    } as any;
+
+    it('a row-cell-participating field with no host cell becomes editable-in-place', async () => {
+        const transport = makeTransport();
+        const onCellCommit = vi.fn();
+        const Wrapper = wrap(injectionWithWidget(transport));
+
+        render(
+            <ListShell
+                resource="widgets"
+                columns={[{ field: 'title', header: 'Title' }]}
+                manifest={manifest}
+                onCellCommit={onCellCommit}
+            />,
+            { wrapper: Wrapper },
+        );
+
+        await waitFor(() => expect(screen.getAllByText('Alpha')[0]).toBeTruthy());
+
+        // Read view first; activate the first row's cell → the inherited edit widget mounts.
+        expect(screen.queryByTestId('cell-input')).toBeNull();
+        fireEvent.click(screen.getAllByText('Alpha')[0]);
+        const input = screen.getByTestId('cell-input') as HTMLInputElement;
+        fireEvent.change(input, { target: { value: 'Alpha!' } });
+        await act(async () => {
+            fireEvent.blur(input.parentElement!);
+        });
+        expect(onCellCommit).toHaveBeenCalledWith(
+            expect.objectContaining({ id: '1', title: 'Alpha' }),
+            'title',
+            'Alpha!',
+        );
+    });
+
+    it('a host FrameColumn.cell override still wins — EditableCell is not used', async () => {
+        const transport = makeTransport();
+        const Wrapper = wrap(injectionWithWidget(transport));
+
+        render(
+            <ListShell
+                resource="widgets"
+                columns={[{ field: 'title', cell: (r) => <span data-testid="host-cell">{String(r.title)}</span> }]}
+                manifest={manifest}
+                onCellCommit={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+
+        await waitFor(() => expect(screen.getAllByTestId('host-cell')[0]).toBeTruthy());
+        // The host closure rendered; no editable-cell affordance for this field.
+        fireEvent.click(screen.getAllByTestId('host-cell')[0]);
+        expect(screen.queryByTestId('cell-input')).toBeNull();
+        expect(document.querySelector('[data-frame-cell]')).toBeNull();
+    });
+
+    it('absent manifest ⇒ unchanged behavior — no EditableCell (not a gate)', async () => {
+        const transport = makeTransport();
+        const Wrapper = wrap(injectionWithWidget(transport));
+
+        render(
+            <ListShell resource="widgets" columns={[{ field: 'title', header: 'Title' }]} />,
+            { wrapper: Wrapper },
+        );
+
+        await waitFor(() => expect(screen.getAllByText('Alpha')[0]).toBeTruthy());
+        // No manifest → the plain DefaultCell path; no editable-cell markup at all.
+        expect(document.querySelector('[data-frame-cell]')).toBeNull();
+        fireEvent.click(screen.getAllByText('Alpha')[0]);
+        expect(screen.queryByTestId('cell-input')).toBeNull();
+    });
+});
