@@ -61,7 +61,7 @@
     },
     "dependencies": {
         "@remote-dom/core": "^1.11.1",
-        "@schemastud/seam": "file:../seam",
+        "@schemastud/seam": "^0.1.0",
         "quickjs-emscripten": "^0.32.0"
     },
     "devDependencies": {
