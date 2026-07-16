@@ -1,0 +1,96 @@
+{
+    "name": "@schemastud/blockdoc",
+    "version": "0.1.0",
+    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/core.js",
+    "types": "dist/core.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/core.d.ts",
+            "import": "./dist/core.js"
+        },
+        "./core": {
+            "types": "./dist/core.d.ts",
+            "import": "./dist/core.js"
+        },
+        "./react": {
+            "types": "./dist/react.d.ts",
+            "import": "./dist/react.js"
+        },
+        "./rjsf": {
+            "types": "./dist/rjsf.d.ts",
+            "import": "./dist/rjsf.js"
+        }
+    },
+    "files": [
+        "README.md",
+        "dist",
+        "src"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/blockdoc.git"
+    },
+    "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "prepublishOnly": "npm run build"
+    },
+    "dependencies": {
+        "@tiptap/core": "^3.27.3",
+        "@tiptap/extension-bubble-menu": "^3.27.3",
+        "@tiptap/extensions": "^3.27.3",
+        "@tiptap/pm": "^3.27.3",
+        "@tiptap/react": "^3.27.3",
+        "uuid": "^11.0.0"
+    },
+    "peerDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@schemastud/seam": "^0.1.0",
+        "react": ">=18",
+        "react-dom": ">=18"
+    },
+    "peerDependenciesMeta": {
+        "@rjsf/core": {
+            "optional": true
+        },
+        "@rjsf/utils": {
+            "optional": true
+        },
+        "@schemastud/seam": {
+            "optional": true
+        },
+        "react": {
+            "optional": true
+        },
+        "react-dom": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/shadcn": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@rjsf/validator-ajv8": "^6.0.0",
+        "@schemastud/seam": "^0.1.0",
+        "@testing-library/react": "^16.1.0",
+        "@types/node": "^26.1.1",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "jsdom": "^26.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0",
+        "vitest": "^3.0.0"
+    },
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    }
+}

@@ -1,0 +1,167 @@
+{
+    "profile": "base",
+    "version": 1,
+    "doc": null,
+    "nodes": [
+        {
+            "name": "paragraph",
+            "description": "A paragraph of inline prose.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "heading",
+            "description": "A section heading at a given level.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] },
+                    "level": { "type": "integer", "default": 1 }
+                }
+            }
+        },
+        {
+            "name": "blockquote",
+            "description": "A quoted run of prose blocks.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": ["prose"],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "bullet_list",
+            "description": "An unordered list.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": ["list_item"],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "ordered_list",
+            "description": "An ordered list.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": ["list_item"],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "list_item",
+            "description": "One list item holding prose blocks.",
+            "group": "block",
+            "category": "list_item",
+            "admitsChildCategories": ["prose"],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "code_block",
+            "description": "A block of literal code text.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": "text*",
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "horizontal_rule",
+            "description": "A thematic break.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": [],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "hard_break",
+            "description": "A forced line break within inline content.",
+            "group": "inline",
+            "category": null,
+            "admitsChildCategories": [],
+            "admitsText": false,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        }
+    ],
+    "marks": [
+        { "name": "strong" },
+        { "name": "em" },
+        { "name": "code" },
+        {
+            "name": "link",
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "href": { "type": "string" }
+                }
+            }
+        },
+        {
+            "name": "annotation",
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            },
+            "excludes": ""
+        }
+    ]
+}
