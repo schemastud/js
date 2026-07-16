@@ -6,6 +6,10 @@ export { FrameProvider, useFrameInjection } from './context';
 export { ListShell } from './ListShell';
 export { EditShell } from './EditShell';
 export { resolveColumns } from './resolveColumns';
+export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
+export { SchemaView, type SchemaViewProps } from './SchemaView';
+export { KNOWN_CONTEXTS, INHERITS } from './contexts';
+export type { FrameContext, NodeParticipation, ContextManifest } from './contexts';
 export { stripHostWidgets, STUD_WIDGET_KEYWORD } from './raw-mode';
 export {
     useResourceList,

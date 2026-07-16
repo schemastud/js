@@ -78,11 +78,15 @@ export interface FrameColumn {
 
 // `schema` is the resource's list/filter schema — unused by the v1 host-supplied
 // strategy, but the seam carries it so a future x-column reflection strategy can
-// derive columns from it without changing the shell contract.
+// derive columns from it without changing the shell contract. The optional
+// `manifest` threads the resource's ContextManifest so `list-column` participation
+// (sort/label) folds into the columns and host columns are validated against it; when
+// omitted, the seam is a pure passthrough (zero migration for existing surfaces).
 export type ResolveColumns = (
     resource: string,
     schema: unknown,
     hostColumns: FrameColumn[],
+    manifest?: import('./contexts').ContextManifest,
 ) => FrameColumn[];
 
 // The manifest entry shape frame's shells consume — the frontend projection of the
