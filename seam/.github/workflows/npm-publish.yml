@@ -1,0 +1,33 @@
+# Reusable npm publish pipeline for the schemastud/splicewire JS packages (the ship
+# contract behind splicewire-editor issue 02). Sibling package repos call this
+# via `uses: schemastud/seam/.github/workflows/npm-publish.yml@main`
+# from their own tag-triggered workflow — the pattern, not per-repo copy-paste.
+name: npm-publish
+
+on:
+  workflow_call:
+    secrets:
+      NPM_TOKEN:
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install --no-audit --no-fund
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - run: npm test --if-present
+      - run: npm run typecheck --if-present
+      - run: npm run build
+      - run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

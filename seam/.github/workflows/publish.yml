@@ -1,0 +1,14 @@
+name: publish
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    uses: ./.github/workflows/npm-publish.yml
+    permissions:
+      contents: read
+      packages: write
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
