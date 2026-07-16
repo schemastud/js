@@ -1,0 +1,84 @@
+{
+    "name": "@schemastud/frame-remote",
+    "version": "0.1.0",
+    "description": "Production-shape isolation substrate for rendering untrusted remote components: an untrusted guest runs inside QuickJS-in-WASM (no ambient browser globals), served from a separate origin inside a Worker, emitting a serialized mutation stream that a host reconciles through @remote-dom/core into a host-owned allowlisted component vocabulary. The trust boundary is execution-context isolation, not API-guarding.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./guest": {
+            "types": "./dist/guest.d.ts",
+            "import": "./dist/guest.js"
+        },
+        "./sdk": {
+            "types": "./dist/sdk.d.ts",
+            "import": "./dist/sdk.js"
+        },
+        "./host": {
+            "types": "./dist/host.d.ts",
+            "import": "./dist/host.js"
+        }
+    },
+    "sideEffects": false,
+    "files": [
+        "dist",
+        "src",
+        "README.md",
+        "VERIFY.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/frame-remote.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "demo": "vite --config demo/vite.config.ts",
+        "demo:sandbox": "vite --config demo/vite.sandbox.config.ts"
+    },
+    "peerDependencies": {
+        "react": ">=18",
+        "react-dom": ">=18"
+    },
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "react-dom": {
+            "optional": true
+        }
+    },
+    "dependencies": {
+        "@remote-dom/core": "^1.11.1",
+        "@schemastud/seam": "file:../seam",
+        "quickjs-emscripten": "^0.32.0"
+    },
+    "devDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/shadcn": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@rjsf/validator-ajv8": "^6.0.0",
+        "@types/node": "^22.20.1",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.2.3",
+        "@vitejs/plugin-react": "^4.7.0",
+        "jsdom": "^26.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.2.7",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0",
+        "vite": "^6.0.0",
+        "vitest": "^4.1.10"
+    }
+}
