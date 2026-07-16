@@ -1,0 +1,75 @@
+{
+    "name": "@schemastud/chat",
+    "version": "0.1.0",
+    "description": "The fleet's single chat substrate: a headless-core + slotted-view chat UI package. @schemastud/chat/core is the framework-agnostic state machine (messages, streaming fold, roster, transport binding, session capabilities); @schemastud/chat/react is the view (<ChatView>, slot sockets, presets). A peer contribution at the seam socket (ADR-0078) owning the chat message envelope (ADR-0079) — not built on blockdoc; blockdoc is an optional per-medium widget peer.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/core.js",
+    "types": "dist/core.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/core.d.ts",
+            "import": "./dist/core.js"
+        },
+        "./core": {
+            "types": "./dist/core.d.ts",
+            "import": "./dist/core.js"
+        },
+        "./react": {
+            "types": "./dist/react.d.ts",
+            "import": "./dist/react.js"
+        }
+    },
+    "files": [
+        "README.md",
+        "dist",
+        "src"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/schemastud/chat.git"
+    },
+    "scripts": {
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "prepublishOnly": "npm run build"
+    },
+    "peerDependencies": {
+        "@schemastud/blockdoc": "^0.1.0",
+        "@schemastud/seam": "^0.1.0",
+        "react": ">=18",
+        "react-dom": ">=18"
+    },
+    "peerDependenciesMeta": {
+        "@schemastud/blockdoc": {
+            "optional": true
+        },
+        "@schemastud/seam": {
+            "optional": true
+        },
+        "react": {
+            "optional": true
+        },
+        "react-dom": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@testing-library/react": "^16.1.0",
+        "@types/node": "^26.1.1",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.0.0",
+        "jsdom": "^26.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0",
+        "vitest": "^3.0.0"
+    },
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    }
+}
