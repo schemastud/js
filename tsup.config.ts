@@ -22,5 +22,8 @@ export default defineConfig({
         '@remote-dom/core/receivers',
         '@remote-dom/core/elements',
         'quickjs-emscripten',
+        // The frame vocabulary seam stays external — resolved at runtime by the
+        // consumer, exactly as @schemastud/frame keeps seam external.
+        '@schemastud/seam',
     ],
 });

@@ -111,3 +111,46 @@ export const INTERACTIVE_COMPONENT = /* js */ `
   function render() { FrameRemote.render(view()); }
   render();
 `;
+
+/**
+ * A guest that NAMES an allowlisted type ('Card' + 'Heading') AND an unregistered
+ * type ('DangerZone') in the same tree. The host must paint the allowlisted ones and
+ * refuse the unknown one — proving vocabulary resolution drives what paints.
+ */
+export const NAMES_KNOWN_AND_UNKNOWN = /* js */ `
+  FrameRemote.render(
+    FrameRemote.h('Card', {}, [
+      FrameRemote.h('Heading', { text: 'known block painted' }),
+      // 'DangerZone' is not in the host vocabulary — must be refused.
+      FrameRemote.h('DangerZone', { text: 'should never paint' }, []),
+    ]),
+  );
+`;
+
+/**
+ * A guest that tries every injection a hostile publisher might reach for. NONE of it
+ * can cross: the guest can only *name* a type + pass serialized props. It cannot
+ * inject a component, raw HTML, a dangerouslySetInnerHTML sink, a <script>, or inline
+ * CSS as markup. Every non-vocabulary name is refused; the props on the one allowed
+ * block are inert serialized values, never interpreted as DOM/markup/handlers.
+ */
+export const INJECTION_ATTEMPTS = /* js */ `
+  FrameRemote.render(
+    FrameRemote.h('Card', {}, [
+      // 1. name a raw HTML tag — not a vocabulary key, refused.
+      FrameRemote.h('div', { innerHTML: '<img src=x onerror=alert(1)>' }, []),
+      // 2. name <script> directly — refused.
+      FrameRemote.h('script', { src: 'evil.js' }, []),
+      // 3. name <style> to smuggle CSS — refused.
+      FrameRemote.h('style', {}, [FrameRemote.h('Text', { text: 'body{display:none}' })]),
+      // 4. an allowlisted block carrying a dangerouslySetInnerHTML-shaped prop + a
+      //    style-string prop. The prop is a serialized VALUE the host never reads as
+      //    markup; the block paints its own first-party styling only.
+      FrameRemote.h('Text', {
+        text: 'inert text',
+        dangerouslySetInnerHTML: { __html: '<b>pwned</b>' },
+        style: 'position:fixed;inset:0;background:red',
+      }),
+    ]),
+  );
+`;

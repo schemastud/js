@@ -57,9 +57,14 @@
     },
     "dependencies": {
         "@remote-dom/core": "^1.11.1",
+        "@schemastud/seam": "file:../seam",
         "quickjs-emscripten": "^0.32.0"
     },
     "devDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/shadcn": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@rjsf/validator-ajv8": "^6.0.0",
         "@types/node": "^22.20.1",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.2.3",

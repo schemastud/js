@@ -42,7 +42,7 @@ describe('fidelity — real events + controlled input round-trip, no iframe', ()
         // The smuggled non-allowlisted <script> is refused, not painted.
         expect(container!.querySelector('script')).toBeNull();
         expect(container!.querySelector('[data-frame-remote-blocked="script"]')).not.toBeNull();
-        expect(container!.textContent).toContain('blocked non-allowlisted <script>');
+        expect(container!.textContent).toContain('unknown block <script>');
     });
 
     it('a real click round-trips guest -> host -> guest and increments', async () => {

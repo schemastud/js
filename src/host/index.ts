@@ -10,6 +10,12 @@ export {
     type RenderContext,
 } from './allowlist.js';
 export {
+    createBlockVocabulary,
+    registerBlock,
+    DEFAULT_BLOCK_VOCABULARY,
+    type BlockVocabulary,
+} from './vocabulary.js';
+export {
     RemoteSurface,
     renderRemoteTree,
     type RemoteSurfaceProps,
