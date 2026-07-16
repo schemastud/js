@@ -16,6 +16,12 @@ export {
     type BlockVocabulary,
 } from './vocabulary.js';
 export {
+    BLOCK_TYPES,
+    type BlockType,
+    type BlockProps,
+    type HandlerProp,
+} from './vocabulary-spec.js';
+export {
     RemoteSurface,
     renderRemoteTree,
     type RemoteSurfaceProps,

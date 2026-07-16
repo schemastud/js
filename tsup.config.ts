@@ -1,12 +1,15 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-    // Three entrypoints: the umbrella (`.`), the guest SDK (runs inside the VM /
-    // worker), and the host receiver (paints from the allowlist). Object form keeps
+    // Four entrypoints: the umbrella (`.`), the guest VM substrate (`./guest`, host
+    // machinery that RUNS a guest), the published guest AUTHORING SDK (`./sdk`, the
+    // surface a remote publisher authors against off-repo — host-free by construction),
+    // and the host receiver (`./host`, paints from the allowlist). Object form keeps
     // distinct output basenames.
     entry: {
         index: 'src/index.ts',
         guest: 'src/guest/index.ts',
+        sdk: 'src/guest/sdk.ts',
         host: 'src/host/index.ts',
     },
     format: ['esm'],

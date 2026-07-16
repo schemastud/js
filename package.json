@@ -15,6 +15,10 @@
             "types": "./dist/guest.d.ts",
             "import": "./dist/guest.js"
         },
+        "./sdk": {
+            "types": "./dist/sdk.d.ts",
+            "import": "./dist/sdk.js"
+        },
         "./host": {
             "types": "./dist/host.d.ts",
             "import": "./dist/host.js"
