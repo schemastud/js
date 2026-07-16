@@ -20,6 +20,16 @@ export {
 } from './ResourceRefWidget';
 export { createFrameHooks, type FrameHooks, type SubmittedHandler, type SubmittedContext } from './hooks';
 export {
+    createRouteRegistry,
+    createGuardRegistry,
+    assertRouteContext,
+    resolveAliasTarget,
+    type RouteRegistry,
+    type GuardRegistry,
+    type RouteComponent,
+    type GuardComponent,
+} from './routes';
+export {
     useResourceList,
     useResourceRecord,
     useFormSchema,
@@ -51,6 +61,9 @@ export type {
     FrameColumn,
     ResolveColumns,
     AdminResourceDefinition,
+    RouteContextEntry,
+    RouteMounts,
+    AliasEntry,
     ListShellProps,
     ListSlots,
     ToolbarSlotProps,

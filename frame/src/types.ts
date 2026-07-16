@@ -106,7 +106,61 @@ export interface AdminResourceDefinition {
     editData: string | null;
     policy: string | null;
     form: FormMode;
-    nav: { label: string; group?: string | null; icon?: string | null };
+    nav: {
+        label: string;
+        group?: string | null;
+        icon?: string | null;
+        // Host-nav join keys (FC-22): the sitemap section this resource
+        // auto-attaches into, its placement within that section, and the route
+        // identity a host binds the generated leaf under. All nullable.
+        section?: string | null;
+        navOrder?: number | null;
+        routeName?: string | null;
+    };
+}
+
+// =============================================================================
+// RouteContext — the router half of the one-spine / three-faces frame runtime
+// (routes · nav · widgets, joined by `routeName`). FC-22.
+//
+// HARD GUARDRAIL: a RouteContextEntry is FLAT. It carries per-route properties and
+// nothing that encodes parent/child route nesting — record-nested sub-routes stay
+// hand-written in the host router. `mounts` names what renders; it never carries a
+// child route table.
+// =============================================================================
+
+// What a route leaf renders: a built-in shell verb, a heavyweight widget mount,
+// or a redirect. Flat — never a nested child table.
+export type RouteMounts = 'list' | 'edit' | 'detail' | 'widget' | 'redirect';
+
+export interface RouteContextEntry {
+    // Stable identity; the RouteRegistry + nav join key.
+    routeName: string;
+    // The route path, flat (e.g. `circuits`, `threads/assistants/:id`).
+    path: string;
+    // The hand-written layout shell this leaf slots under (null = top-level).
+    shell: string | null;
+    // The host wraps the component in lazy()/Suspense when true.
+    lazy: boolean;
+    // The host guard key wrapping this leaf (`root` → RequireRoot); null = none.
+    guard: string | null;
+    // What renders.
+    mounts: RouteMounts;
+    // When `mounts === 'widget'`, the registered widget name (a heavyweight editor).
+    widget?: string | null;
+    // The frame resource key this route lists/edits/details (null for a
+    // resource-less standalone page).
+    resource?: string | null;
+}
+
+// One back-compat redirect, emitted in the manifest so the JS router is a pure
+// renderer (no separate client alias table). A `:id` in both `from` and `to`
+// interpolates client-side; `preserveQuery` carries the query string through. A
+// by-name data lookup is resolved server-side at emit and arrives as a static entry.
+export interface AliasEntry {
+    from: string;
+    to: string;
+    preserveQuery: boolean;
 }
 
 // =============================================================================
