@@ -1,7 +1,7 @@
 {
     "name": "@schemastud/blockdoc",
     "version": "0.1.0",
-    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest \u2192 ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
+    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
     "license": "MIT",
     "type": "module",
     "main": "dist/core.js",
@@ -85,9 +85,9 @@
         "jsdom": "^26.0.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
+        "tsup": "^8.5.1",
         "typescript": "^5.7.0",
-        "vitest": "^3.0.0",
-        "tsup": "^8.5.1"
+        "vitest": "^3.0.0"
     },
     "publishConfig": {
         "registry": "https://registry.npmjs.org",
