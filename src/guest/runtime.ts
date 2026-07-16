@@ -118,7 +118,27 @@ export const GUEST_RUNTIME_SOURCE = /* js */ `
     }
   };
 
-  // Expose the SDK the untrusted component authors against.
-  globalThis.FrameRemote = { h: h, text: text, render: render };
+  // ---- brokered capability call (RCP-05) ----
+  // The guest HOLDS its scoped token but never sees it as a value; it can only USE it by
+  // calling capability(name, args). The host broker (__frame_capability) presents the
+  // token to the server-side authority, runs the capability, and returns the result.
+  // A refusal comes back as { ok: false, reason }, never a throw.
+  function capability(name, args) {
+    // Read the token lazily: the host injects __frame_capability_token AFTER this runtime
+    // is loaded, so a load-time snapshot would always be null.
+    var token = typeof __frame_capability_token === "string" ? __frame_capability_token : "";
+    if (!token) return { ok: false, reason: "no_token" };
+    if (typeof __frame_capability !== "function") return { ok: false, reason: "no_broker" };
+    var raw = __frame_capability(String(name), JSON.stringify(args == null ? {} : args));
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return { ok: false, reason: "bad_broker_result" };
+    }
+  }
+
+  // Expose the SDK the untrusted component authors against. capability() is the ONLY
+  // way out to host authority — no fetch, no host DOM, no credential.
+  globalThis.FrameRemote = { h: h, text: text, render: render, capability: capability };
 })();
 `;

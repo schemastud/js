@@ -50,11 +50,22 @@ export interface TextNode {
 /** Anything that can be a child: an element, a text leaf, or a bare string/number. */
 export type Node = Element | TextNode | string | number;
 
+/**
+ * The result of a brokered capability call (RCP-05). Either an allowed result the host
+ * ran server-side, or a refusal reason — never a credential, and never thrown.
+ */
+export interface CapabilityResult<T = unknown> {
+    readonly ok: boolean;
+    readonly data?: T;
+    readonly reason?: string;
+}
+
 /** The ambient in-VM bridge the guest runtime installs. Present only inside the VM. */
 interface FrameRemoteBridge {
     h(type: string, props?: Record<string, unknown>, children?: unknown): Element;
     text(value: unknown): TextNode;
     render(tree: Node | readonly Node[]): void;
+    capability(name: string, args?: unknown): CapabilityResult;
 }
 
 /**
@@ -111,11 +122,26 @@ export function render(tree: Node | readonly Node[]): void {
  * state in a closure and calls `ctx.render(view())` from a handler is the parity shape
  * with the in-repo interactive guest.
  */
+/**
+ * Invoke a brokered capability by NAME (RCP-05) — the guest's one path to host
+ * authority. The guest holds an injected scoped token it can never read; calling
+ * `capability('resolve', { id })` routes through the host, which presents that token to
+ * the server-side broker, runs the capability inside the token's grant + scope, and
+ * returns the result. Anything outside the grant or scope comes back
+ * `{ ok: false, reason }` — a mis-asking guest degrades, it never crashes and never
+ * reaches a credential, a host DOM, or a raw fetch. This is the whole trust surface.
+ */
+export function capability<T = unknown>(name: string, args?: unknown): CapabilityResult<T> {
+    return bridge().capability(name, args) as CapabilityResult<T>;
+}
+
 export interface ComponentContext {
     /** Paint (or repaint) this component's tree. */
     render: (tree: Node | readonly Node[]) => void;
+    /** Invoke a brokered capability by name — same as the free {@see capability}. */
+    capability: <T = unknown>(name: string, args?: unknown) => CapabilityResult<T>;
 }
 
 export function defineComponent(setup: (ctx: ComponentContext) => void): void {
-    setup({ render });
+    setup({ render, capability });
 }

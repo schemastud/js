@@ -86,10 +86,12 @@ describe('off-repo SDK — a component built outside the repo renders through th
 
 describe('off-repo SDK — the guest surface excludes host DOM / window / credentials', () => {
     it('exports only the vocabulary + authoring API', () => {
-        // The published surface is exactly: h, text, render, defineComponent (+ types,
-        // which erase at runtime). No host receiver, no VM, no allowlist internals.
+        // The published surface is exactly: h, text, render, defineComponent, and the
+        // RCP-05 brokered-capability call `capability` (+ types, which erase at runtime).
+        // No host receiver, no VM, no allowlist internals — `capability` reaches host
+        // authority only through the injected token + broker, never a credential.
         const runtimeExports = Object.keys(sdk).sort();
-        expect(runtimeExports).toEqual(['defineComponent', 'h', 'render', 'text']);
+        expect(runtimeExports).toEqual(['capability', 'defineComponent', 'h', 'render', 'text']);
     });
 
     it('names no host DOM, window, credential, or receiver surface', async () => {

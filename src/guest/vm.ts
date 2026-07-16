@@ -41,6 +41,24 @@ function quickjs(): Promise<QuickJSWASMModule> {
     return modulePromise;
 }
 
+/**
+ * The host-side broker a guest capability call routes through (RCP-05). The guest,
+ * holding ONLY its injected scoped token, calls `FrameRemote.capability(name, args)`;
+ * that lands here. The host is the authority: it presents the token to the server-side
+ * `CapabilityBroker` (over HTTP, in a real embedder), which verifies the grant + scope,
+ * runs the capability, and audits it. This callback returns the broker's JSON-able
+ * result — the guest never holds a credential and never makes a raw fetch, consistent
+ * with the RCP-04 no-host-surface rule. A refusal is returned as `{ ok: false, reason }`,
+ * NOT thrown, so a mis-asking guest degrades rather than crashing the render.
+ */
+export type BrokerCall = (name: string, args: unknown) => BrokerCallResult;
+
+export interface BrokerCallResult {
+    readonly ok: boolean;
+    readonly data?: unknown;
+    readonly reason?: string;
+}
+
 export interface GuestVmOptions {
     limits?: Partial<VmLimits>;
     /**
@@ -50,6 +68,18 @@ export interface GuestVmOptions {
     onMutate: (records: readonly RemoteMutationRecord[]) => void;
     /** Optional dev sink for guest `__frame_log(...)` output. */
     onLog?: (message: string) => void;
+    /**
+     * The scoped capability token the host minted for this guest (RCP-05). Injected
+     * INTO the VM as an opaque holder — the guest uses it via `FrameRemote.capability`,
+     * it never crosses back out. Absent = the guest gets no capability surface at all.
+     */
+    capabilityToken?: string;
+    /**
+     * The host broker a `FrameRemote.capability(name, args)` call routes through.
+     * Required for the guest to reach any brokered capability; without it, a capability
+     * call is refused in-VM (`{ ok: false, reason: 'no_broker' }`).
+     */
+    brokerCall?: BrokerCall;
 }
 
 export class GuestFailure extends Error {
@@ -72,6 +102,7 @@ export class GuestVm {
         private readonly limits: VmLimits,
         private readonly onMutate: (records: readonly RemoteMutationRecord[]) => void,
         private readonly onLog?: (message: string) => void,
+        private readonly brokerCall?: BrokerCall,
     ) {}
 
     static async create(options: GuestVmOptions): Promise<GuestVm> {
@@ -84,9 +115,10 @@ export class GuestVm {
         runtime.setMaxStackSize(limits.maxStackSizeBytes);
 
         const context = runtime.newContext();
-        const vm = new GuestVm(context, runtime, limits, options.onMutate, options.onLog);
+        const vm = new GuestVm(context, runtime, limits, options.onMutate, options.onLog, options.brokerCall);
         vm.injectBridge();
         vm.loadGuestRuntime();
+        vm.injectCapabilityToken(options.capabilityToken);
         return vm;
     }
 
@@ -118,6 +150,41 @@ export class GuestVm {
         });
         context.setProp(context.global, '__frame_log', log);
         log.dispose();
+
+        // The brokered-capability call (RCP-05). The guest passes a capability name and a
+        // JSON args string; the host routes it through its broker (which presents the
+        // scoped token to the server-side authority) and returns a JSON result string.
+        // Deny-by-default: with no broker wired, every capability call is refused in-VM.
+        const capability = context.newFunction('__frame_capability', (nameHandle, argsHandle) => {
+            const name = context.getString(nameHandle);
+            let args: unknown = {};
+            try {
+                args = JSON.parse(context.getString(argsHandle));
+            } catch {
+                args = {};
+            }
+
+            const result: BrokerCallResult = this.brokerCall
+                ? this.brokerCall(name, args)
+                : { ok: false, reason: 'no_broker' };
+
+            return context.newString(JSON.stringify(result));
+        });
+        context.setProp(context.global, '__frame_capability', capability);
+        capability.dispose();
+    }
+
+    /**
+     * Inject the scoped capability token as an opaque in-VM holder (RCP-05). The guest
+     * runtime reads it once to arm `FrameRemote.capability`, but the token is never
+     * surfaced back to the guest as a value it can exfiltrate — it is a capability the
+     * guest *uses*, not a credential it *sees*. Absent token = no capability surface.
+     */
+    private injectCapabilityToken(token?: string): void {
+        const { context } = this;
+        const value = token ? context.newString(token) : context.null;
+        context.setProp(context.global, '__frame_capability_token', value);
+        value.dispose();
     }
 
     /** Evaluate the guest SDK runtime string inside the VM (trusted, ours). */
