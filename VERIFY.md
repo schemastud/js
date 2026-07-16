@@ -9,7 +9,8 @@ the one property that genuinely needs two live origins.
 ## Automated (headless) — `npm run test`
 
 Run in Node + jsdom with the **real** `quickjs-emscripten` WASM VM and the **real**
-`@remote-dom/core` receiver. 14 tests across 4 files:
+`@remote-dom/core` receiver. 50 tests across 9 files (the isolation set below plus the
+RCP-03 vocabulary, RCP-04 off-repo SDK, RCP-05 capability, and RCP-06 manifest suites):
 
 ### `containment.test.ts` (4) — layer-1 isolation, in the real VM
 - The guest self-probe, run **inside the QuickJS VM**, finds every browser ambient
@@ -41,6 +42,30 @@ Run in Node + jsdom with the **real** `quickjs-emscripten` WASM VM and the **rea
   host React tree; the smuggled non-allowlisted `<script>` is **dropped**.
 - A real **click** round-trips guest → host → guest (counter increments).
 - A **controlled input** updates through the isolation boundary (`Hello, Ada`).
+
+### `manifest.test.tsx` (15) — RCP-06 vocabulary versioning + capability permission
+- A component whose manifest declares the **current major** + **in-tier capabilities**
+  is **granted** and renders (`manifest-gated block` paints).
+- A **mismatched major** (older or newer) is **shimmed** by default — a structured
+  `vocabulary_major_mismatch` decision, and the guest tree is **NOT painted** (asserts
+  no silent runtime break). With `allowShim: false` the same mismatch is a hard
+  **refuse** — never a silent pass-through either way.
+- An **over-asking** `untrusted_publisher` (requests `request_save`, a `first_party`-only
+  capability) is **refused at load** with a clear reason naming the tier + capability —
+  asserted **before any render and before any broker call** (the broker call log is
+  empty). The load-time complement to the RCP-05 per-call broker check.
+- Capability is checked **before** version — an over-ask on a mismatched major still
+  refuses (trust first).
+- The vocabulary version is **single-sourced**: `VOCABULARY_MAJOR` is derived from
+  `VOCABULARY_VERSION`, and the **documented** major (README/VERIFY) is pinned to the
+  code constant (drift guard, mirrors the `vocabulary-spec` single-source test).
+
+## The vocabulary contract is semver'd (RCP-06)
+
+`VOCABULARY_VERSION = "1.0.0"` → publishers target **major 1**. Same major = compatible
+(minor/patch are additive only); different major = incompatible (refused-or-shimmed at
+load). See the README "vocabulary contract" section. The one string to bump lives in
+`src/host/version.ts`; the docs are pinned to it by a test.
 
 ## NOT headless-provable — the cross-site credentialed-fetch demonstration
 

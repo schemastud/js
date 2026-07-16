@@ -27,3 +27,20 @@ export {
     type RemoteSurfaceProps,
     type RenderTreeOptions,
 } from './render.js';
+export { VOCABULARY_VERSION, VOCABULARY_MAJOR } from './version.js';
+export {
+    type TrustTier,
+    type CapabilityName,
+    CAPABILITY_NAMES,
+    TIER_CAPABILITIES,
+    isKnownCapability,
+    tierGrants,
+} from './tiers.js';
+export {
+    type ComponentManifest,
+    type LoadDecision,
+    type LoadDecisionKind,
+    type EvaluateManifestOptions,
+    evaluateManifest,
+    readManifest,
+} from './manifest.js';

@@ -32,6 +32,18 @@ import type { BlockProps, BlockType } from '../host/vocabulary-spec.js';
 export type { BlockType, BlockProps, HandlerProp } from '../host/vocabulary-spec.js';
 
 /**
+ * The component MANIFEST a publisher declares alongside their bundle (RCP-06). Re-exported
+ * here so an off-repo author declares it against the same typed surface they author the
+ * component against — `vocabularyMajor` targets a stable vocabulary major, `capabilities`
+ * lists the brokered capabilities the component will call. The HOST reads this as data
+ * before mount (manifest.ts); this export is TYPE-ONLY, so it stays host-free (no runtime
+ * host/version/tier code is pulled into the guest bundle). A publisher typically exports
+ * `export const manifest: ComponentManifest = { ... }` next to their component source.
+ */
+export type { ComponentManifest } from '../host/manifest.js';
+export type { CapabilityName, TrustTier } from '../host/tiers.js';
+
+/**
  * An authored element descriptor — the same `{ type, props, children }` shape the
  * in-VM runtime's `h(...)` produces. Opaque to the author; produced by `h`/`text` and
  * consumed by `render` (or nested as a child).

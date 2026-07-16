@@ -18,6 +18,17 @@ import type { VmLimits } from './config.js';
 export interface RemoteComponentBridgeOptions {
     limits?: Partial<VmLimits>;
     onLog?: GuestVmOptions['onLog'];
+    /**
+     * The scoped capability token the host minted for this guest (RCP-05). Forwarded to
+     * the VM so a GRANTED component (RCP-06 manifest gate passed) can invoke its in-tier
+     * brokered capabilities. Absent = the guest gets no capability surface.
+     */
+    capabilityToken?: GuestVmOptions['capabilityToken'];
+    /**
+     * The host broker a `FrameRemote.capability(name, args)` call routes through (RCP-05).
+     * Absent = every capability call is refused in-VM (`no_broker`).
+     */
+    brokerCall?: GuestVmOptions['brokerCall'];
 }
 
 export class RemoteComponentBridge {
@@ -37,6 +48,8 @@ export class RemoteComponentBridge {
             limits: options.limits,
             onLog: options.onLog,
             onMutate: (records) => host.applyMutations(records),
+            capabilityToken: options.capabilityToken,
+            brokerCall: options.brokerCall,
         });
         vmRef = vm;
         return new RemoteComponentBridge(host, vm);
