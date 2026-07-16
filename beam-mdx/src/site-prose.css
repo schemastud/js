@@ -1,0 +1,160 @@
+/* =============================================================================
+   @schemastud/beam-mdx — base long-form essay / MDX typography.
+
+   Token-driven: every color, font, and hairline reads a CSS custom property
+   (--sr-*, --font-*) the *satellite* defines, so a consuming site overrides the
+   look by setting tokens, never by forking this stylesheet. Import once (e.g.
+   `@import '@schemastud/beam-mdx/css';`) and apply `.site-prose` to the article.
+   ============================================================================= */
+
+.site-prose {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    line-height: 1.72;
+    color: var(--sr-text);
+}
+.site-prose h1 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: clamp(2rem, 5vw, 2.625rem);
+    line-height: 1.16;
+    letter-spacing: -0.02em;
+    color: var(--sr-heading);
+    margin: 0 0 1.25rem;
+}
+.site-prose h2 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 1.5rem;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    color: var(--sr-heading);
+    margin: 3rem 0 1rem;
+}
+.site-prose h3 {
+    font-family: var(--font-sans);
+    font-weight: 600;
+    font-size: 1.15rem;
+    color: var(--sr-heading);
+    margin: 2rem 0 0.75rem;
+}
+.site-prose p {
+    margin: 0 0 1.5rem;
+}
+.site-prose a {
+    color: var(--sr-brand);
+    text-decoration: none;
+}
+.site-prose a:hover {
+    text-decoration: underline;
+}
+.site-prose em {
+    font-style: italic;
+    color: var(--sr-heading);
+}
+.site-prose strong {
+    color: var(--sr-heading);
+    font-weight: 500;
+}
+.site-prose ul {
+    margin: 0 0 1.5rem;
+    padding-left: 1.25rem;
+    list-style: disc;
+}
+.site-prose ul li {
+    margin-bottom: 0.75rem;
+}
+.site-prose blockquote {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-size: 1.3rem;
+    line-height: 1.5;
+    color: #aab0b8;
+    border-left: 2px solid oklch(0.8 0.13 200 / 0.5);
+    padding-left: 1.25rem;
+    margin: 0 0 2.5rem;
+}
+/* The single pull-quote line. */
+.site-prose .pull {
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: clamp(1.375rem, 3.5vw, 1.75rem);
+    line-height: 1.34;
+    letter-spacing: -0.01em;
+    color: var(--sr-heading);
+    margin: 2.75rem 0;
+}
+.site-prose hr {
+    border: 0;
+    border-top: 1px solid var(--sr-hairline);
+    margin: 3rem 0;
+}
+
+/* Inline cross-property cite (<Ref>) — an evidence link at a concrete claim. Reads as
+   the brand link but carries a faint dotted underline so it's legible as a citation. */
+.site-prose .sr-ref {
+    color: var(--sr-brand);
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+}
+.site-prose .sr-ref:hover {
+    text-decoration-style: solid;
+}
+
+/* End-of-essay receipts block (<Receipts>) — the evidence ledger. Hairline-topped,
+   mono kind labels, one canonical sibling per row. Matches the essay footer register. */
+.site-prose .receipts {
+    margin: 3.5rem 0 0;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--sr-hairline);
+}
+.site-prose .receipts-label {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--sr-brand);
+    margin: 0 0 1rem;
+}
+.site-prose .receipts ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.site-prose .receipts li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.35rem 0.9rem;
+    align-items: baseline;
+    padding: 0.85rem 0;
+    border-top: 1px solid var(--sr-faint, var(--sr-hairline));
+}
+.site-prose .receipts li:first-child {
+    border-top: 0;
+}
+.site-prose .receipts-kind {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.625rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sr-dim);
+    padding-top: 0.15em;
+}
+.site-prose .receipts-link {
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    color: var(--sr-brand);
+    text-decoration: none;
+}
+.site-prose .receipts-link:hover {
+    text-decoration: underline;
+}
+.site-prose .receipts-summary {
+    grid-column: 2;
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--sr-dim);
+}
