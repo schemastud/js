@@ -1,7 +1,7 @@
 {
     "name": "@schemastud/seam",
-    "version": "0.1.0",
-    "description": "The medium-neutral editing socket: a predicate-based widget registry, a form intent bus, uiSchema derivation from schema-carried hints, configurable extension-keyword tolerance, an injected $ref fetcher seam, a base SchemaForm, and the uniform SelectionChrome primitive. Host-agnostic and grammar-blind \u2014 no vendor vocabulary, no document model.",
+    "version": "0.1.1",
+    "description": "The medium-neutral editing socket: a predicate-based widget registry, a form intent bus, uiSchema derivation from schema-carried hints, configurable extension-keyword tolerance, an injected $ref fetcher seam, a base SchemaForm, and the uniform SelectionChrome primitive. Host-agnostic and grammar-blind — no vendor vocabulary, no document model.",
     "license": "MIT",
     "type": "module",
     "main": "dist/index.js",

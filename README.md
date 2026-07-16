@@ -6,7 +6,6 @@ The `@schemastud` JS package family, as a single npm workspace.
 | --- | --- |
 | `@schemastud/frame` | Editor / UI runtime (rjsf + shadcn widget surface) |
 | `@schemastud/frame-remote` | Remote component portability (RCP) surface |
-| `@schemastud/beam-mdx` | File-driven MDX content rung (draft-exclusion plugin, citation kit, `.site-prose`) |
 | `@schemastud/blockdoc` | Block-document primitives |
 | `@schemastud/chat` | Chat surface |
 | `@schemastud/facets` | Facet primitives |
