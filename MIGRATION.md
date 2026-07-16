@@ -1,8 +1,20 @@
 # Consolidation runbook — 7 standalone repos → one `@schemastud` workspace
 
-One-time migration. The reversible foundation (root `package.json`, `tsconfig.base.json`,
-Changesets, release workflow) is already in place and breaks nothing. The steps below are the
-**destructive / outward-facing** tail — do them as one reviewed pass.
+## Status (2026-07-16)
+
+- ✅ **Steps 1–3 DONE and green.** Two dirty trees snapshotted; all 7 packages imported with history
+  preserved (70 commits, original tips reachable); `npm install` + `build` (0 DTS errors) +
+  `typecheck` (0 errors) + `test` (**321 passed, 0 failed**) all green. Committed in this repo.
+  Build runs leaves-first (topological); two pre-existing nits fixed (chat unused import,
+  beam-mdx `--passWithNoTests`).
+- 🔒 **`.import-bak-*/` retained** as a safety net — `chat`, `facets`, `frame-remote` have **no
+  remote**, so these local backups are their only copy until you push the monorepo. Delete after push.
+- 🟡 **Remaining = Steps 4–6 (yours):** create the GitHub monorepo + push; create the `schemastud`
+  npm org + `NPM_TOKEN` + first publish; archive the old repos; opportunistically migrate `file:`
+  overlays to `^` (not mid-FC for `frame`/`frame-remote`).
+
+The reversible foundation and the destructive consolidation are complete; the **outward-facing**
+tail (push, publish, archival) needs your credentials.
 
 ## Preconditions (blockers, as of pre-flight)
 
