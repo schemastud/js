@@ -1,0 +1,28 @@
+{
+    "name": "schemastud",
+    "private": true,
+    "type": "module",
+    "description": "The @schemastud JS package family — a single npm workspace. Packages stay at their existing top-level paths so the fleet's file: overlays and the live FC/RCP wiring keep resolving unchanged.",
+    "packageManager": "npm@10.9.2",
+    "workspaces": [
+        "beam-mdx",
+        "blockdoc",
+        "chat",
+        "facets",
+        "frame",
+        "frame-remote",
+        "seam"
+    ],
+    "scripts": {
+        "build": "npm run build --workspaces --if-present",
+        "dev": "npm run dev --workspaces --if-present",
+        "test": "npm run test --workspaces --if-present",
+        "typecheck": "npm run typecheck --workspaces --if-present",
+        "changeset": "changeset",
+        "version-packages": "changeset version",
+        "release": "npm run build && changeset publish"
+    },
+    "devDependencies": {
+        "@changesets/cli": "^2.27.9"
+    }
+}

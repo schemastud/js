@@ -1,0 +1,16 @@
+{
+    "//": "Shared compiler baseline for every @schemastud package. Each package's tsconfig.json can shrink to { \"extends\": \"../tsconfig.base.json\", \"include\": [\"src\"] } once adopted — done incrementally, not required by the workspace.",
+    "compilerOptions": {
+        "target": "ES2022",
+        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "strict": true,
+        "skipLibCheck": true,
+        "noEmit": true,
+        "verbatimModuleSyntax": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true
+    }
+}
