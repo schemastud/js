@@ -4,14 +4,15 @@
     "type": "module",
     "description": "The @schemastud JS package family — a single npm workspace. Packages stay at their existing top-level paths so the fleet's file: overlays and the live FC/RCP wiring keep resolving unchanged.",
     "packageManager": "npm@10.9.2",
+    "//workspaces": "Listed in TOPOLOGICAL order (leaves first) so `npm run build --workspaces` builds each package after the @schemastud deps whose .d.ts it needs: seam/facets/beam-mdx (leaves) -> blockdoc/frame-remote/frame -> chat. If the graph outgrows a hand-ordered list, adopt a graph-aware runner (Turborepo/Nx) rather than maintaining this by hand.",
     "workspaces": [
+        "seam",
+        "facets",
         "beam-mdx",
         "blockdoc",
-        "chat",
-        "facets",
-        "frame",
         "frame-remote",
-        "seam"
+        "frame",
+        "chat"
     ],
     "scripts": {
         "build": "npm run build --workspaces --if-present",

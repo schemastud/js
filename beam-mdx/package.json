@@ -36,7 +36,8 @@
     "scripts": {
         "build": "tsup",
         "dev": "tsup --watch",
-        "test": "vitest run",
+        "//test": "no test files yet; --passWithNoTests keeps the workspace-wide `npm test` green",
+        "test": "vitest run --passWithNoTests",
         "typecheck": "tsc --noEmit"
     },
     "peerDependencies": {

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { type ChatMessage, type ChatTransport, createChatCore } from '../src/core/index';
 import { ChatView, type ChatSlots, popover, presets, siteAsk, support, useChat, viewport } from '../src/react/index';
