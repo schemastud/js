@@ -1,0 +1,70 @@
+{
+    "name": "@schemastud/frame",
+    "version": "0.1.0",
+    "description": "The batteries-included schema-driven admin editor rung atop @schemastud/seam + @schemastud/facets: resource-blind ListShell + EditShell, a three-seam injection bundle (transport, design-system primitives, URL-state), layered slots, and a resolveColumns seam. The shell renders any resource from its schema + a thin manifest entry, with no per-resource UI code.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./shadcn": {
+            "types": "./dist/shadcn.d.ts",
+            "import": "./dist/shadcn.js"
+        }
+    },
+    "sideEffects": false,
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/frame.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/shadcn": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@rjsf/validator-ajv8": "^6.0.0",
+        "@tanstack/react-query": "^5.0.0",
+        "lucide-react": ">=0.4.0",
+        "react": ">=18"
+    },
+    "dependencies": {
+        "@schemastud/facets": "^0.1.0",
+        "@schemastud/seam": "^0.1.0"
+    },
+    "devDependencies": {
+        "@rjsf/core": "^6.0.0",
+        "@rjsf/shadcn": "^6.0.0",
+        "@rjsf/utils": "^6.0.0",
+        "@rjsf/validator-ajv8": "^6.0.0",
+        "@tanstack/react-query": "^5.62.0",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.3.2",
+        "@types/react": "^19.0.0",
+        "@types/react-dom": "^19.2.3",
+        "jsdom": "^29.1.1",
+        "lucide-react": "^0.525.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.2.7",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0",
+        "vitest": "^4.1.10"
+    }
+}
