@@ -1,6 +1,7 @@
 import type { FormIntentBus, SchemaFetcher, SchemaNode, WidgetRegistry } from '@schemastud/seam';
 import type { FacetsPrimitives, FacetsTransport, UseUrlState } from '@schemastud/facets';
 import type { ComponentType, ReactNode } from 'react';
+import type { FrameHooks } from './hooks';
 
 // =============================================================================
 // frame v1 — shell + slot contract (ADR-0081). Every type generalizes something
@@ -62,6 +63,12 @@ export interface FrameInjection {
     registry: WidgetRegistry;
     schemaFetcher: SchemaFetcher;
     can: FrameCan;
+    /**
+     * Optional host-side hook bus. When present, frame fires `onSubmitted` after a
+     * successful save (see EditShell). Optional so existing consumers still compile;
+     * a host opts in by passing `createFrameHooks()`.
+     */
+    hooks?: FrameHooks;
 }
 
 // -----------------------------------------------------------------------------

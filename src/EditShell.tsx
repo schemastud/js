@@ -24,7 +24,7 @@ export function EditShell({
     onCancel,
     slots,
 }: EditShellProps) {
-    const { can } = useFrameInjection();
+    const { can, hooks } = useFrameInjection();
     const [form, setForm] = useState<FormMode>(formProp);
     const [formData, setFormData] = useState<Row>({});
 
@@ -51,7 +51,17 @@ export function EditShell({
         if (effectiveReadOnly) return;
         saveMutation.mutate(
             { id, data },
-            { onSuccess: (saved) => onSaved?.(saved) },
+            {
+                onSuccess: (saved) => {
+                    // Fire the host-side onSubmitted hook (opt-in) with the saved/returned
+                    // record BEFORE the onSaved prop; both run, neither replaces the other.
+                    hooks?.fireSubmitted(resource, saved, {
+                        resource,
+                        mode: id == null ? 'create' : 'edit',
+                    });
+                    onSaved?.(saved);
+                },
+            },
         );
     };
 

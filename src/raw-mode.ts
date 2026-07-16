@@ -8,6 +8,15 @@ import type { SchemaNode } from '@schemastud/seam';
 export const STUD_WIDGET_KEYWORD = 'x-stud-widget';
 
 /**
+ * The frame's resource-reference keyword — emitted by `#[ResourceRef(...)]` on an
+ * edit DTO (laravel-frame's `Keywords::ResourceRef`). A property carrying it resolves
+ * to frame's built-in ResourceRefWidget, which fetches the referenced resource's index
+ * to build picker options. It is a genuine data control (not a rich host affordance),
+ * so it is intentionally NOT stripped by `raw` mode.
+ */
+export const STUD_RESOURCE_REF_KEYWORD = 'x-stud-resource-ref';
+
+/**
  * Strip host-widget overrides from a schema so the `raw` form mode falls back to the
  * inferred controls — the frame's mode contract: `splicewire` resolves host widgets
  * (the rich affordances, e.g. enrich), `raw` edits the plain underlying data. The

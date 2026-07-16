@@ -10,7 +10,14 @@ export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
 export { KNOWN_CONTEXTS, INHERITS } from './contexts';
 export type { FrameContext, NodeParticipation, ContextManifest } from './contexts';
-export { stripHostWidgets, STUD_WIDGET_KEYWORD } from './raw-mode';
+export { stripHostWidgets, STUD_WIDGET_KEYWORD, STUD_RESOURCE_REF_KEYWORD } from './raw-mode';
+export {
+    ResourceRefWidget,
+    registerResourceRefWidget,
+    readResourceRefConfig,
+    type ResourceRefConfig,
+} from './ResourceRefWidget';
+export { createFrameHooks, type FrameHooks, type SubmittedHandler, type SubmittedContext } from './hooks';
 export {
     useResourceList,
     useResourceRecord,
