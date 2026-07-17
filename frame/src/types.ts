@@ -218,6 +218,12 @@ export interface ListShellProps {
      * row-cell cells actually persist; without it an edited cell commits to a no-op.
      */
     onCellCommit?: (record: Row, field: string, value: unknown) => void;
+    /**
+     * Where the pagination bar (count · rows-per-page · prev/next) renders relative to
+     * the table. Defaults to `'both'` — a bar above and below. Swap the `Pagination`
+     * slot to fully customize the bar; set `'bottom'`/`'top'`/`'none'` to place it.
+     */
+    paginationPlacement?: 'top' | 'bottom' | 'both' | 'none';
 }
 
 export interface FormBodySlotProps {

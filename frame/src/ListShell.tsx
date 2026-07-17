@@ -22,7 +22,15 @@ import type { FrameColumn, ListShellProps, Row } from './types';
  * is fully schema-driven (rides FilterSchemaController where a filter schema
  * exists), pagination is transport-driven, columns resolve through the columns seam.
  */
-export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCommit }: ListShellProps) {
+export function ListShell({
+    resource,
+    columns,
+    onOpen,
+    slots,
+    manifest,
+    onCellCommit,
+    paginationPlacement = 'both',
+}: ListShellProps) {
     const { useUrlState, can, registry } = useFrameInjection();
     const filters = useListFilters(resource);
     const [searchParams, setSearchParams] = useUrlState();
@@ -68,6 +76,19 @@ export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCo
 
     const rows: Row[] = query.data?.data ?? [];
 
+    const showTopPagination = paginationPlacement === 'top' || paginationPlacement === 'both';
+    const showBottomPagination =
+        paginationPlacement === 'bottom' || paginationPlacement === 'both';
+    const paginationBar = (
+        <Pagination
+            page={query.data?.page ?? page}
+            perPage={query.data?.perPage ?? rows.length}
+            total={query.data?.total ?? rows.length}
+            onPageChange={onPageChange}
+            onPerPageChange={onPerPageChange}
+        />
+    );
+
     return (
         <div data-frame-shell="list">
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
@@ -91,6 +112,7 @@ export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCo
                 <Empty />
             ) : (
                 <>
+                    {showTopPagination && paginationBar}
                     <Table
                         columns={resolvedColumns}
                         rows={rows}
@@ -106,13 +128,7 @@ export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCo
                             sortableFields: filters.sortableFields,
                         }}
                     />
-                    <Pagination
-                        page={query.data?.page ?? page}
-                        perPage={query.data?.perPage ?? rows.length}
-                        total={query.data?.total ?? rows.length}
-                        onPageChange={onPageChange}
-                        onPerPageChange={onPerPageChange}
-                    />
+                    {showBottomPagination && paginationBar}
                 </>
             )}
         </div>
