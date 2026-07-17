@@ -1,3 +1,4 @@
+import type { ComponentType } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import { ListFilters, useListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
@@ -40,7 +41,10 @@ export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCo
 
     const Toolbar = slots?.Toolbar ?? DefaultToolbar;
     const Filters = slots?.Filters ?? (() => <ListFilters {...filters} />);
-    const Table = slots?.Table ?? DefaultTable;
+    // The Table slot contract is `ComponentType<any>` (ListSlots.Table); type the
+    // resolved component as such so the shell can thread sort state to slots that
+    // render sortable headers (the plain default simply ignores it).
+    const Table: ComponentType<any> = slots?.Table ?? DefaultTable;
     const Cell = slots?.Cell ?? DefaultCell;
     const RowActions = slots?.RowActions;
     const Empty = slots?.Empty ?? DefaultEmpty;
@@ -79,6 +83,14 @@ export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCo
                         onOpen={onOpen}
                         Cell={Cell}
                         RowActions={RowActions}
+                        sort={{
+                            // Column headers and the facets-bar Sort control share ONE
+                            // `sort` param — the shadcn Table slot renders click-to-sort
+                            // headers for any column whose `sortField` the resource lists.
+                            sort: filters.sort,
+                            onSortChange: filters.onSortChange,
+                            sortableFields: filters.sortableFields,
+                        }}
                     />
                     <Pagination
                         page={query.data?.page ?? page}

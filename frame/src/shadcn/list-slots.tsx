@@ -1,4 +1,6 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, MouseEvent } from 'react';
+import { parseSort, serializeSort, sortStateFor, toggleSortKey } from '@schemastud/facets';
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useFrameInjection } from '../context';
 import { DefaultCell } from '../slots/defaults';
 import type {
@@ -9,6 +11,19 @@ import type {
     Row,
     ToolbarSlotProps,
 } from '../types';
+
+/**
+ * Sort state the list shell threads into the Table slot so column headers and the
+ * facets-bar Sort control share ONE comma-joined `sort` param — never a competing
+ * mechanism. `sortableFields` are the resource's declared `x-sort` field names (a
+ * header only becomes clickable when its column's `sortField` is in this set, so an
+ * unknown sort can't be emitted).
+ */
+export interface TableSort {
+    sort: string | null;
+    onSortChange: (value: string | null) => void;
+    sortableFields: Set<string>;
+}
 
 /**
  * shadcn-flavored list slots — the batteries-included default for the (all-shadcn)
@@ -26,17 +41,16 @@ export function ShadcnTable(props: {
     onOpen?: (record: Row) => void;
     Cell: ComponentType<CellSlotProps>;
     RowActions?: ComponentType<{ record: Row }>;
+    sort?: TableSort;
 }) {
-    const { columns, rows, onOpen, Cell, RowActions } = props;
+    const { columns, rows, onOpen, Cell, RowActions, sort } = props;
     return (
-        <div data-frame-slot="Table" className="overflow-hidden rounded-lg border border-border">
+        <div data-frame-slot="Table" className="overflow-hidden rounded-lg border border-border bg-card">
             <table className="w-full border-collapse text-left text-sm">
                 <thead>
                     <tr className="border-b border-border bg-muted/40 text-[11px] tracking-[0.12em] text-muted-foreground uppercase">
                         {columns.map((c) => (
-                            <th key={c.field} className="px-4 py-3 font-medium">
-                                {c.header ?? c.field}
-                            </th>
+                            <ShadcnHeaderCell key={c.field} column={c} sort={sort} />
                         ))}
                         {RowActions ? <th className="px-4 py-3" /> : null}
                     </tr>
@@ -66,6 +80,59 @@ export function ShadcnTable(props: {
                 </tbody>
             </table>
         </div>
+    );
+}
+
+/**
+ * One header cell. A column becomes a click-to-sort button only when it declares a
+ * `sortField` the resource lists as sortable (`x-sort`); click cycles asc → desc →
+ * cleared, shift-click appends a secondary key. Otherwise a plain, static header.
+ */
+function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
+    const { column, sort } = props;
+    const label = column.header ?? column.field;
+    const sortable = Boolean(sort) && Boolean(column.sortField) && sort!.sortableFields.has(column.sortField!);
+
+    if (!sortable) {
+        return <th className="px-4 py-3 font-medium">{label}</th>;
+    }
+
+    const keys = parseSort(sort!.sort);
+    const state = sortStateFor(keys, column.sortField!);
+    const multi = keys.length > 1;
+
+    const onClick = (event: MouseEvent<HTMLButtonElement>) => {
+        sort!.onSortChange(serializeSort(toggleSortKey(keys, column.sortField!, event.shiftKey)));
+    };
+
+    return (
+        <th className="px-4 py-3 font-medium">
+            <button
+                type="button"
+                onClick={onClick}
+                aria-sort={state.active ? (state.desc ? 'descending' : 'ascending') : 'none'}
+                title="Click to sort; shift-click to add a secondary sort"
+                className={`group -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase hover:bg-muted ${
+                    state.active ? 'text-foreground' : ''
+                }`}
+            >
+                <span>{label}</span>
+                {state.active ? (
+                    state.desc ? (
+                        <ArrowDown className="size-3" />
+                    ) : (
+                        <ArrowUp className="size-3" />
+                    )
+                ) : (
+                    <ChevronsUpDown className="size-3 opacity-0 transition-opacity group-hover:opacity-60" />
+                )}
+                {state.active && multi ? (
+                    <span className="rounded bg-muted px-1 text-[10px] leading-4 tabular-nums text-muted-foreground">
+                        {state.index + 1}
+                    </span>
+                ) : null}
+            </button>
+        </th>
     );
 }
 
