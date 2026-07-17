@@ -3,6 +3,7 @@ import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@sc
 import { EditShellMountProvider, useEditShellMountController } from './EditShellMount';
 import { collapseModes, deriveCollapseLevel, type CollapseLevel } from './responsive';
 import { Inspector } from './Inspector';
+import { MissingSlots } from './MissingSlots';
 import { PalettePane } from './PalettePane';
 import { SavePill } from './SavePill';
 import { StatusBar } from './StatusBar';
@@ -145,14 +146,18 @@ export function FiveRegionEditShell({
                                 {JSON.stringify(record ?? {}, null, 2)}
                             </pre>
                         ) : (
-                            <WidgetSurface
-                                schema={schema}
-                                record={record}
-                                widget={widget}
-                                registry={registry}
-                                readOnly={readOnly}
-                                mount={mount}
-                            />
+                            <>
+                                {/* Absent-required-category chrome, in the canvas flow (ED-13 F6). */}
+                                <MissingSlots />
+                                <WidgetSurface
+                                    schema={schema}
+                                    record={record}
+                                    widget={widget}
+                                    registry={registry}
+                                    readOnly={readOnly}
+                                    mount={mount}
+                                />
+                            </>
                         )}
                     </div>
                     <div

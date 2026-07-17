@@ -21,6 +21,14 @@ export interface NodeAccess {
     setNodeAttrs(nodeId: string, attrs: Record<string, unknown>): void;
 }
 
+/** A required-child deficit: a parent short of `min` children of a category (ED-13). */
+export interface RequiredSlot {
+    parentId: string;
+    category: string;
+    min: number;
+    filled: number;
+}
+
 /** The document conformance the editor publishes for the status bar (ED-14). */
 export interface Conformance {
     /** PM descendant node count. */
@@ -34,6 +42,8 @@ export interface Conformance {
     /** Ids of structurally-incomplete nodes (absent-category on the parent id,
      * present-but-empty on the child id — both listed). */
     incompleteNodeIds: readonly string[];
+    /** Per-parent required-category deficits (ED-13 B7) — drives the Missing cards. */
+    requiredSlots?: readonly RequiredSlot[];
 }
 
 export interface EditShellMountValue {

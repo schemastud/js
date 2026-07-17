@@ -9,6 +9,7 @@ export { WidgetShell, WidgetSurface } from './WidgetShell';
 export { FiveRegionEditShell, type FiveRegionEditShellProps } from './FiveRegionEditShell';
 export { Inspector } from './Inspector';
 export { PalettePane } from './PalettePane';
+export { MissingSlots } from './MissingSlots';
 export { SavePill } from './SavePill';
 export { StatusBar } from './StatusBar';
 export {
@@ -24,6 +25,7 @@ export {
     type EditShellMountValue,
     type NodeAccess,
     type Conformance,
+    type RequiredSlot,
     type FlushFn,
 } from './EditShellMount';
 export { resolveColumns } from './resolveColumns';

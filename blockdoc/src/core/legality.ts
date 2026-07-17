@@ -76,6 +76,18 @@ export interface InsertableCandidate {
     edgeTarget: InsertableEdgeTarget | null;
 }
 
+/**
+ * A required-child deficit (ED-13 B7): a parent node that has fewer than `min`
+ * children of a required `category`. The shell paints a "Missing: N ⟨category⟩"
+ * card at the parent from these (F6). Additive read — no PM change.
+ */
+export interface RequiredSlot {
+    parentId: string;
+    category: string;
+    min: number;
+    filled: number;
+}
+
 /** Per-node manifest metadata PM's schema does not carry. */
 interface NodeMeta {
     category: string | null;
@@ -119,6 +131,8 @@ export interface LegalityReader {
     nearestValidSlot(doc: PMNode, from: number, targetPos: number): number | null;
     /** Structural completeness of the whole document (shell-owned). */
     completeness(doc: PMNode): Completeness;
+    /** Per-parent required-category deficits (ED-13 B7) — `filled < min` entries. */
+    requiredBreakdown(doc: PMNode): RequiredSlot[];
     /** Q7: is this node content-empty? Textblock/container → no content; leaf →
      * an unset required attr; plain atomic leaf → never empty. */
     isContentEmpty(node: PMNode): boolean;
@@ -263,6 +277,38 @@ export function createLegalityReader(manifest: BlockdocManifest | BlockdocManife
         visit(doc);
 
         return { requiredTotal, requiredFilled, incompleteNodeIds: [...incompleteNodeIds] };
+    }
+
+    // ED-13 B7 — the per-parent short-category breakdown the shell paints missing
+    // slots from. Same walk/tally as completeness, but exports the deficits
+    // (`filled < min`) rather than aggregate counts. Additive; no PM change.
+    function requiredBreakdown(doc: PMNode): RequiredSlot[] {
+        const slots: RequiredSlot[] = [];
+
+        const visit = (node: PMNode): void => {
+            const constraints = constraintsOf(node.type.name);
+            const tally = tallyChildren(node);
+
+            for (const [category, constraint] of Object.entries(constraints)) {
+                const min = effectiveMin(constraint);
+
+                if (min <= 0) {
+                    continue;
+                }
+
+                const bucket = tally.get(category) ?? { present: 0, filled: 0, emptyIds: [] };
+
+                if (bucket.filled < min && typeof node.attrs.id === 'string') {
+                    slots.push({ parentId: node.attrs.id, category, min, filled: bucket.filled });
+                }
+            }
+
+            node.forEach((child) => visit(child));
+        };
+
+        visit(doc);
+
+        return slots;
     }
 
     function insertableAt(doc: PMNode, pos: number): string[] {
@@ -494,6 +540,7 @@ export function createLegalityReader(manifest: BlockdocManifest | BlockdocManife
         canDragTo,
         nearestValidSlot,
         completeness,
+        requiredBreakdown,
         isContentEmpty,
         isIncomplete,
     };

@@ -37,6 +37,7 @@ export type {
     InsertableCandidate,
     InsertableEdgeTarget,
     LegalityReader,
+    RequiredSlot,
     Verdict,
 } from './legality';
 export { generateNodeId, NODE_ID_ATTR } from './ids';
