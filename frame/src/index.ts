@@ -16,6 +16,7 @@ export {
 } from './EditShellMount';
 export { resolveColumns } from './resolveColumns';
 export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
+export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
 export { EditableCell, type EditableCellProps } from './EditableCell';
 export { KNOWN_CONTEXTS, INHERITS } from './contexts';
