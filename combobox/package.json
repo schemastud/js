@@ -1,0 +1,43 @@
+{
+    "name": "@schemastud/combobox",
+    "version": "0.1.0",
+    "description": "A host-agnostic async combobox: a searchable, debounced, keyboard-navigable select whose UI atoms (Popover, Input) are injected as props so it carries no design-system dependency. Fetches options through a caller-supplied search function — usable for navigation switchers, filter value pickers, or resource-ref widgets.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/combobox.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "typecheck": "tsc --noEmit",
+        "prepublishOnly": "npm run build"
+    },
+    "peerDependencies": {
+        "react": ">=18"
+    },
+    "devDependencies": {
+        "@types/react": "^19.0.0",
+        "react": "^19.0.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0"
+    }
+}

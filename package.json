@@ -8,6 +8,8 @@
     "workspaces": [
         "seam",
         "facets",
+        "combobox",
+        "breadcrumb",
         "blockdoc",
         "frame-remote",
         "frame",
