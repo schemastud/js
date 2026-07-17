@@ -21,6 +21,21 @@ export interface NodeAccess {
     setNodeAttrs(nodeId: string, attrs: Record<string, unknown>): void;
 }
 
+/** The document conformance the editor publishes for the status bar (ED-14). */
+export interface Conformance {
+    /** PM descendant node count. */
+    nodes: number;
+    /** Sum of every required-child minimum across the doc. */
+    requiredTotal: number;
+    /** How many required slots are satisfied. */
+    requiredFilled: number;
+    /** Whether a loaded doc satisfies the PM schema. */
+    grammarValid: boolean;
+    /** Ids of structurally-incomplete nodes (absent-category on the parent id,
+     * present-but-empty on the child id — both listed). */
+    incompleteNodeIds: readonly string[];
+}
+
 export interface EditShellMountValue {
     // --- selection channel (bare nodeId — no type/schema resolution here) ---
     selectedNodeId: string | null;
@@ -50,6 +65,10 @@ export interface EditShellMountValue {
     registerNodeAccess(access: NodeAccess): () => void;
     getNode(nodeId: string): unknown | null;
     setNodeAttrs(nodeId: string, attrs: Record<string, unknown>): void;
+
+    // --- conformance channel (widget → status bar, ED-14) ---
+    conformance: Conformance | null;
+    publishConformance(conformance: Conformance | null): void;
 }
 
 const EditShellMountContext = createContext<EditShellMountValue | null>(null);
@@ -64,6 +83,7 @@ export function useEditShellMountController(): EditShellMountValue {
     const [dirty, setDirty] = useState(false);
     const [saving, setSaving] = useState(false);
     const [candidates, setCandidates] = useState<readonly unknown[]>([]);
+    const [conformance, setConformance] = useState<Conformance | null>(null);
 
     const flushes = useRef<Set<FlushFn>>(new Set());
     const revealHandler = useRef<((nodeId: string) => void) | null>(null);
@@ -117,8 +137,11 @@ export function useEditShellMountController(): EditShellMountValue {
             },
             getNode: (nodeId) => nodeAccess.current?.getNode(nodeId) ?? null,
             setNodeAttrs: (nodeId, attrs) => nodeAccess.current?.setNodeAttrs(nodeId, attrs),
+
+            conformance,
+            publishConformance: setConformance,
         }),
-        [selectedNodeId, dirty, saving, candidates],
+        [selectedNodeId, dirty, saving, candidates, conformance],
     );
 }
 

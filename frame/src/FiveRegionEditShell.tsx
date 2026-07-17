@@ -4,6 +4,7 @@ import { EditShellMountProvider, useEditShellMountController } from './EditShell
 import { Inspector } from './Inspector';
 import { PalettePane } from './PalettePane';
 import { SavePill } from './SavePill';
+import { StatusBar } from './StatusBar';
 import { WidgetSurface } from './WidgetShell';
 import type { Row } from './types';
 
@@ -126,7 +127,7 @@ export function FiveRegionEditShell({
                     </div>
                 </div>
                 <div data-frame-region="status" style={STATUS_STYLE}>
-                    {status ?? <StatusStub />}
+                    {status ?? <StatusBar />}
                 </div>
             </div>
         </EditShellMountProvider>
@@ -141,6 +142,3 @@ export function FiveRegionEditShell({
     );
 }
 
-function StatusStub() {
-    return <span data-frame-region-stub="status">Ready</span>;
-}

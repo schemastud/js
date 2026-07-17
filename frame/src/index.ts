@@ -10,12 +10,14 @@ export { FiveRegionEditShell, type FiveRegionEditShellProps } from './FiveRegion
 export { Inspector } from './Inspector';
 export { PalettePane } from './PalettePane';
 export { SavePill } from './SavePill';
+export { StatusBar } from './StatusBar';
 export {
     EditShellMountProvider,
     useEditShellMount,
     useEditShellMountController,
     type EditShellMountValue,
     type NodeAccess,
+    type Conformance,
     type FlushFn,
 } from './EditShellMount';
 export { resolveColumns } from './resolveColumns';
