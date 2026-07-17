@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { EditShellMountProvider, useEditShellMountController } from './EditShellMount';
+import { collapseModes, deriveCollapseLevel, type CollapseLevel } from './responsive';
 import { Inspector } from './Inspector';
 import { PalettePane } from './PalettePane';
 import { SavePill } from './SavePill';
@@ -47,6 +48,8 @@ export interface FiveRegionEditShellProps {
     onSave?: () => void;
     /** Show the `Rich | Source` toggle. Defaults on; the editor always opens Rich. */
     sourceToggle?: boolean;
+    /** Force a responsive collapse level (0/1/2); otherwise derived from width (ED-11). */
+    collapseLevel?: CollapseLevel;
 }
 
 export function FiveRegionEditShell({
@@ -61,15 +64,41 @@ export function FiveRegionEditShell({
     autosave = true,
     onSave,
     sourceToggle = true,
+    collapseLevel,
 }: FiveRegionEditShellProps) {
     // The one mount both the canvas widget and the inspector share.
     const mount = useEditShellMountController();
     // The editor always opens in Rich; Source is an opt-in view.
     const [mode, setMode] = useState<'rich' | 'source'>('rich');
 
+    // Responsive collapse: measured from the shell width unless a level is forced.
+    const shellRef = useRef<HTMLDivElement>(null);
+    const [autoLevel, setAutoLevel] = useState<CollapseLevel>(0);
+    useEffect(() => {
+        if (collapseLevel !== undefined) {
+            return;
+        }
+        const el = shellRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+        const observer = new ResizeObserver((entries) => {
+            setAutoLevel(deriveCollapseLevel(entries[0]?.contentRect.width ?? el.clientWidth));
+        });
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, [collapseLevel]);
+
+    const regions = collapseModes(collapseLevel ?? autoLevel);
+
     const shell = (
         <EditShellMountProvider value={mount}>
-            <div data-frame-shell="edit-five" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div
+                ref={shellRef}
+                data-frame-shell="edit-five"
+                data-collapse-level={collapseLevel ?? autoLevel}
+                style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
+            >
                 <div
                     data-frame-region="top-bar"
                     style={{ ...BAR_STYLE, display: 'flex', alignItems: 'center', gap: 8 }}
@@ -103,10 +132,14 @@ export function FiveRegionEditShell({
                     {topBar ?? null}
                 </div>
                 <div data-frame-region="body" style={REGION_BODY}>
-                    <div data-frame-region="palette" style={PALETTE_STYLE}>
+                    <div data-frame-region="palette" data-palette-mode={regions.palette} style={PALETTE_STYLE}>
                         {palette ?? <PalettePane />}
                     </div>
-                    <div data-frame-region="canvas" style={CANVAS_STYLE}>
+                    <div
+                        data-frame-region="canvas"
+                        data-full-bleed={regions.canvasFullBleed ? '' : undefined}
+                        style={CANVAS_STYLE}
+                    >
                         {mode === 'source' ? (
                             <pre data-frame-source-view="" style={{ margin: 0, padding: 12, fontSize: 12 }}>
                                 {JSON.stringify(record ?? {}, null, 2)}
@@ -122,7 +155,11 @@ export function FiveRegionEditShell({
                             />
                         )}
                     </div>
-                    <div data-frame-region="inspector-region" style={INSPECTOR_STYLE}>
+                    <div
+                        data-frame-region="inspector-region"
+                        data-inspector-mode={regions.inspector}
+                        style={INSPECTOR_STYLE}
+                    >
                         <Inspector />
                     </div>
                 </div>

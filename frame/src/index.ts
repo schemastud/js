@@ -12,6 +12,12 @@ export { PalettePane } from './PalettePane';
 export { SavePill } from './SavePill';
 export { StatusBar } from './StatusBar';
 export {
+    deriveCollapseLevel,
+    collapseModes,
+    type CollapseLevel,
+    type CollapseModes,
+} from './responsive';
+export {
     EditShellMountProvider,
     useEditShellMount,
     useEditShellMountController,
