@@ -10,7 +10,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRe
 import type { CSSProperties } from 'react';
 import type { EditorState } from '@tiptap/pm/state';
 import { generateNodeId, NODE_ID_ATTR } from '../core';
-import type { BlockdocManifest } from '../core';
+import type { BlockdocManifest, JsonSchema } from '../core';
 import { CommitController } from './commit-controller';
 import type { CommitPolicy, DocJson } from './commit-controller';
 import { valueDocSource } from './doc-source';
@@ -19,7 +19,7 @@ import { annotationIntegrityPlugin } from './annotation-plugin';
 import { nodeIdPlugin } from './node-id-plugin';
 import { createManifestExtensions } from './manifest-extensions';
 import type { NodeViewRegistry } from './node-views';
-import { selectionForNodeId, selectionNodeId } from './selection';
+import { findNodeById, selectionForNodeId, selectionNodeId } from './selection';
 
 /**
  * The flush-before-intent hook: hosts hand the island a bus; the island
@@ -30,6 +30,13 @@ export interface CommitBus {
     register(flush: () => void): () => void;
 }
 
+/** The inspector's view of a node: its type + id-stripped attrs schema + attrs. */
+export interface NodeAttrsView {
+    type: string;
+    attrsSchema?: JsonSchema;
+    attrs: Record<string, unknown>;
+}
+
 export interface BlockdocEditorHandle {
     /** Commit synchronously when dirty (no-op when clean). */
     flushCommits(): void;
@@ -37,6 +44,18 @@ export interface BlockdocEditorHandle {
     view: EditorView | null;
     /** The live Tiptap Editor (null before mount). */
     editor: Editor | null;
+    /**
+     * Node-attrs channel — pull (ED-07). Resolve a node by id against the live
+     * PM doc + manifest, with the identity attr stripped so the inspector never
+     * sees it. Returns null when the node is gone (selection raced a delete).
+     */
+    getNode(nodeId: string): NodeAttrsView | null;
+    /**
+     * Node-attrs channel — push (ED-07). Apply attr edits as a PM transaction
+     * that rides the SAME commit pipe as typing (onUpdate → CommitController →
+     * onChange). No second save path. The identity attr is preserved.
+     */
+    setNodeAttrs(nodeId: string, attrs: Record<string, unknown>): void;
 }
 
 export interface BlockdocEditorProps {
@@ -75,6 +94,25 @@ export interface BlockdocEditorProps {
  */
 function isDocJson(value: DocJson | null | undefined): value is DocJson {
     return value != null && typeof (value as { type?: unknown }).type === 'string';
+}
+
+/** Strip the identity attr from a record — the inspector never edits `id`. */
+function withoutIdentity<T>(record: Record<string, T>): Record<string, T> {
+    const { [NODE_ID_ATTR]: _id, ...rest } = record;
+
+    return rest;
+}
+
+/** The manifest attrsSchema minus the identity attr (the ED-06-retired id-strip). */
+function attrsSchemaWithoutIdentity(attrsSchema: JsonSchema | undefined): JsonSchema | undefined {
+    if (attrsSchema?.properties === undefined) {
+        return attrsSchema;
+    }
+
+    return {
+        ...attrsSchema,
+        properties: withoutIdentity(attrsSchema.properties as Record<string, unknown>),
+    };
 }
 
 function insertPaletteNode(editor: Editor, type: NodeType): void {
@@ -359,8 +397,59 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
             get editor() {
                 return editor !== null && !editor.isDestroyed ? editor : null;
             },
+            getNode: (nodeId) => {
+                if (editor === null || editor.isDestroyed) {
+                    return null;
+                }
+
+                const found = findNodeById(editor.state.doc, nodeId);
+
+                if (found === null) {
+                    return null;
+                }
+
+                const typeName = found.node.type.name;
+                const entry = manifestList
+                    .flatMap((manifest) => manifest.nodes)
+                    .find((node) => node.name === typeName);
+
+                return {
+                    type: typeName,
+                    attrsSchema: attrsSchemaWithoutIdentity(entry?.attrsSchema),
+                    attrs: withoutIdentity(found.node.attrs as Record<string, unknown>),
+                };
+            },
+            setNodeAttrs: (nodeId, attrs) => {
+                if (editor === null || editor.isDestroyed) {
+                    return;
+                }
+
+                const found = findNodeById(editor.state.doc, nodeId);
+
+                if (found === null) {
+                    return;
+                }
+
+                // Merge over current attrs, preserving the identity attr. The
+                // transaction rides the normal onUpdate → commit pipe (no new
+                // save path) — identical to a typed edit.
+                const merged = {
+                    ...found.node.attrs,
+                    ...attrs,
+                    [NODE_ID_ATTR]: found.node.attrs[NODE_ID_ATTR],
+                };
+
+                editor
+                    .chain()
+                    .command(({ tr }) => {
+                        tr.setNodeMarkup(found.pos, undefined, merged);
+
+                        return true;
+                    })
+                    .run();
+            },
         }),
-        [editor],
+        [editor, manifestList],
     );
 
     const paletteTypes = useMemo(

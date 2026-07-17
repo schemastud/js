@@ -58,3 +58,27 @@ export function selectionForNodeId(doc: PMNode, id: string | null): Selection {
 
     return Selection.atStart(doc);
 }
+
+/**
+ * Find the node carrying `id` in `doc`, with its position. Returns null when no
+ * node has that id (e.g. a selection raced a delete) — callers must tolerate it.
+ */
+export function findNodeById(doc: PMNode, id: string): { node: PMNode; pos: number } | null {
+    let result: { node: PMNode; pos: number } | null = null;
+
+    doc.descendants((node, pos) => {
+        if (result !== null) {
+            return false;
+        }
+
+        if (node.attrs[NODE_ID_ATTR] === id) {
+            result = { node, pos };
+
+            return false;
+        }
+
+        return true;
+    });
+
+    return result;
+}

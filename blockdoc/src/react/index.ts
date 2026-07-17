@@ -1,5 +1,6 @@
 export { BlockdocEditor } from './BlockdocEditor';
-export type { BlockdocEditorHandle, BlockdocEditorProps, CommitBus } from './BlockdocEditor';
+export type { BlockdocEditorHandle, BlockdocEditorProps, CommitBus, NodeAttrsView } from './BlockdocEditor';
+export { findNodeById } from './selection';
 export { CommitController } from './commit-controller';
 export type { CommitPolicy, DocJson, ExternalValueDecision } from './commit-controller';
 export { createManifestExtensions } from './manifest-extensions';
