@@ -6,6 +6,8 @@ import type {
     WidgetRegistry,
     WidgetResolution,
 } from './types';
+import { ButtonGroupWidget } from './widgets/button-group';
+import { StarRatingWidget } from './widgets/star-rating';
 
 const FORMAT_INPUTS = ['date', 'date-time', 'email', 'uri'];
 
@@ -78,5 +80,12 @@ export function createWidgetRegistry(): WidgetRegistry {
  * given; extended by registerWidget calls in consuming apps.
  */
 export const defaultRegistry = createWidgetRegistry();
+
+// Generic presentation widgets, registered on the default (unshifted, so they
+// precede the `enum ≤ 4 → radio` fallback). They fire only on an explicit
+// `x-widget` opt-in, so an attr without one keeps its cardinality default.
+defaultRegistry.registerWidget((s) => s['x-widget'] === 'button-group', ButtonGroupWidget);
+defaultRegistry.registerWidget((s) => s['x-widget'] === 'star-rating', StarRatingWidget);
+
 export const registerWidget = defaultRegistry.registerWidget;
 export const resolveWidget = defaultRegistry.resolveWidget;

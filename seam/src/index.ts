@@ -14,6 +14,8 @@ export {
     resolveSkin,
 } from './skin-registry';
 export { BlockChromeFallback } from './block-chrome';
+export { ButtonGroupWidget } from './widgets/button-group';
+export { StarRatingWidget } from './widgets/star-rating';
 export { resolveExternalRefs } from './refs';
 export { relaxNullableRequired } from './relax';
 export { SchemaForm, WidgetRegistryContext, type SchemaFormProps } from './SchemaForm';
