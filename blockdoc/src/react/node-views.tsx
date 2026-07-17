@@ -2,9 +2,9 @@ import type { Node as PMNode } from '@tiptap/pm/model';
 import type { EditorView } from '@tiptap/pm/view';
 import { NodeViewWrapper, useReactNodeView } from '@tiptap/react';
 import type { ReactNodeViewProps } from '@tiptap/react';
-import { SchemaForm } from '@schemastud/seam';
+import { BlockChromeFallback, defaultSkinRegistry, SelectionChrome } from '@schemastud/seam';
+import type { SkinComponent, SkinContext, SkinNode, SkinRegistry } from '@schemastud/seam';
 import type { ComponentType } from 'react';
-import { useMemo } from 'react';
 import { NODE_ID_ATTR } from '../core';
 import type { BlockdocManifest, JsonSchema, NodeManifestEntry } from '../core';
 
@@ -26,6 +26,10 @@ export interface NodeViewComponentProps {
      * at the passthrough spot. Null for leaf nodes.
      */
     contentRef: ((element: HTMLElement | null) => void) | null;
+    /** Whether PM currently selects this node (Tiptap-provided; drives chrome). */
+    selected?: boolean;
+    /** The resolved skin (resting body). Only the generic node-view reads it. */
+    skin?: SkinComponent;
 }
 
 /**
@@ -84,6 +88,8 @@ export function needsGenericNodeView(entry: NodeManifestEntry): boolean {
 export interface ResolvedNodeView {
     component: ComponentType<NodeViewComponentProps>;
     attrsSchema?: JsonSchema;
+    /** The skin the generic node-view composes as its resting body. */
+    skin?: SkinComponent;
 }
 
 /**
@@ -94,7 +100,9 @@ export interface ResolvedNodeView {
 export function resolveNodeViewComponents(
     manifests: readonly BlockdocManifest[],
     registry?: NodeViewRegistry,
+    skins?: SkinRegistry,
 ): Map<string, ResolvedNodeView> {
+    const skinRegistry = skins ?? defaultSkinRegistry;
     const resolved = new Map<string, ResolvedNodeView>();
 
     for (const manifest of manifests) {
@@ -107,7 +115,13 @@ export function resolveNodeViewComponents(
             }
 
             if (needsGenericNodeView(entry)) {
-                resolved.set(entry.name, { component: GenericNodeView, attrsSchema: entry.attrsSchema });
+                // The generic node-view composes a skin; an unregistered node-type
+                // resolves to seam's block-chrome fallback (via the registry).
+                resolved.set(entry.name, {
+                    component: GenericNodeView,
+                    attrsSchema: entry.attrsSchema,
+                    skin: skinRegistry.resolveSkin(entry.name),
+                });
             }
         }
     }
@@ -122,9 +136,9 @@ export function resolveNodeViewComponents(
  * NodeViewContent), and updateAttrs keeps the merge-and-preserve-id contract.
  */
 export function tiptapNodeView(resolved: ResolvedNodeView): ComponentType<ReactNodeViewProps> {
-    const { component: Component, attrsSchema } = resolved;
+    const { component: Component, attrsSchema, skin } = resolved;
 
-    function BlockdocNodeViewAdapter({ node, editor, getPos, updateAttributes }: ReactNodeViewProps) {
+    function BlockdocNodeViewAdapter({ node, editor, getPos, updateAttributes, selected }: ReactNodeViewProps) {
         const { nodeViewContentRef } = useReactNodeView();
         const contentRef = node.isLeaf ? null : (nodeViewContentRef ?? null);
 
@@ -139,6 +153,8 @@ export function tiptapNodeView(resolved: ResolvedNodeView): ComponentType<ReactN
                     }
                     attrsSchema={attrsSchema}
                     contentRef={contentRef}
+                    skin={skin}
+                    selected={selected}
                 />
             </NodeViewWrapper>
         );
@@ -149,79 +165,28 @@ export function tiptapNodeView(resolved: ResolvedNodeView): ComponentType<ReactN
     return BlockdocNodeViewAdapter;
 }
 
-/** The manifest attrsSchema minus the identity attr — id is not hand-edited. */
-function formSchemaFor(attrsSchema: JsonSchema | undefined): JsonSchema | null {
-    const properties = (attrsSchema?.properties ?? {}) as Record<string, unknown>;
-    const editable = Object.entries(properties).filter(([name]) => name !== NODE_ID_ATTR);
-
-    if (editable.length === 0) {
-        return null;
-    }
-
-    return {
-        ...attrsSchema,
-        type: 'object',
-        properties: Object.fromEntries(editable),
-    };
-}
-
 /**
- * The generic NodeView — the drill-down seam: labeled chrome plus a
- * SchemaForm over the node's attrs (per the manifest's attrsSchema), with
- * contentDOM passthrough below when the node has content. Form changes
- * dispatch attr-patching transactions.
+ * The generic NodeView (ED-06) — **editor chrome only**. It draws PM-specific
+ * chrome (selection ring / drag handle via seam's SelectionChrome), composes the
+ * resolved **skin** as its resting body (a pure presenter that tags each attr
+ * with `data-attr`), and passes PM-managed content through `contentRef`. There is
+ * **no inline form** — attr-editing has moved to the inspector (ED-08). An
+ * unregistered node-type composes seam's block-chrome fallback skin.
  */
-export function GenericNodeView({ node, updateAttrs, attrsSchema, contentRef }: NodeViewComponentProps) {
-    const formSchema = useMemo(() => formSchemaFor(attrsSchema), [attrsSchema]);
-
-    const formData = useMemo(() => {
-        const data: Record<string, unknown> = {};
-
-        for (const name of Object.keys((formSchema?.properties ?? {}) as Record<string, unknown>)) {
-            data[name] = node.attrs[name];
-        }
-
-        return data;
-    }, [formSchema, node]);
+export function GenericNodeView({ node, attrsSchema, contentRef, skin, selected }: NodeViewComponentProps) {
+    const Skin: SkinComponent = skin ?? BlockChromeFallback;
+    const nodeId = String(node.attrs[NODE_ID_ATTR] ?? '');
+    const skinNode: SkinNode = { type: node.type.name, attrs: node.attrs };
+    const skinContext: SkinContext = { attrsSchema: attrsSchema as SkinContext['attrsSchema'] };
 
     return (
-        <div
-            data-blockdoc-node={node.type.name}
-            style={{
-                border: '1px solid #d4d4d8',
-                borderRadius: 6,
-                margin: '8px 0',
-                background: '#fafafa',
-            }}
-        >
-            <div
-                style={{
-                    padding: '4px 10px',
-                    fontSize: 11,
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: '#71717a',
-                    borderBottom: '1px solid #e4e4e7',
-                }}
-                contentEditable={false}
-            >
-                {node.type.name}
+        <SelectionChrome nodeId={nodeId} localSelected={selected ?? false}>
+            <div data-blockdoc-node={node.type.name} contentEditable={false}>
+                {Skin(skinNode, skinContext)}
             </div>
-            {formSchema !== null && (
-                <div style={{ padding: '8px 10px' }} contentEditable={false}>
-                    <SchemaForm
-                        schema={formSchema}
-                        formData={formData}
-                        onChange={(event) => updateAttrs((event.formData ?? {}) as Record<string, unknown>)}
-                        liveValidate={false}
-                    >
-                        {/* onChange dispatches; hide the submit affordance. */}
-                        <button type="submit" hidden />
-                    </SchemaForm>
-                </div>
+            {contentRef !== null && (
+                <div ref={contentRef} data-blockdoc-content style={{ padding: '8px 10px' }} />
             )}
-            {contentRef !== null && <div ref={contentRef} style={{ padding: '8px 10px' }} />}
-        </div>
+        </SelectionChrome>
     );
 }

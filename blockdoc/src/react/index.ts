@@ -28,3 +28,7 @@ export { selectionForNodeId, selectionNodeId } from './selection';
 // for blockdoc consumers that imported it from this entry.
 export { SelectionChrome } from '@schemastud/seam';
 export type { RemoteSelection, SelectionChromeProps } from '@schemastud/seam';
+// The skin socket the generic node-view composes (ED-06): re-exported so a
+// blockdoc consumer wires skins against one import.
+export { BlockChromeFallback, createSkinRegistry, defaultSkinRegistry, resolveSkin } from '@schemastud/seam';
+export type { SkinComponent, SkinContext, SkinNode, SkinRegistry } from '@schemastud/seam';

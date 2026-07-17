@@ -10,6 +10,7 @@ import {
     NODE_ID_ATTR,
 } from '../core';
 import type { BlockdocManifest, MarkManifestEntry, NodeManifestEntry } from '../core';
+import type { SkinRegistry } from '@schemastud/seam';
 import { resolveNodeViewComponents, tiptapNodeView } from './node-views';
 import type { NodeViewRegistry, ResolvedNodeView } from './node-views';
 
@@ -35,6 +36,12 @@ export interface ManifestExtensionsOptions {
     docAdmits?: string[];
     /** NodeView registry; resolution rules are {@link resolveNodeViewComponents}. */
     nodeViews?: NodeViewRegistry;
+    /**
+     * Skin registry the generic node-view composes resting bodies from (ED-06).
+     * Defaults to seam's default skin registry; unregistered node-types fall
+     * back to seam's block-chrome skin.
+     */
+    skins?: SkinRegistry;
 }
 
 /**
@@ -52,7 +59,7 @@ export function createManifestExtensions(
     const { doc, nodeEntries, markEntries } = collectManifestEntries(manifestList);
     const allCategories = allBlockCategories(nodeEntries);
     const admits = options.docAdmits ?? doc.admitsChildCategories;
-    const nodeViews = resolveNodeViewComponents(manifestList, options.nodeViews);
+    const nodeViews = resolveNodeViewComponents(manifestList, options.nodeViews, options.skins);
 
     const extensions: Extensions = [
         Node.create({
