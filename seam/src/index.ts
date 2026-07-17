@@ -7,6 +7,13 @@ export {
     type FormIntentHandler,
 } from './intent-bus';
 export { createWidgetRegistry, defaultRegistry, registerWidget, resolveWidget } from './registry';
+export {
+    createSkinRegistry,
+    defaultSkinRegistry,
+    registerSkin,
+    resolveSkin,
+} from './skin-registry';
+export { BlockChromeFallback } from './block-chrome';
 export { resolveExternalRefs } from './refs';
 export { relaxNullableRequired } from './relax';
 export { SchemaForm, WidgetRegistryContext, type SchemaFormProps } from './SchemaForm';
@@ -17,6 +24,10 @@ export type {
     ResolvedWidget,
     SchemaFetcher,
     SchemaNode,
+    SkinComponent,
+    SkinContext,
+    SkinNode,
+    SkinRegistry,
     WidgetConfig,
     WidgetRegistry,
     WidgetResolution,
