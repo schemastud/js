@@ -20,9 +20,9 @@
 import { NodeRange } from '@tiptap/pm/model';
 import type { Node as PMNode, NodeType } from '@tiptap/pm/model';
 import { liftTarget } from '@tiptap/pm/transform';
-import type { BlockdocManifest, ChildConstraint } from './types';
+import type { BlockdocManifest, ChildConstraint, NodeManifestEntry } from './types';
 import { collectManifestEntries } from './assemble';
-import { requiredReason } from './fields';
+import { attrDereferenceTarget, attrIsPickMany, requiredReason } from './fields';
 
 /** A legality answer: whether the gesture is allowed and, if not, why (opaque). */
 export interface Verdict {
@@ -39,6 +39,41 @@ export interface Completeness {
     /** Ids of nodes that are structurally incomplete (missing a required child,
      * or present-but-empty while occupying a required slot). */
     incompleteNodeIds: string[];
+}
+
+/** The min/max the candidate's category must satisfy in the parent at `pos`. */
+export interface InsertableArity {
+    min: number;
+    /** null = unbounded. `max: 1` is the "max 1" affordance. */
+    max: number | null;
+}
+
+/** A reference edge a candidate node-type declares on one of its attrs. */
+export interface InsertableEdgeTarget {
+    /** The attr that carries the reference. */
+    attr: string;
+    /** The category/type whose instances scope the picker (`x-dereference-target`). */
+    target: string;
+    /** True → an array of edges (the `pick-many → catalog` affordance). */
+    pickMany: boolean;
+}
+
+/**
+ * An enriched insert candidate (B1). Everything here is derived from manifest +
+ * legality data the reader already holds — no new source of truth, no PM change.
+ * Affordance labels (`text·inline`, `product·attrs`, `pick-many → catalog`,
+ * `max 1`) are derivable by a renderer from these fields.
+ */
+export interface InsertableCandidate {
+    nodeType: string;
+    /** null when the node-type has no category (untargetable via category). */
+    category: string | null;
+    /** A short display label (category, else the node-type name — parity with `insertableAt`). */
+    label: string;
+    /** The category arity in the parent at this position, or null when categoryless. */
+    arity: InsertableArity | null;
+    /** The first reference edge this node-type declares, or null. */
+    edgeTarget: InsertableEdgeTarget | null;
 }
 
 /** Per-node manifest metadata PM's schema does not carry. */
@@ -67,6 +102,8 @@ function isBlank(value: unknown): boolean {
 export interface LegalityReader {
     /** Categories that may be inserted at `pos` (the palette's candidate set). */
     insertableAt(doc: PMNode, pos: number): string[];
+    /** Enriched, per-node-type candidates at `pos` (category/arity/edge metadata). */
+    insertableCandidatesAt(doc: PMNode, pos: number): InsertableCandidate[];
     /** May the node before `pos` be removed without violating its parent? */
     canDelete(doc: PMNode, pos: number): Verdict;
     /** May a copy of the node before `pos` be inserted after it (ceiling check)? */
@@ -252,6 +289,69 @@ export function createLegalityReader(manifest: BlockdocManifest | BlockdocManife
         return categories;
     }
 
+    // The reference edge (if any) a node-type declares — the first attr whose
+    // schema carries an `x-dereference-target`.
+    function edgeTargetOf(entry: NodeManifestEntry | undefined): InsertableEdgeTarget | null {
+        const properties = entry?.attrsSchema?.properties;
+
+        if (properties === undefined || properties === null || typeof properties !== 'object') {
+            return null;
+        }
+
+        for (const [attr, property] of Object.entries(properties as Record<string, unknown>)) {
+            const prop = property as Record<string, unknown>;
+            // A single reference carries the target on the property; a pick-many
+            // array carries it on `items`.
+            const direct = attrDereferenceTarget(prop);
+            const viaItems =
+                direct === null && prop.type === 'array'
+                    ? attrDereferenceTarget(prop.items as Record<string, unknown>)
+                    : null;
+            const target = direct ?? viaItems;
+
+            if (target !== null) {
+                return { attr, target, pickMany: attrIsPickMany(prop) };
+            }
+        }
+
+        return null;
+    }
+
+    function insertableCandidatesAt(doc: PMNode, pos: number): InsertableCandidate[] {
+        const $pos = doc.resolve(pos);
+        const parent = $pos.parent;
+        const index = $pos.index();
+        const candidates: InsertableCandidate[] = [];
+
+        for (const type of Object.values(doc.type.schema.nodes) as NodeType[]) {
+            if (type.name === 'doc' || type.name === 'text' || type.isText) {
+                continue;
+            }
+
+            // Same grammar-legal filter as insertableAt — a category already at
+            // its `max` fails canReplaceWith and is excluded here too.
+            if (! parent.canReplaceWith(index, index, type)) {
+                continue;
+            }
+
+            const category = categoryOf(type.name);
+            const constraint = category !== null ? constraintsOf(parent.type.name)[category] : undefined;
+
+            candidates.push({
+                nodeType: type.name,
+                category,
+                label: category ?? type.name,
+                arity:
+                    category !== null
+                        ? { min: effectiveMin(constraint), max: constraint?.max ?? null }
+                        : null,
+                edgeTarget: edgeTargetOf(entryByName.get(type.name)),
+            });
+        }
+
+        return candidates;
+    }
+
     /** The reason a required-category floor blocks removing `node` from `parent`. */
     function floorReason(parent: PMNode, node: PMNode): string {
         const category = categoryOf(node.type.name);
@@ -387,6 +487,7 @@ export function createLegalityReader(manifest: BlockdocManifest | BlockdocManife
 
     return {
         insertableAt,
+        insertableCandidatesAt,
         canDelete,
         canDuplicate,
         canUnnest,
