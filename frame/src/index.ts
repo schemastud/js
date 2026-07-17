@@ -6,6 +6,8 @@ export { FrameProvider, useFrameInjection } from './context';
 export { ListShell } from './ListShell';
 export { EditShell } from './EditShell';
 export { WidgetShell, WidgetSurface } from './WidgetShell';
+export { FiveRegionEditShell, type FiveRegionEditShellProps } from './FiveRegionEditShell';
+export { Inspector } from './Inspector';
 export {
     EditShellMountProvider,
     useEditShellMount,
