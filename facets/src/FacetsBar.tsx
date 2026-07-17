@@ -8,6 +8,11 @@ import type { FilterDescriptor, FilterSchema } from './types';
 
 function humanize(key: string): string {
     return key
+        // Drop a trailing relation-id suffix on a longer key (`assistantId` → `assistant`,
+        // `circuit_id` → `circuit`) so labels read as the relation, not the column. Only a
+        // camelCase `Id` or a `_id`/`-id` separator counts — a word merely ending in "id"
+        // (e.g. `valid`) and a bare `id` are left alone.
+        .replace(/(?:(.)Id|[_-]id)$/, '$1')
         .replace(/([a-z])([A-Z])/g, '$1 $2')
         .replace(/[_:]/g, ' ')
         .replace(/^\w/, (c) => c.toUpperCase());
@@ -194,7 +199,7 @@ export function FacetsBar({
                 <div className="relative">
                     <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        className="h-8 w-56 pl-9"
+                        className="h-8 w-56 !pl-9"
                         value={values[searchFacet.descriptor.name] ?? ''}
                         placeholder="Search…"
                         aria-label="Search"
