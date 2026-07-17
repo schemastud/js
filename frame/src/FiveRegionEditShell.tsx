@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { EditShellMountProvider, useEditShellMountController } from './EditShellMount';
 import { Inspector } from './Inspector';
+import { PalettePane } from './PalettePane';
 import { WidgetSurface } from './WidgetShell';
 import type { Row } from './types';
 
@@ -59,7 +60,7 @@ export function FiveRegionEditShell({
                 </div>
                 <div data-frame-region="body" style={REGION_BODY}>
                     <div data-frame-region="palette" style={PALETTE_STYLE}>
-                        {palette ?? <PaletteStub />}
+                        {palette ?? <PalettePane />}
                     </div>
                     <div data-frame-region="canvas" style={CANVAS_STYLE}>
                         <WidgetSurface
@@ -88,14 +89,6 @@ export function FiveRegionEditShell({
         <WidgetRegistryContext.Provider value={registry}>{shell}</WidgetRegistryContext.Provider>
     ) : (
         shell
-    );
-}
-
-function PaletteStub() {
-    return (
-        <div data-frame-region-stub="palette" style={{ padding: 12, fontSize: 12, color: '#a1a1aa' }}>
-            Palette
-        </div>
     );
 }
 
