@@ -5,6 +5,7 @@
 export { FrameProvider, useFrameInjection } from './context';
 export { ListShell } from './ListShell';
 export { EditShell } from './EditShell';
+export { WidgetShell, WidgetSurface } from './WidgetShell';
 export { resolveColumns } from './resolveColumns';
 export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
@@ -70,6 +71,7 @@ export type {
     CellSlotProps,
     PaginationSlotProps,
     EditShellProps,
+    WidgetShellProps,
     EditSlots,
     FormBodySlotProps,
     SaveBarSlotProps,

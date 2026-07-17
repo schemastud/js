@@ -240,6 +240,19 @@ export interface SaveBarSlotProps {
     onCancel?: () => void;
 }
 
+/**
+ * The widget route shell (ED-04): a `mounts: 'widget'` route mounts one
+ * heavyweight widget full-surface. `widget` is the registered widget name the
+ * route entry carries (`RouteContextEntry.widget`).
+ */
+export interface WidgetShellProps {
+    resource: string;
+    id: string | null;
+    widget: string;
+    readOnly?: boolean;
+    onSaved?: (record: Row) => void;
+}
+
 export interface EditShellProps {
     resource: string;
     id: string | null;
