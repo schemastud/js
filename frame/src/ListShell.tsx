@@ -57,6 +57,14 @@ export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCo
             prev.set('page', String(next));
             return prev;
         });
+    // Page size rides the URL (`per_page`) like every other list param, so facets folds
+    // it into requestParams and the transport sends it. Changing size resets to page 1.
+    const onPerPageChange = (nextPerPage: number) =>
+        setSearchParams((prev) => {
+            prev.set('per_page', String(nextPerPage));
+            prev.set('page', '1');
+            return prev;
+        });
 
     const rows: Row[] = query.data?.data ?? [];
 
@@ -103,6 +111,7 @@ export function ListShell({ resource, columns, onOpen, slots, manifest, onCellCo
                         perPage={query.data?.perPage ?? rows.length}
                         total={query.data?.total ?? rows.length}
                         onPageChange={onPageChange}
+                        onPerPageChange={onPerPageChange}
                     />
                 </>
             )}

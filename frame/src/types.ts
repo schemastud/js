@@ -193,6 +193,10 @@ export interface PaginationSlotProps {
     perPage: number;
     total: number;
     onPageChange: (page: number) => void;
+    /** Change the page size; absent when the host doesn't offer a size control. */
+    onPerPageChange?: (perPage: number) => void;
+    /** Page-size choices offered by the size control (defaults to 10/25/50/100). */
+    perPageOptions?: number[];
 }
 
 export interface ListShellProps {

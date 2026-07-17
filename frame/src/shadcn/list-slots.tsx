@@ -173,15 +173,38 @@ export function ShadcnToolbar({ resource, onNew, canCreate }: ToolbarSlotProps) 
     );
 }
 
-export function ShadcnPagination({ page, perPage, total, onPageChange }: PaginationSlotProps) {
+export function ShadcnPagination({
+    page,
+    perPage,
+    total,
+    onPageChange,
+    onPerPageChange,
+    perPageOptions,
+}: PaginationSlotProps) {
     const { primitives } = useFrameInjection();
-    const { Button } = primitives;
+    const { Button, SimpleSelect } = primitives;
     const lastPage = Math.max(1, Math.ceil(total / Math.max(1, perPage)));
+    const options = perPageOptions ?? [10, 25, 50, 100];
     return (
         <div data-frame-slot="Pagination" className="mt-3 flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">
-                Page {page} of {lastPage} · {total} total
-            </span>
+            <div className="flex items-center gap-2 text-muted-foreground">
+                <span>
+                    Page {page} of {lastPage} · {total} total
+                </span>
+                {onPerPageChange && SimpleSelect && (
+                    <span className="flex items-center gap-1.5">
+                        <span aria-hidden>·</span>
+                        <span>Rows</span>
+                        <SimpleSelect
+                            value={String(perPage)}
+                            onValueChange={(value: string) => onPerPageChange(Number(value))}
+                            options={options.map((n) => ({ value: String(n), label: String(n) }))}
+                            aria-label="Rows per page"
+                            className="h-7 w-[4.75rem]"
+                        />
+                    </span>
+                )}
+            </div>
             <div className="flex gap-2">
                 <Button
                     type="button"
