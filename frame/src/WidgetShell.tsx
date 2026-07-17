@@ -1,6 +1,11 @@
 import { useContext, useEffect, useState } from 'react';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from './context';
+import {
+    EditShellMountProvider,
+    useEditShellMountController,
+    type EditShellMountValue,
+} from './EditShellMount';
 import { useFormSchema, useResourceRecord, useSaveResource } from './data';
 import { resolveWidgetFor } from './resolveWidgetFor';
 import type { Row, WidgetShellProps } from './types';
@@ -24,6 +29,7 @@ export function WidgetSurface({
     readOnly = false,
     onChange,
     onSubmit,
+    mount: mountProp,
 }: {
     schema: SchemaNode;
     record?: Row;
@@ -32,9 +38,15 @@ export function WidgetSurface({
     readOnly?: boolean;
     onChange?: (data: Row) => void;
     onSubmit?: (data: Row) => void;
+    /** The EditShellMount handshake; a standalone surface makes its own. */
+    mount?: EditShellMountValue;
 }) {
     const contextRegistry = useContext(WidgetRegistryContext);
     const registry = registryProp ?? contextRegistry;
+    // Always create a controller (rules-of-hooks); prefer a parent-supplied one
+    // (WidgetShell owns it so it can flush before persist + navigate-away).
+    const ownMount = useEditShellMountController();
+    const mount = mountProp ?? ownMount;
 
     if (!registry) {
         return <div data-frame-shell="widget-unbound">No widget registry.</div>;
@@ -59,17 +71,21 @@ export function WidgetSurface({
         );
     }
 
+    // The EditShellMount is scoped here and dies with this surface on navigate-away.
     return (
-        <div data-frame-shell="widget" data-widget={widget}>
-            <Widget
-                schema={schema}
-                formData={record ?? {}}
-                value={record ?? {}}
-                onChange={onChange}
-                onSubmit={onSubmit}
-                readOnly={readOnly}
-            />
-        </div>
+        <EditShellMountProvider value={mount}>
+            <div data-frame-shell="widget" data-widget={widget}>
+                <Widget
+                    schema={schema}
+                    formData={record ?? {}}
+                    value={record ?? {}}
+                    onChange={onChange}
+                    onSubmit={onSubmit}
+                    readOnly={readOnly}
+                    editShellMount={mount}
+                />
+            </div>
+        </EditShellMountProvider>
     );
 }
 
@@ -83,6 +99,7 @@ export function WidgetSurface({
 export function WidgetShell({ resource, id, widget, readOnly = false, onSaved }: WidgetShellProps) {
     const { can } = useFrameInjection();
     const [formData, setFormData] = useState<Row>({});
+    const mount = useEditShellMountController();
 
     const schemaQuery = useFormSchema(resource, 'splicewire');
     const recordQuery = useResourceRecord(resource, id);
@@ -100,8 +117,10 @@ export function WidgetShell({ resource, id, widget, readOnly = false, onSaved }:
 
     const schema = schemaQuery.data ?? { type: 'object', properties: {} };
 
-    const submit = (data: Row) => {
+    const submit = async (data: Row) => {
         if (effectiveReadOnly) return;
+        // Drain the widget's commit bus before persisting.
+        await mount.flush();
         saveMutation.mutate({ id, data }, { onSuccess: (saved) => onSaved?.(saved) });
     };
 
@@ -113,6 +132,7 @@ export function WidgetShell({ resource, id, widget, readOnly = false, onSaved }:
             readOnly={effectiveReadOnly}
             onChange={setFormData}
             onSubmit={submit}
+            mount={mount}
         />
     );
 }
