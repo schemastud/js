@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { EditShellMountProvider, useEditShellMountController } from './EditShellMount';
 import { Inspector } from './Inspector';
 import { PalettePane } from './PalettePane';
+import { SavePill } from './SavePill';
 import { WidgetSurface } from './WidgetShell';
 import type { Row } from './types';
 
@@ -31,12 +32,20 @@ export interface FiveRegionEditShellProps {
     /** Widget registry (falls back to the seam context). */
     registry?: WidgetRegistry;
     readOnly?: boolean;
-    /** Top-bar content (stub-friendly). */
+    /** Extra top-bar content, rendered beside the save pill / mode toggle. */
     topBar?: ReactNode;
-    /** Palette region content — a stub until ED-09. */
+    /** Palette region content — defaults to the hoisted PalettePane (ED-09). */
     palette?: ReactNode;
     /** Status region content — a stub until ED-14. */
     status?: ReactNode;
+    /**
+     * Persistence is autosave-by-default; the manual Save action shows only when
+     * a host turns autosave OFF (ED-10).
+     */
+    autosave?: boolean;
+    onSave?: () => void;
+    /** Show the `Rich | Source` toggle. Defaults on; the editor always opens Rich. */
+    sourceToggle?: boolean;
 }
 
 export function FiveRegionEditShell({
@@ -48,14 +57,48 @@ export function FiveRegionEditShell({
     topBar,
     palette,
     status,
+    autosave = true,
+    onSave,
+    sourceToggle = true,
 }: FiveRegionEditShellProps) {
     // The one mount both the canvas widget and the inspector share.
     const mount = useEditShellMountController();
+    // The editor always opens in Rich; Source is an opt-in view.
+    const [mode, setMode] = useState<'rich' | 'source'>('rich');
 
     const shell = (
         <EditShellMountProvider value={mount}>
             <div data-frame-shell="edit-five" style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <div data-frame-region="top-bar" style={BAR_STYLE}>
+                <div
+                    data-frame-region="top-bar"
+                    style={{ ...BAR_STYLE, display: 'flex', alignItems: 'center', gap: 8 }}
+                >
+                    <SavePill />
+                    {! autosave && (
+                        <button type="button" data-frame-save-action="" onClick={() => onSave?.()}>
+                            Save
+                        </button>
+                    )}
+                    {sourceToggle && (
+                        <span data-frame-mode-toggle="" role="group" style={{ marginLeft: 'auto' }}>
+                            <button
+                                type="button"
+                                data-mode="rich"
+                                aria-pressed={mode === 'rich'}
+                                onClick={() => setMode('rich')}
+                            >
+                                Rich
+                            </button>
+                            <button
+                                type="button"
+                                data-mode="source"
+                                aria-pressed={mode === 'source'}
+                                onClick={() => setMode('source')}
+                            >
+                                Source
+                            </button>
+                        </span>
+                    )}
                     {topBar ?? null}
                 </div>
                 <div data-frame-region="body" style={REGION_BODY}>
@@ -63,14 +106,20 @@ export function FiveRegionEditShell({
                         {palette ?? <PalettePane />}
                     </div>
                     <div data-frame-region="canvas" style={CANVAS_STYLE}>
-                        <WidgetSurface
-                            schema={schema}
-                            record={record}
-                            widget={widget}
-                            registry={registry}
-                            readOnly={readOnly}
-                            mount={mount}
-                        />
+                        {mode === 'source' ? (
+                            <pre data-frame-source-view="" style={{ margin: 0, padding: 12, fontSize: 12 }}>
+                                {JSON.stringify(record ?? {}, null, 2)}
+                            </pre>
+                        ) : (
+                            <WidgetSurface
+                                schema={schema}
+                                record={record}
+                                widget={widget}
+                                registry={registry}
+                                readOnly={readOnly}
+                                mount={mount}
+                            />
+                        )}
                     </div>
                     <div data-frame-region="inspector-region" style={INSPECTOR_STYLE}>
                         <Inspector />

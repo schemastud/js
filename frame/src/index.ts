@@ -9,6 +9,7 @@ export { WidgetShell, WidgetSurface } from './WidgetShell';
 export { FiveRegionEditShell, type FiveRegionEditShellProps } from './FiveRegionEditShell';
 export { Inspector } from './Inspector';
 export { PalettePane } from './PalettePane';
+export { SavePill } from './SavePill';
 export {
     EditShellMountProvider,
     useEditShellMount,

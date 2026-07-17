@@ -32,6 +32,9 @@ export interface EditShellMountValue {
     // --- dirty/saved state (widget → shell, drives the ● Saved indicator) ---
     dirty: boolean;
     markDirty(dirty: boolean): void;
+    /** A commit is in flight — drives the "Saving…" pill state (ED-10). */
+    saving: boolean;
+    markSaving(saving: boolean): void;
 
     // --- commitBus flush registration (shell drains before persist + navigate) ---
     registerFlush(flush: FlushFn): () => void;
@@ -59,6 +62,7 @@ const EditShellMountContext = createContext<EditShellMountValue | null>(null);
 export function useEditShellMountController(): EditShellMountValue {
     const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
     const [dirty, setDirty] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [candidates, setCandidates] = useState<readonly unknown[]>([]);
 
     const flushes = useRef<Set<FlushFn>>(new Set());
@@ -80,6 +84,8 @@ export function useEditShellMountController(): EditShellMountValue {
 
             dirty,
             markDirty: setDirty,
+            saving,
+            markSaving: setSaving,
 
             registerFlush: (flush) => {
                 flushes.current.add(flush);
@@ -112,7 +118,7 @@ export function useEditShellMountController(): EditShellMountValue {
             getNode: (nodeId) => nodeAccess.current?.getNode(nodeId) ?? null,
             setNodeAttrs: (nodeId, attrs) => nodeAccess.current?.setNodeAttrs(nodeId, attrs),
         }),
-        [selectedNodeId, dirty, candidates],
+        [selectedNodeId, dirty, saving, candidates],
     );
 }
 
