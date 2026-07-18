@@ -112,7 +112,8 @@ export function ListShell({
                 <Empty />
             ) : (
                 <>
-                    {showTopPagination && paginationBar}
+                    {/* Top bar gets breathing room below it before the table header. */}
+                    {showTopPagination && <div className="mb-3">{paginationBar}</div>}
                     <Table
                         columns={resolvedColumns}
                         rows={rows}
