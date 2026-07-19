@@ -101,7 +101,7 @@ export function WidgetShell({ resource, id, widget, readOnly = false, onSaved }:
     const [formData, setFormData] = useState<Row>({});
     const mount = useEditShellMountController();
 
-    const schemaQuery = useFormSchema(resource, 'splicewire');
+    const schemaQuery = useFormSchema(resource, 'enriched');
     const recordQuery = useResourceRecord(resource, id);
     const saveMutation = useSaveResource(resource);
 

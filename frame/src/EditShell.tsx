@@ -18,7 +18,7 @@ export function EditShell({
     id,
     readOnly = false,
     container = 'panel',
-    form: formProp = 'raw',
+    form: formProp = 'bare',
     showModeToggle = false,
     onSaved,
     onCancel,
@@ -70,9 +70,9 @@ export function EditShell({
     }
 
     const served = schemaQuery.data ?? { type: 'object', properties: {} };
-    // The mode contract: `splicewire` resolves host widgets (enrich, etc.); `raw`
+    // The mode contract: `enriched` resolves host widgets (enrich, etc.); `bare`
     // strips them so the field falls to its inferred control (same served schema).
-    const schema = form === 'raw' ? stripHostWidgets(served) : served;
+    const schema = form === 'bare' ? stripHostWidgets(served) : served;
 
     return (
         <Container>

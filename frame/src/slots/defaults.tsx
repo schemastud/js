@@ -176,7 +176,7 @@ export function DefaultToggle({
 }) {
     return (
         <div data-frame-slot="Toggle" role="radiogroup" aria-label="Form mode">
-            {(['splicewire', 'raw'] as FormMode[]).map((mode) => (
+            {(['enriched', 'bare'] as FormMode[]).map((mode) => (
                 <label key={mode} style={{ marginRight: '0.5rem' }}>
                     <input
                         type="radio"

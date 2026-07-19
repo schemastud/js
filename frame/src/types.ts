@@ -17,7 +17,7 @@ export interface Paginated<T> {
     perPage: number;
 }
 
-export type FormMode = 'splicewire' | 'raw';
+export type FormMode = 'enriched' | 'bare';
 
 // -----------------------------------------------------------------------------
 // Injected auth check — frame CALLS `can`, never absorbs a policy cascade. numero

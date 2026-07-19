@@ -21,7 +21,7 @@ export function ShadcnToggle({
             aria-label="Form mode"
             className="mb-4 inline-flex rounded-md border border-border bg-muted p-0.5 text-sm"
         >
-            {(['splicewire', 'raw'] as FormMode[]).map((mode) => (
+            {(['enriched', 'bare'] as FormMode[]).map((mode) => (
                 <button
                     key={mode}
                     type="button"
