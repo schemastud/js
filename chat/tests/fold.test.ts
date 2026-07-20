@@ -206,6 +206,41 @@ describe('foldEvent — terminal states', () => {
         ]);
         expect(snap.messages[0].streaming?.error).toBe('network');
     });
+
+    it('a message-scoped error for an unknown id falls back to the latest streaming turn', () => {
+        // The stream minted turn `a` (a token created it) but the error is tagged
+        // with a synthetic id that never matched a message — attach to `a` anyway.
+        const snap = replay([
+            { type: 'token', messageId: 'a', delta: 'x' },
+            { type: 'error', messageId: 'assistant_999', error: 'boom', partial: true },
+        ]);
+        expect(snap.messages).toHaveLength(1);
+        expect(snap.messages[0].id).toBe('a');
+        expect(snap.messages[0].streaming?.error).toBe('boom');
+    });
+
+    it('a pre-token error synthesizes an assistant turn so it is never dropped', () => {
+        // No token ever minted the assistant turn; the last message is the user's.
+        // The synthetic-id error must still surface on a fresh assistant turn.
+        const seed = hydrate([{ id: 'u1', role: 'user', content: 'hi' }]);
+        const snap = replay(
+            [{ type: 'error', messageId: 'assistant_1700000000', error: 'provider 500', partial: true }],
+            seed,
+        );
+        expect(snap.messages).toHaveLength(2);
+        const last = snap.messages[snap.messages.length - 1];
+        expect(last.role).toBe('assistant');
+        expect(last.id).toBe('assistant_1700000000');
+        expect(last.streaming?.error).toBe('provider 500');
+    });
+
+    it('a pre-token untargeted error also synthesizes an assistant turn', () => {
+        const snap = replay([{ type: 'error', error: 'network down', partial: false }]);
+        expect(snap.messages).toHaveLength(1);
+        expect(snap.messages[0].role).toBe('assistant');
+        expect(snap.messages[0].streaming?.error).toBe('network down');
+        expect(snap.messages[0].streaming?.partial).toBe(false);
+    });
 });
 
 describe('foldEvent — mixed correlation (two concurrent turns)', () => {

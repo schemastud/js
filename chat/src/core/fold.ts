@@ -227,10 +227,13 @@ export function foldEvent(snapshot: ChatSnapshot, event: ChatWireEvent): ChatSna
         }
 
         case 'error': {
-            // A message-scoped error finalizes that turn with an error; an
-            // untargeted error surfaces on the latest streaming turn if any.
+            // A message-scoped error finalizes that turn with an error. When its
+            // `messageId` matches an existing message we attach there. Otherwise —
+            // an untargeted error, OR a message-scoped error whose id no message
+            // ever minted (the stream died before any token created the assistant
+            // turn) — fall back to the latest still-streaming turn.
             let index = event.messageId ? indexOf(snapshot.messages, event.messageId) : -1;
-            if (index === -1 && !event.messageId) {
+            if (index === -1) {
                 for (let i = snapshot.messages.length - 1; i >= 0; i--) {
                     if (snapshot.messages[i].streaming?.partial) {
                         index = i;
@@ -240,9 +243,17 @@ export function foldEvent(snapshot: ChatSnapshot, event: ChatWireEvent): ChatSna
             }
 
             if (index === -1) {
-                // No turn to attach to: surface as a session-level escalation-free error is
-                // out of scope; keep it on the snapshot's streaming flag cleared.
-                return { ...snapshot, streaming: false };
+                // No turn to attach to (a pre-token failure — the last turn is the
+                // user's). Synthesize an assistant turn to carry the error so it is
+                // surfaced to the consumer rather than dropped silently.
+                const fresh: ChatMessage = {
+                    id: event.messageId ?? `error_${snapshot.messages.length}`,
+                    role: 'assistant',
+                    content: '',
+                    streaming: { partial: event.partial, error: event.error },
+                };
+                const next = [...snapshot.messages, fresh];
+                return { ...snapshot, messages: next, streaming: anyStreaming(next) };
             }
 
             const next = patchAt(snapshot.messages, index, (m) => ({
