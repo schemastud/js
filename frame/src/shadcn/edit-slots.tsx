@@ -47,7 +47,11 @@ export function ShadcnSaveBar({ saving, readOnly, onSave, onCancel }: SaveBarSlo
     return (
         <div
             data-frame-slot="SaveBar"
-            className="mt-6 flex justify-end gap-2 border-t border-border pt-4"
+            // Sticky one-primary-CTA footer: Save stays reachable at the bottom of a
+            // scrolling edit panel (the drawer's overflow container is the scroll
+            // parent). A translucent, blurred backing keeps fields legible as they
+            // scroll under it. Cancel is visually subordinate (ghost); Save is primary.
+            className="sticky bottom-0 z-10 -mx-1 mt-6 flex justify-end gap-2 border-t border-border bg-background/95 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
         >
             {onCancel ? (
                 <Button type="button" variant="ghost" onClick={onCancel} data-frame-action="cancel">
