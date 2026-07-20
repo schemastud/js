@@ -63,6 +63,34 @@ describe('uiSchema walker', () => {
         });
     });
 
+    it('hides a shapeless nested array reached only behind a local $ref', () => {
+        // The item-less-array guard must reach a field defined inside a $def and
+        // referenced by $ref (RJSF resolves the ref for the real form, so the
+        // uiSchema has to mirror the resolved shape at the data path). Prior to the
+        // $ref descent, `rule.byday` was never visited and RJSF showed its
+        // "Missing items definition" error block.
+        const ui = buildUiSchema(
+            {
+                type: 'object',
+                properties: {
+                    rule: { $ref: '#/$defs/Rule' },
+                },
+                $defs: {
+                    Rule: {
+                        type: 'object',
+                        properties: {
+                            freq: { type: 'string' },
+                            byday: { type: 'array' }, // no items → shapeless
+                        },
+                    },
+                },
+            },
+            registry,
+        );
+
+        expect(ui).toEqual({ rule: { byday: { 'ui:widget': 'hidden' } } });
+    });
+
     it('tolerates unknown extension keywords without emitting anything for them', () => {
         const ui = buildUiSchema(
             {

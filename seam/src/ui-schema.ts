@@ -10,7 +10,7 @@ type UiSchema = Record<string, unknown>;
  * `ui:placeholder`.
  */
 export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiSchema {
-    return walkUiSchema(schema, registry, schema);
+    return walkUiSchema(schema, registry, schema, new Set());
 }
 
 /** The effective type of a nullable anyOf node: its first non-null branch's (ref-resolved) type. */
@@ -49,7 +49,12 @@ function resolveLocalRef(node: SchemaNode, root: SchemaNode): SchemaNode {
     return target && typeof target === 'object' ? (target as SchemaNode) : node;
 }
 
-function walkUiSchema(schema: SchemaNode, registry: WidgetRegistry, root: SchemaNode): UiSchema {
+function walkUiSchema(
+    schema: SchemaNode,
+    registry: WidgetRegistry,
+    root: SchemaNode,
+    seen: Set<string>,
+): UiSchema {
     const ui: UiSchema = {};
 
     const { widget, config } = registry.resolveEntry(schema);
@@ -101,19 +106,34 @@ function walkUiSchema(schema: SchemaNode, registry: WidgetRegistry, root: Schema
         ui['ui:widget'] = 'hidden';
     }
 
-    const properties = schema.properties as Record<string, SchemaNode> | undefined;
+    // Descend through a local $ref into its $defs target, so the item-less-array
+    // guard (and any keyword read during the walk) reaches fields defined only
+    // behind a ref — RJSF/AJV resolve the ref for the actual form, but the uiSchema
+    // must mirror that resolved shape at the data path (e.g. `rule.byday`, whose
+    // shapeless array lives in the RecurrenceRuleData $def, not on the parent).
+    // A per-branch `seen` copy breaks cycles without treating a diamond (one $def
+    // referenced from two siblings) as a cycle.
+    let target = schema;
+    const ref = schema.$ref;
+    if (typeof ref === 'string' && ref.startsWith('#/')) {
+        if (seen.has(ref)) return ui;
+        seen = new Set(seen).add(ref);
+        target = resolveLocalRef(schema, root);
+    }
+
+    const properties = target.properties as Record<string, SchemaNode> | undefined;
     if (properties) {
         for (const [key, child] of Object.entries(properties)) {
-            const childUi = walkUiSchema(child, registry, root);
+            const childUi = walkUiSchema(child, registry, root, seen);
             if (Object.keys(childUi).length > 0) {
                 ui[key] = childUi;
             }
         }
     }
 
-    const items = schema.items as SchemaNode | undefined;
+    const items = target.items as SchemaNode | undefined;
     if (items && typeof items === 'object' && !Array.isArray(items)) {
-        const itemsUi = walkUiSchema(items, registry, root);
+        const itemsUi = walkUiSchema(items, registry, root, seen);
         if (Object.keys(itemsUi).length > 0) {
             ui.items = itemsUi;
         }

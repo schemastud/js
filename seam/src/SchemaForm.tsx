@@ -7,6 +7,7 @@ import { resolveExternalRefs } from './refs';
 import { relaxNullableRequired } from './relax';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
 import { buildUiSchema, mergeUiSchema } from './ui-schema';
+import { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
 import { defaultValidator } from './validator';
 
 const ThemedForm = withTheme(ShadcnTheme);
@@ -40,6 +41,7 @@ export function SchemaForm({
     validator,
     formData,
     formContext,
+    templates,
     ...rest
 }: SchemaFormProps) {
     const contextRegistry = useContext(WidgetRegistryContext);
@@ -93,6 +95,9 @@ export function SchemaForm({
             schema={relaxedSchema as RJSFSchema}
             uiSchema={mergeUiSchema(generatedUiSchema, uiSchema) as UiSchema}
             validator={validator ?? defaultValidator}
+            // Partition `x-group` properties into titled sections; degrades to the
+            // theme default for ungrouped objects. Caller-supplied templates win.
+            templates={{ ObjectFieldTemplate: GroupedObjectFieldTemplate, ...templates }}
             formData={safeFormData}
             // The injected fetcher rides formContext so fields that resolve
             // their own refs (rich-content manifests among them) share the

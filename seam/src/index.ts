@@ -19,6 +19,7 @@ export { StarRatingWidget } from './widgets/star-rating';
 export { resolveExternalRefs } from './refs';
 export { relaxNullableRequired } from './relax';
 export { SchemaForm, WidgetRegistryContext, type SchemaFormProps } from './SchemaForm';
+export { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
 export type {
     KeywordVocabulary,
     KeywordVocabularyConfig,

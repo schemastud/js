@@ -5,7 +5,7 @@ import type { KeywordVocabulary, KeywordVocabularyConfig } from './types';
  * vocabulary. Everything beyond these is caller territory: hosts declare
  * their own dialects through `createKeywordVocabulary`.
  */
-export const FORM_KEYWORDS = ['x-widget', 'x-placeholder', 'x-widget-options'] as const;
+export const FORM_KEYWORDS = ['x-widget', 'x-placeholder', 'x-widget-options', 'x-group'] as const;
 
 /**
  * Build a keyword vocabulary from caller-supplied exact names and patterns.
