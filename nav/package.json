@@ -1,0 +1,44 @@
+{
+    "name": "@schemastud/nav",
+    "version": "0.1.0",
+    "description": "A host-agnostic docs/site navigation kit: a compose-many nav-source registry, a pure tree builder (group + one-level nest + order), a collapsible <ExpandableNav> whose links, classNames, and motion are all injected, and a navTrail() breadcrumb-trail derivation. Ships no CSS and no router — the host injects link rendering, class names, and the current path.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/nav.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "react": ">=18"
+    },
+    "devDependencies": {
+        "@types/react": "^19.0.0",
+        "react": "^19.0.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0",
+        "vitest": "^4.1.10"
+    }
+}
