@@ -1,13 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
+import { scanHeadings, type TocHeading } from './headings';
+
 // =============================================================================
 // <OnThisPage> — an automatic in-page table of contents with scroll-spy.
 //
-// Reads headings straight from the rendered DOM (they aren't threaded through any
-// content module), builds anchor links, and drives an IntersectionObserver so the
-// heading nearest the top of the reading zone is "active". Foundation-neutral: no
-// router (anchors are plain `#id` links), no bundled CSS — the host injects class
-// names, the heading selector, and a `routeKey` that triggers a re-scan on navigation.
+// Builds its items via `scanHeadings` (id-bearing headings read from the rendered DOM),
+// renders anchor links, and drives an IntersectionObserver so the heading nearest the top
+// of the reading zone is "active". Foundation-neutral: no router (anchors are plain `#id`
+// links), no bundled CSS — the host injects class names, the heading selector, and a
+// `routeKey` that triggers a re-scan on navigation.
 // =============================================================================
 
 /** Injected class names for each part. Anything omitted renders unstyled. */
@@ -37,28 +39,16 @@ export type OnThisPageProps = {
     'aria-label'?: string;
 };
 
-type Heading = { id: string; text: string; level: 2 | 3 };
-
-const DEFAULT_SELECTOR = 'h2[id], h3[id]';
-
-const scopeSelector = (container: string | undefined, selector: string) =>
-    container
-        ? selector
-              .split(',')
-              .map((s) => `${container} ${s.trim()}`)
-              .join(', ')
-        : selector;
-
 export function OnThisPage({
     routeKey,
     container,
-    selector = DEFAULT_SELECTOR,
+    selector,
     title = 'On this page',
     minHeadings = 2,
     classes = {},
     'aria-label': ariaLabel = 'On this page',
 }: OnThisPageProps) {
-    const [headings, setHeadings] = useState<Heading[]>([]);
+    const [headings, setHeadings] = useState<TocHeading[]>([]);
     const [activeId, setActiveId] = useState<string>('');
 
     useEffect(() => {
@@ -66,23 +56,17 @@ export function OnThisPage({
             return;
         }
 
-        const nodes = Array.from(
-            document.querySelectorAll<HTMLHeadingElement>(
-                scopeSelector(container, selector),
-            ),
-        );
+        const items = scanHeadings({ container, selector });
+        setHeadings(items);
 
-        setHeadings(
-            nodes.map((el) => ({
-                id: el.id,
-                text: el.textContent ?? '',
-                level: el.tagName === 'H2' ? 2 : 3,
-            })),
-        );
-
-        if (nodes.length === 0) {
+        if (items.length === 0) {
             return;
         }
+
+        // The scanned headings' elements, for the scroll-spy observer.
+        const nodes = items
+            .map((h) => document.getElementById(h.id))
+            .filter((el): el is HTMLElement => el !== null);
 
         // "Active" = the heading nearest the top of the reading zone. The negative bottom
         // rootMargin keeps a section highlighted until the next heading reaches the upper band.
