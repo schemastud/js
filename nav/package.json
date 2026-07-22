@@ -1,7 +1,7 @@
 {
     "name": "@schemastud/nav",
     "version": "0.1.0",
-    "description": "A host-agnostic docs/site navigation kit: a compose-many nav-source registry, a pure tree builder (group + one-level nest + order), a collapsible <ExpandableNav> whose links, classNames, and motion are all injected, a navTrail() breadcrumb-trail derivation, and an <OnThisPage> in-page TOC with scroll-spy. Ships no CSS and no router — the host injects link rendering, class names, and the current path.",
+    "description": "A host-agnostic suite of navigation primitives for content/doc sites (a deliberate umbrella, meant to grow: pager/top-nav/tabs later). Today: a compose-many nav-source registry, a pure tree builder (group + one-level nest + order), a collapsible <ExpandableNav> whose links, classNames, and motion are all injected, a navTrail() breadcrumb-trail derivation, and an <OnThisPage> in-page TOC with scroll-spy. Ships no CSS and no router — the host injects link rendering, class names, and the current path. Composes @schemastud/breadcrumb + @schemastud/combobox rather than re-implementing them.",
     "license": "MIT",
     "type": "module",
     "main": "dist/index.js",

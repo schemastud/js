@@ -1,9 +1,16 @@
 // =============================================================================
-// @schemastud/nav — a host-agnostic docs/site navigation kit.
+// @schemastud/nav — a host-agnostic suite of navigation primitives for content sites.
 //
-// The nav-source registry (compose-many) + a pure tree builder, a collapsible
-// <ExpandableNav> whose links/classNames/motion are all injected, and navTrail() —
-// the breadcrumb-trail derivation off the same tree. Ships no CSS and no router.
+// A DELIBERATE umbrella (not a catch-all): the members share a model + house style (no
+// CSS, no router; everything injected) and the package is meant to grow more nav
+// primitives — a prev/next pager, a top nav, tabs — rather than fragment into a package
+// each. Components stay specifically named (ExpandableNav, OnThisPage) so the umbrella
+// never hides what you import. Standalone atoms with their own home (breadcrumb rendering,
+// combobox) are COMPOSED, never re-implemented here.
+//
+// Today: the nav-source registry (compose-many) + a pure tree builder, a collapsible
+// <ExpandableNav>, navTrail() (breadcrumb-trail derivation off the same tree), and
+// <OnThisPage> (in-page TOC + scroll-spy).
 // =============================================================================
 
 // Nav-source registry seam + the shared tree builder + breadcrumb-trail derivation.
