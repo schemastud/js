@@ -27,3 +27,7 @@ export type {
 // Collapsible, accessible sidebar over the seam.
 export { ExpandableNav } from './ExpandableNav';
 export type { ExpandableNavProps, ExpandableNavClasses } from './ExpandableNav';
+
+// In-page table of contents with scroll-spy.
+export { OnThisPage } from './OnThisPage';
+export type { OnThisPageProps, OnThisPageClasses } from './OnThisPage';

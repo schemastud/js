@@ -16,5 +16,9 @@ injects link rendering, class names, and the current path.
 - **`navTrail(tree, href)`.** The breadcrumb trail (track → group → page) derived from the
   same tree, with sibling lists for searchable switcher crumbs (pairs with
   `@schemastud/breadcrumb`).
+- **`<OnThisPage>`.** An automatic in-page table of contents: reads id-bearing headings from
+  the rendered DOM, builds `#anchor` links, and drives an `IntersectionObserver` scroll-spy.
+  Injected `classes`, heading `selector`/`container`, and a `routeKey` that re-scans on
+  navigation — no router, no CSS.
 
 The same composed tree feeds both the sidebar and the breadcrumb, so they never disagree.
