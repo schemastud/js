@@ -43,6 +43,13 @@ export type ExpandableNavClasses = {
 };
 
 export type ExpandableNavProps = {
+    /**
+     * The nav data to render. Feed a `NavNode[]` directly (the simple, synchronous path).
+     * Omit it to compose from the global nav-source registry instead (compose-many + lazy
+     * loading, with the per-source fallback) — useful when packages contribute their own
+     * nodes. Either way the component renders the same `buildNavTree` output.
+     */
+    items?: NavNode[];
     /** Injected link renderer — keeps the kit router-agnostic. Gets the leaf's active state. */
     renderLink: (node: NavNode, ctx: { active: boolean }) => ReactNode;
     /** The current path, used to mark the active leaf and default-open its group. */
@@ -133,6 +140,7 @@ const defaultChevron = (_open: boolean): ReactNode => (
 );
 
 export function ExpandableNav({
+    items,
     renderLink,
     currentHref,
     trackOrder,
@@ -145,9 +153,17 @@ export function ExpandableNav({
 }: ExpandableNavProps) {
     const reduceMotion = usePrefersReducedMotion();
 
+    // Data comes either straight from `items` (the direct, synchronous path) or from the
+    // global nav-source registry (compose-many + lazy). The registry hooks always run but
+    // do nothing when `items` is supplied — sources is empty, so nothing loads.
+    const fromRegistry = items === undefined;
+
     // Per-source loaded nodes; null = still loading. Compose-many builds the tree from
     // whatever has resolved, so a slow source shows a fallback without blocking the rest.
-    const sources = useMemo(() => getNavSources(), []);
+    const sources = useMemo(
+        () => (fromRegistry ? getNavSources() : []),
+        [fromRegistry],
+    );
     const [loaded, setLoaded] = useState<Record<string, NavNode[] | null>>(() =>
         Object.fromEntries(sources.map((s) => [s.id, null])),
     );
@@ -175,9 +191,9 @@ export function ExpandableNav({
 
     const pending = sources.filter((s) => loaded[s.id] === null);
     const tree: NavTrack[] = useMemo(() => {
-        const nodes = sources.flatMap((s) => loaded[s.id] ?? []);
+        const nodes = items ?? sources.flatMap((s) => loaded[s.id] ?? []);
         return buildNavTree(nodes, trackOrder);
-    }, [sources, loaded, trackOrder]);
+    }, [items, sources, loaded, trackOrder]);
 
     // Open/closed per group, resolved by priority (first match wins):
     //   1. in-session toggle; 2. holds the active guide; 3. stored preference;
