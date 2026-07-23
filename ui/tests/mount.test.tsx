@@ -1,7 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { Badge, Button, DataTable, Input, cn, parseSort, serializeSort } from '../src/index';
+import {
+    Badge,
+    Button,
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+    DataTable,
+    Input,
+    Switch,
+    cn,
+    parseSort,
+    serializeSort,
+} from '../src/index';
 
 /**
  * The isolation bar (rehome-components §8a): the primitives render off a plain fixture
@@ -57,6 +70,21 @@ describe('@schemastud/ui primitives mount in isolation', () => {
         expect(screen.getByRole('button', { name: 'Save' }).className).toContain('bg-primary');
         expect(screen.getByText('api').className).toContain('bg-secondary');
         expect(screen.getByPlaceholderText('name')).toBeDefined();
+    });
+
+    it('Switch + Card render off host-owned tokens (portable, no @/ coupling)', () => {
+        render(
+            <Card>
+                <CardHeader>
+                    <CardTitle>System</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Switch aria-label="enabled" defaultChecked />
+                </CardContent>
+            </Card>,
+        );
+        expect(screen.getByText('System').className).toContain('font-semibold');
+        expect(screen.getByRole('switch', { name: 'enabled' })).toBeDefined();
     });
 
     it('cn + sort vocabulary are pure and exported', () => {

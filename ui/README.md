@@ -4,9 +4,10 @@ The portable **foundation UI primitives** for the schemastud/beam stack — the 
 dependency a rehomed component takes **statically**, instead of reaching into an app's
 local `@/components/*`.
 
-Ships: `Button`, `Badge`, `Dialog`, `Input`, `Label`, `Select` / `SimpleSelect`, a
-dependency-free `Popover`, a headless TanStack `DataTable` (with its shared sort
-vocabulary), and `cn`.
+Ships: `Button`, `Badge`, `Card` (+ `CardHeader` / `CardTitle` / `CardDescription` /
+`CardContent` / `CardFooter`), `Dialog`, `Input`, `Label`, `Select` / `SimpleSelect`,
+`Switch`, a dependency-free `Popover`, a headless TanStack `DataTable` (with its shared
+sort vocabulary), and `cn`.
 
 ## The two rules that make it portable
 
@@ -27,8 +28,8 @@ package's built `dist` for the utility classes it uses:
 ```
 
 `react`, `react-dom`, `@radix-ui/react-dialog`, `@radix-ui/react-select`,
-`@tanstack/react-table` and `lucide-react` are **peer** dependencies — the host provides
-the single copy.
+`@radix-ui/react-switch`, `@tanstack/react-table` and `lucide-react` are **peer**
+dependencies — the host provides the single copy.
 
 ## Verify
 

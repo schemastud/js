@@ -19,6 +19,15 @@ export {
 
 export { Button, buttonVariants } from './button';
 export { Badge, badgeVariants } from './badge';
+export { Switch } from './switch';
+export {
+    Card,
+    CardContent,
+    CardDescription,
+    CardFooter,
+    CardHeader,
+    CardTitle,
+} from './card';
 export {
     Dialog,
     DialogClose,
