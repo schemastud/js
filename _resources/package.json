@@ -1,0 +1,33 @@
+{
+    "name": "@schemastud/_resources",
+    "version": "0.1.0",
+    "description": "Generated FOUNDATION resource bundle — the #[TypeScript] type projection (and, later, JSON schemas) off schemastud-tier Data classes, emitted app-side by the `resources:schemastud` pipeline (rushing/laravel-pipeline-registry). Open counterpart to the private @splicewire/_resources. Do not hand-edit; regenerate via `php artisan pipelines:run resources:schemastud`.",
+    "license": "MIT",
+    "type": "module",
+    "sideEffects": false,
+    "exports": {
+        "./types/*": {
+            "types": "./types/*.d.ts"
+        },
+        "./package.json": "./package.json"
+    },
+    "files": [
+        "types",
+        "schemas",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/resources.git"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "typescript": "^5.7.0"
+    }
+}
