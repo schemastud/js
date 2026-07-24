@@ -20,5 +20,6 @@ export default defineConfig({
         '@rjsf/validator-ajv8',
         '@schemastud/seam',
         '@schemastud/facets',
+        '@schemastud/ui',
     ],
 });

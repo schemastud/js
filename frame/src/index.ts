@@ -6,6 +6,23 @@ export { FrameProvider, useFrameInjection } from './context';
 export { ListShell } from './ListShell';
 export { EditShell } from './EditShell';
 export { WidgetShell, WidgetSurface } from './WidgetShell';
+export {
+    FrameLayout,
+    FrameLayoutShell,
+    SingleColumn,
+    SubNavColumn,
+    MasterDetail,
+    type FrameLayoutProps,
+    type FrameLayoutVariant,
+    type FrameLayoutWidth,
+    type FrameLayoutSidePanel,
+    type SingleColumnProps,
+    type SubNavColumnProps,
+    type SubNavItem,
+    type MasterDetailProps,
+    type DetailPresentation,
+    type CollapseMode,
+} from './FrameLayout';
 export { FiveRegionEditShell, type FiveRegionEditShellProps } from './FiveRegionEditShell';
 export { Inspector } from './Inspector';
 export { PalettePane } from './PalettePane';
