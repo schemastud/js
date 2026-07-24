@@ -1,0 +1,65 @@
+{
+    "name": "@schemastud/big-calendar",
+    "version": "0.1.0",
+    "description": "The source-blind, vocab-blind foundation calendar surface: a dumb BigCalendarSurface renderer that wraps react-big-calendar and is driven entirely by injection. It never learns that 'calendar'/'composition'/'channel' exist — it renders whatever FoundationCalendarEvent[] it is handed, emits generic intents, and delegates all vocabulary + host chrome + transport to four injection kinds (client, notify/onError, four renderX slots, subscribe), each with a dependency-free default. react-big-calendar + date-fns are host-provided peers; the 844-line shadcn RBC theme (retokenized onto host token-vars) and the thin Calendar re-export are vendored-and-owned. The commodity view engine + the owned seam around it (big-calendar-surface PRD §1/§3/§7).",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        },
+        "./theme.css": "./src/theme.css",
+        "./package.json": "./package.json"
+    },
+    "sideEffects": [
+        "*.css"
+    ],
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/big-calendar.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "lint:imports": "node scripts/check-imports.mjs",
+        "prepublishOnly": "npm run build"
+    },
+    "peerDependencies": {
+        "@tanstack/react-query": ">=5",
+        "date-fns": ">=3",
+        "react": ">=18",
+        "react-big-calendar": ">=1.19"
+    },
+    "devDependencies": {
+        "@tanstack/react-query": "^5.62.0",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.1.0",
+        "@testing-library/user-event": "^14.5.2",
+        "@types/node": "^22.20.1",
+        "@types/react": "^19.0.0",
+        "@types/react-big-calendar": "^1.16.3",
+        "@types/react-dom": "^19.0.0",
+        "date-fns": "^3.6.0",
+        "jsdom": "^25.0.1",
+        "react": "^19.2.0",
+        "react-big-calendar": "^1.20.0",
+        "react-dom": "^19.2.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.2",
+        "vitest": "^4.1.10"
+    }
+}
