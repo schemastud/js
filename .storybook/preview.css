@@ -1,0 +1,148 @@
+@import 'tailwindcss';
+
+/*
+ * Scan the whole schemastud estate (every workspace's src + colocated stories) for utility
+ * classes. node_modules / .gitignore'd paths are auto-excluded by Tailwind v4.
+ */
+@source '../';
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Workbench token layer (seeded, self-contained).
+ *
+ * The @schemastud packages are headless — they ship NO CSS; the app owns the token layer
+ * (splicewire-app: resources/css/brand-tokens.css + ui/src/index.css). This file is the
+ * workbench's standalone copy so components render skinned in isolation. It is a BASELINE,
+ * not the source of truth: when packages ship their own token defaults (component-seams
+ * ticket 07's aspiration), this seed shrinks to just the semantic → Tailwind bridge.
+ *
+ * Light theme only for the pilot; a dark toolbar toggle can graduate with the treatment axes.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+/* Brand primitives (--splice-*) — mirrored from splicewire-app/resources/css/brand-tokens.css */
+:root {
+    /* Surfaces */
+    --splice-paper: #eef1ee;
+    --splice-paper-raised: #ffffff;
+    --splice-muted: #e6eae5;
+
+    /* Ink */
+    --splice-ink: #2e2c26;
+    --splice-ink-muted: rgba(17, 32, 26, 0.5);
+    --splice-ink-18: rgba(17, 32, 26, 0.18);
+    --splice-line: #e3e6e2;
+
+    /* Green — primary */
+    --splice-green: #14803f;
+    --splice-green-deep: #0f5f2e;
+    --splice-green-tint: #eaf6ee;
+
+    /* Signal + status */
+    --splice-signal: #35d07a;
+    --splice-warn: #e8a13a;
+    --splice-warn-deep: #9a6608;
+    --splice-info: #2b63a7;
+    --splice-danger: #a3271b;
+
+    /* The rail — deep green-black */
+    --splice-rail: #11201a;
+    --splice-rail-deep: #0d1a14;
+    --splice-rail-fg: rgba(207, 233, 216, 0.6);
+    --splice-rail-active: #eaf6ee;
+    --splice-rail-avatar: #1d3527;
+    --splice-signal-13: rgba(53, 208, 122, 0.13);
+    --splice-signal-18: rgba(53, 208, 122, 0.18);
+
+    /* Type */
+    --splice-font-sans:
+        'Space Grotesk', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol';
+    --splice-font-mono:
+        ui-monospace, 'IBM Plex Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+/* Semantic interface (--primary etc.) mapped onto the primitives — mirrored from ui/src/index.css */
+:root {
+    --background: var(--splice-paper);
+    --foreground: var(--splice-ink);
+    --card: var(--splice-paper-raised);
+    --card-foreground: var(--splice-ink);
+    --popover: var(--splice-paper-raised);
+    --popover-foreground: var(--splice-ink);
+    --primary: var(--splice-green);
+    --primary-foreground: var(--splice-paper-raised);
+    --secondary: var(--splice-muted);
+    --secondary-foreground: var(--splice-ink);
+    --muted: var(--splice-muted);
+    --muted-foreground: var(--splice-ink-muted);
+    --accent: var(--splice-green-tint);
+    --accent-foreground: var(--splice-green-deep);
+    --destructive: var(--splice-danger);
+    --destructive-foreground: var(--splice-paper-raised);
+    --border: var(--splice-line);
+    --input: var(--splice-ink-18);
+    --ring: var(--splice-green);
+    --radius: 0.5rem;
+    --signal: var(--splice-signal);
+    --warning: var(--splice-warn);
+    --warning-foreground: var(--splice-warn-deep);
+    --info: var(--splice-info);
+    --sidebar: var(--splice-rail);
+    --sidebar-deep: var(--splice-rail-deep);
+    --sidebar-foreground: var(--splice-rail-fg);
+    --sidebar-active-foreground: var(--splice-rail-active);
+    --sidebar-primary: var(--splice-signal);
+    --sidebar-accent: var(--splice-signal-13);
+    --sidebar-border: var(--splice-signal-18);
+    --sidebar-avatar: var(--splice-rail-avatar);
+}
+
+/* Semantic → Tailwind color/token bridge (the neutral interface Tailwind consumes) */
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-signal: var(--signal);
+    --color-warning: var(--warning);
+    --color-warning-foreground: var(--warning-foreground);
+    --color-info: var(--info);
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-deep: var(--sidebar-deep);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-active-foreground: var(--sidebar-active-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-avatar: var(--sidebar-avatar);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --font-sans: var(--splice-font-sans);
+    --font-mono: var(--splice-font-mono);
+}
+
+@layer base {
+    body {
+        background: var(--background);
+        color: var(--foreground);
+        font-family: var(--splice-font-sans);
+    }
+}

@@ -6,3 +6,7 @@ dist/
 .turbo/
 coverage/
 .import-bak-*/
+
+# Storybook workbench (component-seams ticket 08)
+storybook-static/
+.tests/
