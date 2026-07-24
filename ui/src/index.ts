@@ -38,6 +38,18 @@ export {
     DialogTitle,
     DialogTrigger,
 } from './dialog';
+export {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetPortal,
+    SheetTitle,
+    SheetTrigger,
+    type SheetSide,
+} from './sheet';
 export { Input } from './input';
 export { Label } from './label';
 export {
