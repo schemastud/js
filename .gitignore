@@ -9,4 +9,9 @@ coverage/
 
 # Storybook workbench (component-seams ticket 08)
 storybook-static/
-.tests/
+# Ignore .tests/ CONTENTS (not the dir itself, so git can descend to the negation below).
+.tests/*
+# …except the committed VR baselines (component-seams ticket 14 — the first catalog wave
+# baselined the seam; baselines are tracked, diff output + transient runner artifacts are not).
+!.tests/vr/
+.tests/vr/**/__diff_output__/

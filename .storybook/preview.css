@@ -98,6 +98,62 @@
     --sidebar-avatar: var(--splice-rail-avatar);
 }
 
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Dark seed (component-seams ticket 14 — the light+dark-required-now obligation
+ * from ticket 13).
+ *
+ * The pilot seed (ticket 08) was LIGHT-ONLY. Ticket 13 fixed both schemes as an
+ * ambient axis every story must cover, so the workbench grows a `.dark` layer here
+ * — mirrored from the app's shipped dark theme (splicewire-app/ui/src/index.css
+ * `.dark`) so isolation renders match production. The `colorScheme` toolbar in
+ * `.storybook/preview.ts` toggles `.dark` on the preview root; because these override
+ * the SEMANTIC interface directly, the `@theme inline` bridge below re-resolves and
+ * every `bg-primary`/`bg-card`/… re-skins with zero per-story work.
+ *
+ * schemastud is the FIRST repo to grow this layer; beam/splice stand-ups (23/28)
+ * inherit the requirement. When packages ship self-contained token defaults
+ * (ticket 07), this dark seed shrinks the same way the light one does.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+.dark {
+    --background: oklch(0.2 0.02 165);
+    --foreground: oklch(0.93 0.015 160);
+    --card: oklch(0.24 0.022 165);
+    --card-foreground: oklch(0.93 0.015 160);
+    --popover: oklch(0.23 0.022 165);
+    --popover-foreground: oklch(0.93 0.015 160);
+    --primary: oklch(0.75 0.18 155);
+    --primary-foreground: oklch(0.16 0.03 160);
+    --secondary: oklch(0.29 0.02 165);
+    --secondary-foreground: oklch(0.9 0.015 160);
+    --muted: oklch(0.28 0.02 165);
+    --muted-foreground: oklch(0.68 0.02 160);
+    --accent: oklch(0.32 0.03 160);
+    --accent-foreground: oklch(0.93 0.015 160);
+    --destructive: oklch(0.62 0.19 25);
+    --destructive-foreground: oklch(0.97 0.01 25);
+    --border: oklch(0.32 0.02 165);
+    --input: oklch(0.33 0.02 165);
+    --ring: oklch(0.75 0.18 155);
+
+    /* Signal + status — brightened so they read against the dark canvas. */
+    --signal: oklch(0.78 0.17 155);
+    --warning: oklch(0.78 0.14 75);
+    --warning-foreground: oklch(0.22 0.04 75);
+    --info: oklch(0.68 0.13 245);
+
+    /* The rail — a distinct deep tone below the raised surfaces. */
+    --sidebar: oklch(0.17 0.02 165);
+    --sidebar-deep: oklch(0.14 0.02 165);
+    --sidebar-foreground: oklch(0.72 0.03 160);
+    --sidebar-active-foreground: oklch(0.95 0.015 160);
+    --sidebar-primary: oklch(0.78 0.17 155);
+    --sidebar-accent: oklch(0.78 0.17 155 / 0.16);
+    --sidebar-border: oklch(0.78 0.17 155 / 0.22);
+    --sidebar-avatar: oklch(0.28 0.03 160);
+}
+
 /* Semantic → Tailwind color/token bridge (the neutral interface Tailwind consumes) */
 @theme inline {
     --color-background: var(--background);

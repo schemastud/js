@@ -2,9 +2,12 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Button } from './button';
 
 /**
- * Smoke story for the pilot workbench (component-seams ticket 08). Proves the aggregation glob,
- * the dev server, the production build, and — via the workbench token layer — skinned rendering.
- * The first real catalog wave replaces/expands this with the full foundation set + treatment axes.
+ * Foundation/Button — the first catalog wave (component-seams ticket 14), grown from the
+ * ticket-08 pilot smoke story into the real entry.
+ *
+ * Sanctioned axes it exposes (treatment-axes.md): **variant** (6-value set) + **size**
+ * (sm/default/lg/icon) + **states** (disabled). Ambient token + light⊗dark are wired globally
+ * in .storybook/preview. No density (a leaf control, not a collection) — absent, not a gap.
  */
 const meta = {
     title: 'Foundation/Button',
@@ -16,6 +19,7 @@ const meta = {
             options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'],
         },
         size: { control: 'select', options: ['default', 'sm', 'lg', 'icon'] },
+        disabled: { control: 'boolean' },
     },
     args: { children: 'Button' },
 } satisfies Meta<typeof Button>;
@@ -30,6 +34,10 @@ export const Secondary: Story = { args: { variant: 'secondary' } };
 export const Ghost: Story = { args: { variant: 'ghost' } };
 export const Link: Story = { args: { variant: 'link' } };
 
+/** states axis — disabled. */
+export const Disabled: Story = { args: { disabled: true } };
+
+/** variant axis — the full enum in one matrix (the pilot precedent every wave copies). */
 export const AllVariants: Story = {
     render: () => (
         <div className="flex flex-wrap items-center gap-3">
@@ -39,6 +47,22 @@ export const AllVariants: Story = {
             <Button variant="outline">Outline</Button>
             <Button variant="ghost">Ghost</Button>
             <Button variant="link">Link</Button>
+        </div>
+    ),
+};
+
+/** size axis — the scale enum in one matrix. */
+export const AllSizes: Story = {
+    render: () => (
+        <div className="flex flex-wrap items-center gap-3">
+            <Button size="sm">Small</Button>
+            <Button size="default">Default</Button>
+            <Button size="lg">Large</Button>
+            <Button size="icon" aria-label="Icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+            </Button>
         </div>
     ),
 };
