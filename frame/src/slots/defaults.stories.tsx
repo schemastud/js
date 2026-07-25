@@ -78,6 +78,36 @@ export const Table: Story = {
     ),
 };
 
+const densityRows: Row[] = [
+    { id: '1', name: 'Ada Lovelace', role: 'owner' },
+    { id: '2', name: 'Grace Hopper', role: 'admin' },
+    { id: '3', name: 'Katherine Johnson', role: 'admin' },
+    { id: '4', name: 'Margaret Hamilton', role: 'member' },
+    { id: '5', name: 'Radia Perlman', role: 'member' },
+    { id: '6', name: 'Barbara Liskov', role: 'member' },
+];
+
+/**
+ * Table, density axis (component-seams ticket 38) — the DENSITY structural twin of the
+ * canvas cascade (ticket 36/37). `DefaultTable` reads `--density-row-py` off the
+ * `[data-density]` deployment-root cascade for its row rhythm, so a satellite (or the
+ * workbench VR harness) re-treats the whole collection by flipping ONE root attribute —
+ * no prop, no JS. `parameters.vr.density` opts this story into the ticket-37 VR matrix,
+ * which snapshots it under `[data-density=comfortable]` and `[data-density=compact]`
+ * (baselines `…--density-comfortable` / `…--density-compact`, which must visibly differ:
+ * compact tightens `--density-row-py` 0.625rem → 0.3125rem). Six rows make the rhythm
+ * delta unmistakable. This is the shipped consumer that makes the density axis
+ * VR-provable rather than defined-but-dead.
+ */
+export const TableDensity: Story = {
+    parameters: { vr: { density: true } },
+    render: () => (
+        <MockFrameProvider>
+            <DefaultTable columns={columns} rows={densityRows} Cell={DefaultCell} onOpen={() => {}} />
+        </MockFrameProvider>
+    ),
+};
+
 // ── Empty / Loading ─────────────────────────────────────────────────────────
 /** Empty state — the "No records." slot. */
 export const Empty: Story = { render: () => <DefaultEmpty /> };

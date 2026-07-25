@@ -90,12 +90,19 @@ export function DefaultTable(props: {
     RowActions?: ComponentType<{ record: Row }>;
 }) {
     const { columns, rows, onOpen, Cell, RowActions } = props;
+    // Row rhythm rides the `[data-density]` cascade: vertical padding reads
+    // `--density-row-py` off the deployment root (comfortable | compact), so a root
+    // override re-treats the whole collection with zero JS — the structural twin of
+    // `canvas-surface` (component-seams ticket 36/38). Horizontal padding is fixed
+    // (density governs vertical rhythm only). The fallback preserves the pre-token
+    // 0.5rem render where no `[data-density]` is in scope (e.g. plain prod mounts).
+    const cellStyle = { paddingBlock: 'var(--density-row-py, 0.5rem)', paddingInline: '0.5rem' };
     return (
         <table data-frame-slot="Table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
                 <tr>
                     {columns.map((c) => (
-                        <th key={c.field} style={{ textAlign: 'left', padding: '0.5rem' }}>
+                        <th key={c.field} style={{ textAlign: 'left', ...cellStyle }}>
                             {c.header ?? c.field}
                         </th>
                     ))}
@@ -111,7 +118,7 @@ export function DefaultTable(props: {
                         style={{ cursor: onOpen ? 'pointer' : undefined }}
                     >
                         {columns.map((c) => (
-                            <td key={c.field} style={{ padding: '0.5rem' }}>
+                            <td key={c.field} style={cellStyle}>
                                 <Cell column={c} record={row} />
                             </td>
                         ))}
