@@ -69,6 +69,29 @@ export interface FrameInjection {
      * a host opts in by passing `createFrameHooks()`.
      */
     hooks?: FrameHooks;
+    /**
+     * Optional canonical whole-object form resolver ({@see createFormResolver}). When present,
+     * `DefaultFormBody` consults it to render a bespoke form for an object whose schema kind is
+     * registered, in place of the generic `SchemaForm`; an explicit root `x-widget` and any
+     * unregistered schema fall through unchanged. Optional so existing consumers still compile —
+     * absent, every object root renders the generic form (zero migration).
+     */
+    formResolver?: FormResolver;
+}
+
+/**
+ * A registry for canonical whole-object forms keyed by schema identity (kind = terminal `$id`
+ * segment) with a predicate escape hatch. See {@see createFormResolver} for the resolution order.
+ */
+export interface FormResolver {
+    registerFormForSchema(
+        match: string | ((schema: SchemaNode) => boolean),
+        form: ComponentType<FormBodySlotProps>,
+    ): void;
+    resolveFormForSchema(schema: SchemaNode): {
+        form: ComponentType<FormBodySlotProps> | null;
+        reason: 'x-widget' | 'by-kind' | 'by-predicate' | 'generic';
+    };
 }
 
 // -----------------------------------------------------------------------------

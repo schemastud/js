@@ -46,6 +46,7 @@ export {
     type FlushFn,
 } from './EditShellMount';
 export { resolveColumns } from './resolveColumns';
+export { createFormResolver, kindOfSchema } from './FormResolver';
 export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
 export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
@@ -99,6 +100,7 @@ export type {
     FrameTransport,
     FramePrimitives,
     FrameInjection,
+    FormResolver,
     FrameColumn,
     ResolveColumns,
     AdminResourceDefinition,

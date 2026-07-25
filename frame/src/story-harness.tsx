@@ -39,6 +39,7 @@ import {
     type EditShellMountValue,
 } from './EditShellMount';
 import type {
+    FormResolver,
     FrameCan,
     FrameInjection,
     FramePrimitives,
@@ -189,6 +190,8 @@ export interface MockFrameProviderProps {
     can?: FrameCan;
     /** Register widgets onto the fresh registry (e.g. a demo heavyweight editor). */
     registerWidgets?: (registry: WidgetRegistry) => void;
+    /** Optional canonical form resolver — for stories exercising the FormBody form-resolution seam. */
+    formResolver?: FormResolver;
 }
 
 /**
@@ -201,6 +204,7 @@ export function MockFrameProvider({
     fixtures,
     can = () => true,
     registerWidgets,
+    formResolver,
 }: MockFrameProviderProps) {
     const queryClient = useMemo(makeQueryClient, []);
     const injection = useMemo<FrameInjection>(() => {
@@ -213,6 +217,7 @@ export function MockFrameProvider({
             registry,
             schemaFetcher: async (ref: string): Promise<SchemaNode> => ({ $id: ref }) as SchemaNode,
             can,
+            formResolver,
         };
         // fixtures is a per-story literal; identity-stable across a story's life.
         // eslint-disable-next-line react-hooks/exhaustive-deps

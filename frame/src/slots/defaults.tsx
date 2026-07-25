@@ -137,15 +137,22 @@ export function DefaultTable(props: {
  * registers `splicewire-enrich` in seam's WidgetRegistry). The enrich/refine
  * affordance rides a FormIntentBus on formContext (not props).
  */
-export function DefaultFormBody({
-    schema,
-    formData,
-    intentBus,
-    readOnly,
-    onChange,
-    onSubmit,
-}: FormBodySlotProps) {
-    const { schemaFetcher, registry } = useFrameInjection();
+export function DefaultFormBody(props: FormBodySlotProps) {
+    const { schema, formData, intentBus, readOnly, onChange, onSubmit } = props;
+    const { schemaFetcher, registry, formResolver } = useFrameInjection();
+
+    // Canonical form resolution (order: root x-widget > form-by-kind > generic). A form registered
+    // for the object's schema kind renders in place of the generic SchemaForm; an explicit root
+    // x-widget (heavyweight editor) and any unregistered schema fall through unchanged.
+    const CanonicalForm = formResolver?.resolveFormForSchema(schema).form ?? null;
+    if (CanonicalForm) {
+        return (
+            <div data-frame-slot="FormBody" data-frame-readonly={readOnly ? '' : undefined}>
+                <CanonicalForm {...props} />
+            </div>
+        );
+    }
+
     return (
         <div data-frame-slot="FormBody" data-frame-readonly={readOnly ? '' : undefined}>
             <SchemaForm

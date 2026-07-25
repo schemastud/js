@@ -12,7 +12,8 @@ import {
     DefaultToggle,
     DefaultToolbar,
 } from './defaults';
-import type { FrameColumn, Row } from '../types';
+import type { FormBodySlotProps, FrameColumn, Row } from '../types';
+import { createFormResolver } from '../FormResolver';
 import { MockFrameProvider } from '../story-harness';
 
 /**
@@ -139,6 +140,73 @@ export const FormBody: Story = {
             />
         </MockFrameProvider>
     ),
+};
+
+// ── FormBody canonical-form resolution (the FormResolver seam) ────────────────
+// A schema whose $id kind is `series`, and a bespoke form registered for that kind.
+const seriesSchema: SchemaNode = {
+    $id: 'https://schemastud.example/schemas/calendar/kind/series',
+    type: 'object',
+    properties: { title: { type: 'string', title: 'Title' } },
+} as SchemaNode;
+
+/** A stand-in bespoke whole-object form — what `registerFormForSchema('series', …)` resolves to. */
+function DemoSeriesForm({ formData }: FormBodySlotProps) {
+    return (
+        <div data-testid="canonical-series-form" className="rounded-md border border-dashed p-3 text-sm">
+            <div className="mb-1 font-medium text-foreground">Canonical series editor — resolved by kind</div>
+            <div className="text-muted-foreground">title: {String((formData as { title?: unknown }).title ?? '')}</div>
+        </div>
+    );
+}
+
+/**
+ * FormBody, canonical form — a `formResolver` registered for the `series` kind makes `DefaultFormBody`
+ * render the bespoke form (not the generic SchemaForm) for a `…/kind/series` schema. Order:
+ * root x-widget > form-by-kind > generic.
+ */
+export const FormBodyCanonicalForm: Story = {
+    render: () => {
+        const resolver = createFormResolver();
+        resolver.registerFormForSchema('series', DemoSeriesForm);
+        return (
+            <MockFrameProvider formResolver={resolver}>
+                <DefaultFormBody
+                    schema={seriesSchema}
+                    formData={{ title: 'Weekly drop' }}
+                    intentBus={createFormIntentBus()}
+                    readOnly={false}
+                    form="bare"
+                    onChange={() => {}}
+                    onSubmit={() => {}}
+                />
+            </MockFrameProvider>
+        );
+    },
+};
+
+/**
+ * FormBody, resolver present but no match — a `formResolver` is injected, yet this schema's kind is
+ * unregistered, so `DefaultFormBody` falls through to the generic SchemaForm unchanged.
+ */
+export const FormBodyResolverFallthrough: Story = {
+    render: () => {
+        const resolver = createFormResolver();
+        resolver.registerFormForSchema('series', DemoSeriesForm); // registered, but editSchema is a different kind
+        return (
+            <MockFrameProvider formResolver={resolver}>
+                <DefaultFormBody
+                    schema={editSchema}
+                    formData={{ name: 'Grace Hopper', role: 'admin' }}
+                    intentBus={createFormIntentBus()}
+                    readOnly={false}
+                    form="bare"
+                    onChange={() => {}}
+                    onSubmit={() => {}}
+                />
+            </MockFrameProvider>
+        );
+    },
 };
 
 /** Toggle — the `enriched | bare` form-mode radio group. */
