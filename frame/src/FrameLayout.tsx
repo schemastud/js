@@ -375,9 +375,10 @@ export function MasterDetail({
 // (not a switch) with a `SingleColumn` generic fallback for an unknown variant. The
 // remaining props are the chosen plug's own props (a discriminated union at the call
 // site). This is the data/manifest-driven entry point: a host that stores a layout
-// on a resource's manifest resolves it by passing `variant={manifest.layout}`.
-// (ContextManifest carries no `layout` field today — adding one is a separate wire
-// concern; until then the host supplies `variant` directly.)
+// on a resource's manifest resolves it by passing `variant={manifest.layout ?? undefined}`.
+// `ContextManifest.layout` is the wire field (ticket 31, off `#[AdminResource(layout: …)]`);
+// a null/absent layout degrades to the SingleColumn fallback below, so a host may pass it
+// unconditionally.
 // =============================================================================
 export type FrameLayoutVariant = 'single' | 'subnav' | 'master-detail';
 
@@ -388,14 +389,25 @@ const LAYOUT_REGISTRY: Record<FrameLayoutVariant, ComponentType<any>> = {
 };
 
 export type FrameLayoutProps =
-    | ({ variant?: 'single' } & SingleColumnProps)
+    // The MANIFEST-DRIVEN arm (ticket 31): a `variant` resolved from data — the
+    // `ContextManifest.layout` wire field, whose static type is the whole (nullable)
+    // variant union. It targets the SingleColumn family because that grammar requires no
+    // grammar-specific props, so it's the type-safe home for a not-statically-known
+    // variant; a `subnav`/`master-detail` value still resolves its plug at runtime via the
+    // registry (those grammars degrade gracefully — their extra props are optional here),
+    // and a null/undefined/unknown value falls back to SingleColumn. This is what makes
+    // `<FrameLayout variant={manifest.layout ?? undefined} …>` typecheck.
+    | ({ variant?: FrameLayoutVariant | null } & SingleColumnProps)
+    // The STATICALLY-KNOWN arms: a host that hard-codes the grammar gets that plug's full,
+    // honest prop contract (SubNavColumn's `nav`/`active`/`onSelect`, MasterDetail's
+    // `master`/`detail`) type-checked at the call site.
     | ({ variant: 'subnav' } & SubNavColumnProps)
     | ({ variant: 'master-detail' } & MasterDetailProps);
 
-export function FrameLayout({ variant = 'single', ...rest }: FrameLayoutProps) {
-    // Registry lookup with a generic fallback — an unknown variant degrades to
-    // SingleColumn rather than throwing (resolution-by-intent: the socket always
-    // resolves *something*).
+export function FrameLayout({ variant, ...rest }: FrameLayoutProps) {
+    // Registry lookup with a generic fallback — a null/undefined/unknown variant degrades
+    // to SingleColumn rather than throwing (resolution-by-intent: the socket always
+    // resolves *something*). This is the null→SingleColumn manifest fallback (ticket 09/31).
     const Plug = LAYOUT_REGISTRY[variant as FrameLayoutVariant] ?? SingleColumn;
     return <Plug {...(rest as Record<string, unknown>)} />;
 }

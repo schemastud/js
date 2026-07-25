@@ -1,0 +1,5 @@
+{
+  "tier": "stud",
+  "deniedVarPrefixes": ["rbc-hue"],
+  "exclude": []
+}

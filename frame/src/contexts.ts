@@ -1,3 +1,5 @@
+import type { FrameLayoutVariant } from './FrameLayout';
+
 // =============================================================================
 // frame runtime contexts — the WidgetContextRegistry wire contract (JS half).
 //
@@ -35,6 +37,15 @@ export interface ContextManifest {
     byNode: Record<string, Partial<Record<FrameContext, NodeParticipation>>>;
     inherits: Partial<Record<FrameContext, FrameContext[]>>;
     known: FrameContext[];
+    /**
+     * The resource's declared inner-layout grammar (ticket 31) — the FrameLayout
+     * socket's `variant` token, emitted off the PHP `#[AdminResource(layout: …)]`.
+     * A host resolves the surface's layout straight from the manifest with
+     * `<FrameLayout variant={manifest.layout ?? undefined} …>`. `null`/absent = the
+     * resource is layout-agnostic; the socket falls back to `SingleColumn` (ticket 09).
+     * Optional so existing manifests (and hand-built fixtures) still typecheck.
+     */
+    layout?: FrameLayoutVariant | null;
 }
 
 /** The full context vocabulary, in wire order. */

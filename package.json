@@ -1,43 +1,44 @@
 {
-    "name": "schemastud",
-    "private": true,
-    "type": "module",
-    "description": "The @schemastud JS package family — a single npm workspace. Packages stay at their existing top-level paths so the fleet's file: overlays and the live FC/RCP wiring keep resolving unchanged.",
-    "packageManager": "npm@10.9.2",
-    "//workspaces": "Listed in TOPOLOGICAL order (leaves first) so `npm run build --workspaces` builds each package after the @schemastud deps whose .d.ts it needs: seam/facets (leaves) -> blockdoc/frame-remote/frame -> chat. If the graph outgrows a hand-ordered list, adopt a graph-aware runner (Turborepo/Nx) rather than maintaining this by hand. (beam-mdx lives in the separate `beam` app-substrate monorepo — same @schemastud npm scope.)",
-    "workspaces": [
-        "_resources",
-        "seam",
-        "facets",
-        "ui",
-        "nav",
-        "combobox",
-        "breadcrumb",
-        "blockdoc",
-        "frame-remote",
-        "frame",
-        "chat"
-    ],
-    "scripts": {
-        "build": "npm run build --workspaces --if-present",
-        "dev": "npm run dev --workspaces --if-present",
-        "test": "npm run test --workspaces --if-present",
-        "typecheck": "npm run typecheck --workspaces --if-present",
-        "changeset": "changeset",
-        "version-packages": "changeset version",
-        "release": "npm run build && changeset publish",
-        "storybook": "storybook dev -p 6006",
-        "build-storybook": "storybook build",
-        "test-storybook": "test-storybook --url http://127.0.0.1:6006"
-    },
-    "devDependencies": {
-        "@changesets/cli": "^2.27.9",
-        "@storybook/react-vite": "^10.5.4",
-        "@storybook/test-runner": "^0.24.4",
-        "@tailwindcss/vite": "^4.3.3",
-        "jest-image-snapshot": "^6.5.2",
-        "playwright": "^1.61.1",
-        "storybook": "^10.5.4",
-        "tailwindcss": "^4.3.3"
-    }
+  "name": "schemastud",
+  "private": true,
+  "type": "module",
+  "description": "The @schemastud JS package family — a single npm workspace. Packages stay at their existing top-level paths so the fleet's file: overlays and the live FC/RCP wiring keep resolving unchanged.",
+  "packageManager": "npm@10.9.2",
+  "//workspaces": "Listed in TOPOLOGICAL order (leaves first) so `npm run build --workspaces` builds each package after the @schemastud deps whose .d.ts it needs: seam/facets (leaves) -> blockdoc/frame-remote/frame -> chat. If the graph outgrows a hand-ordered list, adopt a graph-aware runner (Turborepo/Nx) rather than maintaining this by hand. (beam-mdx lives in the separate `beam` app-substrate monorepo — same @schemastud npm scope.)",
+  "workspaces": [
+    "_resources",
+    "seam",
+    "facets",
+    "ui",
+    "nav",
+    "combobox",
+    "breadcrumb",
+    "blockdoc",
+    "frame-remote",
+    "frame",
+    "chat"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "dev": "npm run dev --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "npm run build && changeset publish",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test-storybook": "test-storybook --url http://127.0.0.1:6006",
+    "lint:tokens": "node scripts/lint-tokens.mjs"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.9",
+    "@storybook/react-vite": "^10.5.4",
+    "@storybook/test-runner": "^0.24.4",
+    "@tailwindcss/vite": "^4.3.3",
+    "jest-image-snapshot": "^6.5.2",
+    "playwright": "^1.61.1",
+    "storybook": "^10.5.4",
+    "tailwindcss": "^4.3.3"
+  }
 }
