@@ -15,10 +15,10 @@ const CARD: CSSProperties = {
     gap: 8,
     padding: '6px 10px',
     margin: '4px 0',
-    border: '1px dashed #d4d4d8',
+    border: '1px dashed var(--stud-line-strong)',
     borderRadius: 6,
-    background: '#fafafa',
-    color: '#71717a',
+    background: 'var(--stud-surface-subtle)',
+    color: 'var(--stud-ink-muted)',
     fontSize: 12,
 };
 

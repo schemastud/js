@@ -44,9 +44,9 @@ interface LaneResource {
 
 /** Solid = a filled bar (resident); virtual = dashed/ghost, read-only (PRD §4.2). */
 function eventStyle(colorToken: string, resident: boolean): CSSProperties {
-    const color = `var(--rbc-hue-${colorToken}, var(--rbc-hue-default))`;
+    const color = `var(--stud-hue-${colorToken}, var(--stud-hue-default))`;
     return resident
-        ? { backgroundColor: color, borderColor: color, color: 'var(--rbc-on-hue, #fff)' }
+        ? { backgroundColor: color, borderColor: color, color: 'var(--rbc-on-hue, var(--stud-on-hue))' }
         : { backgroundColor: 'transparent', border: `1.5px dashed ${color}`, color };
 }
 

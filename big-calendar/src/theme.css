@@ -12,29 +12,41 @@
  * forward — a theme reference with no upstream upgrade path to lose.
  */
 
+/*
+ * Package-shipped `--stud-*` token defaults (component-seams ticket 34).
+ *
+ * schemastud is the OPEN tier, so its own tokens carry the `--stud-` prefix (ticket 07:
+ * own-key indirection — a component reads its own tier's key, never a raw literal the
+ * deployment-root cascade can't reach). big-calendar is the one schemastud package that
+ * ships CSS, so it also hosts the calendar-facing `--stud-*` defaults here as its
+ * self-contained baseline (ticket 07 §4 — "a package that can't render itself isn't a
+ * foundation"). A deployment / satellite re-treats by re-declaring these keys at its root.
+ */
 .rbc-surface {
-    /* Chrome — override these against host tokens. */
-    --rbc-bg: var(--background, #ffffff);
-    --rbc-fg: var(--foreground, #0f172a);
-    --rbc-muted: var(--muted-foreground, #64748b);
-    --rbc-border: var(--border, #e2e8f0);
-    --rbc-subtle: var(--muted, #f1f5f9);
-    --rbc-today: var(--accent, #eff6ff);
-    --rbc-on-hue: #ffffff;
+    /* Chrome — override these against host semantic tokens; own-tier `--stud-*` default. */
+    --rbc-bg: var(--background, var(--stud-surface, oklch(1 0 0)));
+    --rbc-fg: var(--foreground, var(--stud-ink-strong, oklch(0.21 0.04 265)));
+    --rbc-muted: var(--muted-foreground, var(--stud-ink-muted, oklch(0.55 0.03 257)));
+    --rbc-border: var(--border, var(--stud-line, oklch(0.9 0.01 248)));
+    --rbc-subtle: var(--muted, var(--stud-surface-muted, oklch(0.96 0.01 248)));
+    --rbc-today: var(--accent, var(--stud-accent-tint, oklch(0.96 0.02 254)));
+    --rbc-on-hue: var(--stud-on-hue, oklch(1 0 0));
 
-    /* The hue palette (design-token names → colour). The satellite hands the surface an
-       already-resolved `colorToken`; the surface paints `var(--rbc-hue-<token>)`. */
-    --rbc-hue-default: #64748b;
-    --rbc-hue-slate: #64748b;
-    --rbc-hue-sky: #0284c7;
-    --rbc-hue-blue: #2563eb;
-    --rbc-hue-indigo: #4f46e5;
-    --rbc-hue-violet: #7c3aed;
-    --rbc-hue-amber: #d97706;
-    --rbc-hue-emerald: #059669;
-    --rbc-hue-rose: #e11d48;
-    --rbc-hue-cyan: #0891b2;
-    --rbc-hue-pink: #db2777;
+    /* The `--stud-hue-*` event ramp (ticket 34: the retired react-big-calendar hue palette
+       migrated to an own-tier `--stud-*` token SET — ticket 32's named multi-hue case). The
+       satellite hands the surface an already-resolved `colorToken`; the surface paints
+       `var(--stud-hue-<token>)`. Named (not numeric) so the `colorToken` API is the token key. */
+    --stud-hue-default: oklch(0.55 0.03 257);
+    --stud-hue-slate: oklch(0.55 0.03 257);
+    --stud-hue-sky: oklch(0.59 0.13 236);
+    --stud-hue-blue: oklch(0.55 0.22 263);
+    --stud-hue-indigo: oklch(0.51 0.23 277);
+    --stud-hue-violet: oklch(0.53 0.25 293);
+    --stud-hue-amber: oklch(0.66 0.15 58);
+    --stud-hue-emerald: oklch(0.6 0.13 163);
+    --stud-hue-rose: oklch(0.59 0.22 11);
+    --stud-hue-cyan: oklch(0.6 0.12 222);
+    --stud-hue-pink: oklch(0.59 0.23 355);
 
     color: var(--rbc-fg);
     background: var(--rbc-bg);
@@ -112,7 +124,7 @@
     box-shadow: none;
 }
 .rbc-surface .rbc-event:focus {
-    outline: 2px solid var(--rbc-hue-blue);
+    outline: 2px solid var(--stud-hue-blue);
     outline-offset: 1px;
 }
 .rbc-surface .rbc-event-title {

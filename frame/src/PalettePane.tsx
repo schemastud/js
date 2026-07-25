@@ -45,15 +45,15 @@ const ITEM_STYLE: CSSProperties = {
     alignItems: 'baseline',
     gap: 8,
     padding: '6px 8px',
-    border: '1px solid #e4e4e7',
+    border: '1px solid var(--stud-line)',
     borderRadius: 4,
-    background: '#fff',
+    background: 'var(--stud-surface)',
     cursor: 'pointer',
     textAlign: 'left',
     font: 'inherit',
 };
-const AFFORDANCE_STYLE: CSSProperties = { fontSize: 11, color: '#a1a1aa' };
-const EMPTY_STYLE: CSSProperties = { padding: 12, fontSize: 12, color: '#a1a1aa' };
+const AFFORDANCE_STYLE: CSSProperties = { fontSize: 11, color: 'var(--stud-ink-faint)' };
+const EMPTY_STYLE: CSSProperties = { padding: 12, fontSize: 12, color: 'var(--stud-ink-faint)' };
 
 export function PalettePane() {
     const mount = useEditShellMount();

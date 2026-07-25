@@ -27,18 +27,18 @@ const ROW_STYLE: CSSProperties = { display: 'inline-flex', gap: 4, flexWrap: 'wr
 const BUTTON_STYLE: CSSProperties = {
     padding: '4px 12px',
     borderRadius: 999,
-    border: '1px solid #d4d4d8',
-    background: '#fff',
-    color: '#3f3f46',
+    border: '1px solid var(--stud-line-strong)',
+    background: 'var(--stud-surface)',
+    color: 'var(--stud-ink)',
     fontSize: 13,
     cursor: 'pointer',
 };
 
 const SELECTED_STYLE: CSSProperties = {
     ...BUTTON_STYLE,
-    background: '#2563eb',
-    borderColor: '#2563eb',
-    color: '#fff',
+    background: 'var(--stud-accent)',
+    borderColor: 'var(--stud-accent)',
+    color: 'var(--stud-surface)',
 };
 
 function enumOptions(props: ButtonGroupWidgetProps): EnumOption[] {

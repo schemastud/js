@@ -19,11 +19,11 @@ import type { Row } from './types';
 // fill in ED-09/13/14).
 
 const REGION_BODY = { display: 'flex', alignItems: 'stretch', minHeight: 0 } as const;
-const PALETTE_STYLE = { flex: '0 0 200px', borderRight: '1px solid #e4e4e7' } as const;
+const PALETTE_STYLE = { flex: '0 0 200px', borderRight: '1px solid var(--stud-line)' } as const;
 const CANVAS_STYLE = { flex: '1 1 auto', minWidth: 0, overflow: 'auto' } as const;
-const INSPECTOR_STYLE = { flex: '0 0 300px', borderLeft: '1px solid #e4e4e7' } as const;
-const BAR_STYLE = { padding: '6px 12px', borderBottom: '1px solid #e4e4e7' } as const;
-const STATUS_STYLE = { padding: '4px 12px', borderTop: '1px solid #e4e4e7', fontSize: 12, color: '#71717a' } as const;
+const INSPECTOR_STYLE = { flex: '0 0 300px', borderLeft: '1px solid var(--stud-line)' } as const;
+const BAR_STYLE = { padding: '6px 12px', borderBottom: '1px solid var(--stud-line)' } as const;
+const STATUS_STYLE = { padding: '4px 12px', borderTop: '1px solid var(--stud-line)', fontSize: 12, color: 'var(--stud-ink-muted)' } as const;
 
 export interface FiveRegionEditShellProps {
     /** The resolved form schema the editor widget mounts over. */

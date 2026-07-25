@@ -134,9 +134,9 @@ const buttonStyle: CSSProperties = {
     font: 'inherit',
     fontSize: 12,
     padding: '2px 8px',
-    border: '1px solid #d4d4d8',
+    border: '1px solid var(--stud-line-strong)',
     borderRadius: 4,
-    background: '#fff',
+    background: 'var(--stud-surface)',
     cursor: 'pointer',
 };
 
@@ -493,7 +493,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                         gap: 4,
                         padding: '4px 0',
                         marginBottom: 4,
-                        borderBottom: '1px solid #e4e4e7',
+                        borderBottom: '1px solid var(--stud-line)',
                     }}
                 >
                     {paletteTypes.map((name) => (
@@ -523,9 +523,9 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                         alignItems: 'center',
                         gap: 4,
                         padding: 4,
-                        border: '1px solid #d4d4d8',
+                        border: '1px solid var(--stud-line-strong)',
                         borderRadius: 6,
-                        background: '#fff',
+                        background: 'var(--stud-surface)',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
                     }}
                 >
@@ -539,7 +539,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                             style={{
                                 ...buttonStyle,
                                 fontWeight: activeMarks?.[name] === true ? 700 : 400,
-                                background: activeMarks?.[name] === true ? '#e4e4e7' : '#fff',
+                                background: activeMarks?.[name] === true ? 'var(--stud-line)' : 'var(--stud-surface)',
                             }}
                         >
                             {label}
@@ -558,7 +558,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                                     fontSize: 12,
                                     width: 140,
                                     padding: '2px 6px',
-                                    border: '1px solid #d4d4d8',
+                                    border: '1px solid var(--stud-line-strong)',
                                     borderRadius: 4,
                                 }}
                             />

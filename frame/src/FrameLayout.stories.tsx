@@ -28,6 +28,14 @@ import {
  * fillings shown are lightweight stand-ins — the real master is a Frame `ListShell`
  * (DataTable) and the real detail an `EditShell` (SchemaForm); those graduate with
  * their own catalog waves.
+ *
+ * STRUCTURAL cascade (ticket 36): the `canvas` axis is authored off the
+ * `[data-canvas]` deployment-root attribute, not a hardcoded pattern — the `DeployRoot`
+ * decorator below sets `[data-canvas]`/`[data-density]` at a root wrapper and every
+ * `FrameLayoutShell` beneath paints via `canvas-surface` off `--canvas-bg` (defined in
+ * `.storybook/preview.css`). Setting the attribute at the root re-treats everything under
+ * it with zero JS — the structural twin of the color-token cascade, and exactly the surface
+ * a satellite overrides. (VR proof the attribute reaches pixels is ticket 37's matrix.)
  */
 const meta = {
     title: 'Frame/Inner Layout Family',
@@ -37,23 +45,27 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// ── Canvas treatment axis ─────────────────────────────────────────────────────
-// flat = calm settings paper (`bg-background`); dotted = work / operator surface.
-// The dotted texture is inlined (not an app utility) so the story is self-contained.
-function Canvas({ variant, children }: { variant: 'flat' | 'dotted'; children: ReactNode }) {
+// ── Structural cascade — the deployment root (ticket 36) ──────────────────────
+// The canvas axis is NOT hardcoded in the story: this wrapper stands in for the
+// DEPLOYMENT ROOT, setting `[data-canvas]` (and optionally `[data-density]`) so the
+// `FrameLayoutShell`s beneath re-treat off the cascade — `canvas-surface` reads
+// `--canvas-bg` (defined in `.storybook/preview.css`, re-declarable by a satellite).
+// flat = calm settings paper; dotted = work / operator surface. A satellite flips the
+// whole surface by re-declaring the attribute at exactly this level.
+function Canvas({
+    variant,
+    density,
+    children,
+}: {
+    variant: 'flat' | 'dotted';
+    density?: 'comfortable' | 'compact';
+    children: ReactNode;
+}) {
     return (
         <div
-            className="min-h-[480px] w-full bg-background px-6 py-8"
-            style={
-                variant === 'dotted'
-                    ? {
-                          backgroundImage:
-                              'radial-gradient(circle, color-mix(in oklch, currentColor 12%, transparent) 1px, transparent 1px)',
-                          backgroundSize: '16px 16px',
-                      }
-                    : undefined
-            }
+            className="canvas-surface min-h-[480px] w-full bg-background px-6 py-8"
             data-canvas={variant}
+            data-density={density}
         >
             {children}
         </div>

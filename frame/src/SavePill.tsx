@@ -16,9 +16,9 @@ const BASE: CSSProperties = {
 };
 
 const BY_STATE: Record<string, { label: string; style: CSSProperties }> = {
-    saved: { label: 'Saved', style: { background: '#f0fdf4', color: '#15803d' } },
-    saving: { label: 'Saving…', style: { background: '#fefce8', color: '#a16207' } },
-    unsaved: { label: 'Unsaved', style: { background: '#fef2f2', color: '#b91c1c' } },
+    saved: { label: 'Saved', style: { background: 'var(--stud-success-tint)', color: 'var(--stud-success)' } },
+    saving: { label: 'Saving…', style: { background: 'var(--stud-warning-tint)', color: 'var(--stud-warning)' } },
+    unsaved: { label: 'Unsaved', style: { background: 'var(--stud-danger-tint)', color: 'var(--stud-danger)' } },
 };
 
 export function SavePill() {

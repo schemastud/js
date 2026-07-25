@@ -12,9 +12,25 @@
  * such a violation over the package's shipped `src/**`. Its behavioural twin (the
  * var exists but nothing reads it) is the VR bar — this catches only *presence*.
  *
+ * FOUR rule categories (ticket 33 landed the first three; ticket 36 adds #4):
+ *   1. raw-hex             literal `#rrggbb` etc. (color the cascade can't reach)
+ *   2. vestigial-prefix    `--swc-*` (retired; migrate to the own tier)
+ *   3. wrong-tier-prefix   a tier var that isn't the repo's own (own-key indirection)
+ *      / foreign-palette   a config-named foreign prefix (`rbc-hue`)
+ *   4. hardcoded-structure a hardcoded canvas/density treatment that should ride the
+ *      `[data-canvas]`/`[data-density]` cascade (ticket 36 / apocryphon
+ *      `satellite-re-treatment-is-a-deployment-root-cascade`). The structural twin of
+ *      raw-hex: a `dotted-bg` class literal or a raw dotted `radial-gradient(... 1px,
+ *      transparent 1px)` pattern is un-re-treatable (a satellite setting `[data-canvas]`
+ *      at the root can never reach it). The authored form paints via `canvas-surface`
+ *      off `var(--canvas-bg)` / reads the `--density-*` tokens. This rule is enabled
+ *      only now the structural axes are authored (that authored form is what defines
+ *      "hardcoded" -- see the ticket 33 deferral). Patterns config-extensible.
+ *
  * Config lives beside this script as `token-lint.config.json`:
  *   { "tier": "stud" | "beam" | "splice",
  *     "deniedVarPrefixes": ["swc", "rbc-hue", ...],   // beyond wrong-tier (auto)
+ *     "hardcodedStructure": ["extra-class", ...],     // added to canvas/density defaults
  *     "exclude": ["glob", ...] }                      // added to the defaults
  *
  * Runnable gate, not wired into `build-storybook` (which stays green): while the
@@ -70,6 +86,30 @@ const HEX_RE = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3})
 // Any CSS custom-property whose prefix segment we can classify.
 const VAR_RE = /--([a-z][a-z0-9]*(?:-[a-z0-9]+)*)-/gi;
 
+// --- hardcoded-structure (rule 4, ticket 36) -------------------------------
+// Canvas/density that bypasses the `[data-canvas]`/`[data-density]` cascade. Two
+// shapes, deliberately narrow (a raw-hex-grade signal, not a spacing heuristic):
+//   • the `dotted-bg` class literal (the app-owned canvas utility, hardcoded)
+//   • a raw dotted `radial-gradient(<tone> 1px, transparent 1px)` dot-grid pattern
+//     that does NOT read `var(--canvas-bg)` (the authored, cascade-reachable form).
+// The authored form is `canvas-surface` off `var(--canvas-bg)`; anything painting
+// the grid directly is un-re-treatable. Density has no reliable static signature
+// (spacing is ubiquitous) — it is covered by the VR bar, not here — so this rule
+// scopes to the canvas dot-grid; repos extend the class list via `hardcodedStructure`.
+const DEFAULT_STRUCTURE_CLASSES = ['dotted-bg'];
+// Tolerate a nested `rgba(…)`/`var(…)` dot-tone before the `1px, transparent 1px`
+// stop — so `radial-gradient(rgba(0,0,0,.05) 1px, transparent 1px)` still matches.
+const DOTTED_GRADIENT_RE = /radial-gradient\(.*?\b1px\s*,\s*transparent\s+1px/i;
+function classNameRe(cls) {
+    // Match the class as a whole token inside a className string / CSS selector,
+    // e.g. `dotted-bg`, `bg-foo dotted-bg`, `.dotted-bg` — not `undotted-bgx`.
+    return new RegExp(`(?<![\\w-])${cls.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w-])`);
+}
+// Structure class literals to flag (rule 4): the defaults + any repo extras.
+const structureClassRes = [
+    ...new Set([...DEFAULT_STRUCTURE_CLASSES, ...(config.hardcodedStructure ?? [])]),
+].map((cls) => ({ cls, re: classNameRe(cls) }));
+
 function classifyVar(name) {
     // name is the full identifier after `--`, e.g. "swc-ink-45", "rbc-hue-sky".
     for (const p of deniedPrefixes) {
@@ -104,6 +144,19 @@ function lintFile(absPath, findings) {
         for (const m of line.matchAll(VAR_RE)) {
             const hit = classifyVar(m[1]);
             if (hit) findings.push({ file: rel, line: i + 1, rule: hit.rule, match: `--${m[1]}-`, detail: hit.detail });
+        }
+        // Hardcoded-structure (rule 4) — canvas that bypasses the [data-canvas] cascade.
+        // The authored form reads `var(--canvas-bg)` (via `canvas-surface`), so any line
+        // that references it is the cascade-reachable form and is exempt.
+        if (!isComment(line) && !line.includes('--canvas-bg')) {
+            for (const { cls, re } of structureClassRes) {
+                if (re.test(line)) {
+                    findings.push({ file: rel, line: i + 1, rule: 'hardcoded-structure', match: cls, detail: `hardcoded canvas class "${cls}" bypasses [data-canvas]; paint via canvas-surface off var(--canvas-bg)` });
+                }
+            }
+            if (DOTTED_GRADIENT_RE.test(line)) {
+                findings.push({ file: rel, line: i + 1, rule: 'hardcoded-structure', match: 'radial-gradient(…1px)', detail: 'hardcoded dotted canvas pattern bypasses [data-canvas]; ride var(--canvas-bg)' });
+            }
         }
     }
 }

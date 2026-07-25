@@ -3,7 +3,7 @@
 // The generic-UI half of the rehoming contract (rehome-components §4): a rehomed
 // component depends on THESE statically instead of importing app-local `@/components/*`.
 // Every primitive is skinned by semantic Tailwind tokens the host owns — zero hard-coded
-// colors — so the host themes them by defining `--color-*` / `--swc-*`, never by forking.
+// colors — so the host themes them by defining `--color-*` / `--stud-*`, never by forking.
 
 export { cn } from './cn';
 

@@ -62,6 +62,46 @@
         ui-monospace, 'IBM Plex Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
 }
 
+/*
+ * `--stud-*` component-chrome token defaults (component-seams ticket 34).
+ *
+ * schemastud packages that ship NO CSS (frame / seam / blockdoc / frame-remote) read their
+ * own open-tier `--stud-*` keys (ticket 07 own-key indirection) in inline styles. Until the
+ * durable per-package self-contained token defaults land (the map's *per-package token
+ * defaults* fog), the workbench seeds them here so isolation stories render skinned; a
+ * deployment / satellite re-treats by re-declaring these keys at its root. big-calendar's
+ * calendar-facing `--stud-*` + `--stud-hue-*` set is shipped in its own theme.css.
+ */
+:root {
+    /* Surfaces */
+    --stud-surface: #ffffff;
+    --stud-surface-subtle: #fafafa;
+    --stud-surface-muted: #f4f4f5;
+    /* Lines */
+    --stud-line: #e4e4e7;
+    --stud-line-strong: #d4d4d8;
+    /* Ink */
+    --stud-ink-strong: #101828;
+    --stud-ink: #3f3f46;
+    --stud-ink-muted: #71717a;
+    --stud-ink-faint: #a1a1aa;
+    /* Accent (blue) */
+    --stud-accent: #2563eb;
+    --stud-accent-deep: #1971c2;
+    --stud-accent-tint: #eff6ff;
+    /* Status */
+    --stud-success: #15803d;
+    --stud-success-tint: #f0fdf4;
+    --stud-warning: #a16207;
+    --stud-warning-strong: #d97706;
+    --stud-warning-tint: #fefce8;
+    --stud-star: #f59e0b;
+    --stud-danger: #b91c1c;
+    --stud-danger-tint: #fee2e2;
+    --stud-selection: #9333ea;
+    --stud-on-hue: #ffffff;
+}
+
 /* Semantic interface (--primary etc.) mapped onto the primitives — mirrored from ui/src/index.css */
 :root {
     --background: var(--splice-paper);
@@ -117,6 +157,30 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 .dark {
+    /* `--stud-*` component chrome re-skinned for dark (ticket 34 + ticket 13 light+dark-now). */
+    --stud-surface: oklch(0.24 0.022 165);
+    --stud-surface-subtle: oklch(0.22 0.02 165);
+    --stud-surface-muted: oklch(0.28 0.02 165);
+    --stud-line: oklch(0.32 0.02 165);
+    --stud-line-strong: oklch(0.38 0.02 165);
+    --stud-ink-strong: oklch(0.95 0.015 160);
+    --stud-ink: oklch(0.9 0.015 160);
+    --stud-ink-muted: oklch(0.68 0.02 160);
+    --stud-ink-faint: oklch(0.55 0.02 160);
+    --stud-accent: oklch(0.68 0.16 255);
+    --stud-accent-deep: oklch(0.8 0.12 240);
+    --stud-accent-tint: oklch(0.3 0.06 255);
+    --stud-success: oklch(0.72 0.16 150);
+    --stud-success-tint: oklch(0.3 0.06 150);
+    --stud-warning: oklch(0.78 0.14 75);
+    --stud-warning-strong: oklch(0.72 0.15 60);
+    --stud-warning-tint: oklch(0.3 0.05 80);
+    --stud-star: oklch(0.79 0.15 75);
+    --stud-danger: oklch(0.7 0.17 22);
+    --stud-danger-tint: oklch(0.3 0.08 22);
+    --stud-selection: oklch(0.62 0.2 300);
+    --stud-on-hue: oklch(1 0 0);
+
     --background: oklch(0.2 0.02 165);
     --foreground: oklch(0.93 0.015 160);
     --card: oklch(0.24 0.022 165);
@@ -152,6 +216,79 @@
     --sidebar-accent: oklch(0.78 0.17 155 / 0.16);
     --sidebar-border: oklch(0.78 0.17 155 / 0.22);
     --sidebar-avatar: oklch(0.28 0.03 160);
+}
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Structural-axis layer (component-seams ticket 36 — the STRUCTURAL twin of the
+ * B1 token cascade).
+ *
+ * Satellite re-treatment is a deployment-root CASCADE with two channels of one
+ * mechanism (satellite-re-treatment.md / apocryphon
+ * `satellite-re-treatment-is-a-deployment-root-cascade`): color rides the
+ * `--stud-`/`--beam-`/`--splice-` tier vars (above); STRUCTURE rides two CSS
+ * data-attributes set at the deployment root —
+ *
+ *   • [data-canvas=flat|dotted]        → the background treatment (`--canvas-bg`)
+ *   • [data-density=comfortable|compact] → collection spacing (`--density-*`)
+ *
+ * These are NOT color and NOT tier-prefixed: they are the same in every repo (the
+ * structural vocabulary is tier-agnostic — a satellite re-declares the attribute at
+ * the root, exactly as it re-declares a tier var, with NO prefix and NO provider,
+ * per canon `tier-words-belong-only-at-the-tier-anchor`). A component authors canvas
+ * as a background off `--canvas-bg` and density off the `--density-*` spacing tokens;
+ * it NEVER hardcodes a `dotted-bg` pattern or a fixed collection gap (that is the
+ * `hardcoded-structure` lint violation — un-re-treatable, the cascade can't reach it).
+ *
+ * Defaults live on `:root`; the two `[data-…]` blocks below are the overrides a
+ * deployment root (or a satellite) flips. Because they cascade, setting the attribute
+ * ANYWHERE up-tree re-treats everything beneath — no JS, no threading.
+ *
+ * Durable home: like the color seed, this is the workbench's standalone copy; when
+ * packages ship self-contained token defaults (ticket 07's fog) this block travels
+ * into each package's own defaults unchanged.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+:root {
+    /* canvas — flat is the plain surface; dotted paints the dot grid (below). */
+    --canvas-bg: transparent;
+    /* density — comfortable is the default rhythm of a collection. */
+    --density-gap: 1.5rem; /* inter-item gap (the `space-y-6` rhythm) */
+    --density-row-py: 0.625rem; /* table/list row vertical padding */
+    --density-pad: 1rem; /* container inset */
+}
+
+[data-canvas='flat'] {
+    --canvas-bg: transparent;
+}
+
+[data-canvas='dotted'] {
+    /* The dot grid is a treatment, not a color literal — its dot tone rides a token
+       (`--canvas-dot`) so it re-skins with the tier and re-treats under `.dark`. */
+    --canvas-dot: var(--border);
+    --canvas-bg: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
+}
+
+[data-density='comfortable'] {
+    --density-gap: 1.5rem;
+    --density-row-py: 0.625rem;
+    --density-pad: 1rem;
+}
+
+[data-density='compact'] {
+    --density-gap: 0.75rem;
+    --density-row-py: 0.3125rem;
+    --density-pad: 0.625rem;
+}
+
+/*
+ * `.canvas-surface` — the one utility a shell/`main`-region composes to paint the
+ * attribute-driven canvas. Reads `--canvas-bg` off the cascade (never a hardcoded
+ * `dotted-bg`), so `[data-canvas=dotted]` at the root turns it on with zero JS.
+ */
+@utility canvas-surface {
+    background-image: var(--canvas-bg);
+    background-size: 16px 16px;
 }
 
 /* Semantic → Tailwind color/token bridge (the neutral interface Tailwind consumes) */

@@ -23,10 +23,10 @@ export interface RenderContext {
 export type HostComponent = (element: RemoteReceiverElement, ctx: RenderContext) => ReactNode;
 
 const card: React.CSSProperties = {
-    border: '1px solid #d8dde6',
+    border: '1px solid var(--stud-line-strong)',
     borderRadius: 12,
     padding: 20,
-    background: '#fff',
+    background: 'var(--stud-surface)',
     boxShadow: '0 1px 3px rgba(16,24,40,.06)',
     maxWidth: 420,
 };
@@ -37,8 +37,8 @@ const btn: React.CSSProperties = {
     padding: '9px 16px',
     fontWeight: 600,
     fontSize: 14,
-    background: '#3b5bdb',
-    color: '#fff',
+    background: 'var(--stud-accent)',
+    color: 'var(--stud-surface)',
 };
 const badge: React.CSSProperties = {
     display: 'inline-block',
@@ -46,15 +46,15 @@ const badge: React.CSSProperties = {
     fontWeight: 700,
     padding: '2px 10px',
     borderRadius: 999,
-    background: '#e7f5ff',
-    color: '#1971c2',
+    background: 'var(--stud-accent-tint)',
+    color: 'var(--stud-accent-deep)',
 };
 const input: React.CSSProperties = {
     width: '100%',
     boxSizing: 'border-box',
     padding: '9px 12px',
     fontSize: 14,
-    border: '1px solid #ced4da',
+    border: '1px solid var(--stud-line-strong)',
     borderRadius: 8,
 };
 
@@ -78,9 +78,9 @@ export const DEFAULT_ALLOWLIST: Record<string, HostComponent> = {
         ),
     Card: (_el, { children }) => createElement('div', { style: card }, children()),
     Heading: (el) =>
-        createElement('h2', { style: { margin: 0, fontSize: 20, color: '#101828' } }, prop<string>(el, 'text')),
+        createElement('h2', { style: { margin: 0, fontSize: 20, color: 'var(--stud-ink-strong)' } }, prop<string>(el, 'text')),
     Text: (el) =>
-        createElement('p', { style: { margin: 0, color: '#475467', lineHeight: 1.5 } }, prop<string>(el, 'text')),
+        createElement('p', { style: { margin: 0, color: 'var(--stud-ink-muted)', lineHeight: 1.5 } }, prop<string>(el, 'text')),
     Badge: (el) => createElement('span', { style: badge }, prop<string>(el, 'text')),
     Button: (el, { fire }) =>
         createElement(

@@ -238,7 +238,7 @@ export function createRichContentWidget(
                 {advisoryErrors.length > 0 && (
                     <ul
                         data-blockdoc-advisory-errors=""
-                        style={{ color: '#b91c1c', fontSize: 12, margin: '4px 0', paddingLeft: 18 }}
+                        style={{ color: 'var(--stud-danger)', fontSize: 12, margin: '4px 0', paddingLeft: 18 }}
                     >
                         {advisoryErrors.map((error, index) => (
                             <li key={index}>{error}</li>
@@ -265,11 +265,11 @@ export function createRichContentWidget(
                             gap: 6,
                             padding: '4px 0',
                             marginTop: 4,
-                            borderTop: '1px solid #e4e4e7',
+                            borderTop: '1px solid var(--stud-line)',
                             fontSize: 12,
                         }}
                     >
-                        <span data-blockdoc-selected-node="" style={{ color: '#71717a', fontFamily: 'monospace' }}>
+                        <span data-blockdoc-selected-node="" style={{ color: 'var(--stud-ink-muted)', fontFamily: 'monospace' }}>
                             {selectedNodeId ?? 'no block selected'}
                         </span>
                         <input
@@ -283,7 +283,7 @@ export function createRichContentWidget(
                                 font: 'inherit',
                                 fontSize: 12,
                                 padding: '2px 6px',
-                                border: '1px solid #d4d4d8',
+                                border: '1px solid var(--stud-line-strong)',
                                 borderRadius: 4,
                             }}
                         />
@@ -296,9 +296,9 @@ export function createRichContentWidget(
                                 font: 'inherit',
                                 fontSize: 12,
                                 padding: '2px 8px',
-                                border: '1px solid #d4d4d8',
+                                border: '1px solid var(--stud-line-strong)',
                                 borderRadius: 4,
-                                background: '#fff',
+                                background: 'var(--stud-surface)',
                                 cursor: dispatching ? 'default' : 'pointer',
                                 opacity: dispatching ? 0.5 : 1,
                             }}

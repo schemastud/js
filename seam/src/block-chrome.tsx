@@ -9,13 +9,13 @@ import type { SkinContext, SkinNode } from './types';
 
 const CARD_STYLE: CSSProperties = {
     position: 'relative',
-    border: '1px solid #d4d4d8',
+    border: '1px solid var(--stud-line-strong)',
     borderRadius: 6,
     padding: '10px 12px',
     // The "striped" resting look that reads as un-skinned.
     backgroundImage:
-        'repeating-linear-gradient(45deg, #fafafa, #fafafa 8px, #f4f4f5 8px, #f4f4f5 16px)',
-    color: '#3f3f46',
+        'repeating-linear-gradient(45deg, var(--stud-surface-subtle), var(--stud-surface-subtle) 8px, var(--stud-surface-muted) 8px, var(--stud-surface-muted) 16px)',
+    color: 'var(--stud-ink)',
     fontSize: 13,
 };
 
@@ -27,17 +27,17 @@ const HEADER_STYLE: CSSProperties = {
     fontWeight: 600,
 };
 
-const HINT_STYLE: CSSProperties = { fontWeight: 400, fontSize: 12, color: '#2563eb' };
+const HINT_STYLE: CSSProperties = { fontWeight: 400, fontSize: 12, color: 'var(--stud-accent)' };
 
 const ANCHOR_STYLE: CSSProperties = {
     display: 'flex',
     justifyContent: 'space-between',
     gap: 12,
     padding: '3px 0',
-    borderTop: '1px dashed #e4e4e7',
+    borderTop: '1px dashed var(--stud-line)',
 };
 
-const KEY_STYLE: CSSProperties = { color: '#71717a' };
+const KEY_STYLE: CSSProperties = { color: 'var(--stud-ink-muted)' };
 
 // The attribute keys to anchor: the node-type's attrsSchema properties when
 // present (so declared-but-empty attrs still get an anchor), else the keys

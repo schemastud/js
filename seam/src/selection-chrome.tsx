@@ -45,7 +45,7 @@ const RING_STYLE: CSSProperties = {
     position: 'absolute',
     inset: -2,
     borderRadius: 6,
-    border: '2px solid #2563eb',
+    border: '2px solid var(--stud-accent)',
     pointerEvents: 'none',
 };
 
@@ -56,7 +56,7 @@ const HANDLE_STYLE: CSSProperties = {
     width: 14,
     height: 14,
     cursor: 'grab',
-    color: '#71717a',
+    color: 'var(--stud-ink-muted)',
 };
 
 const REQUIRED_BADGE_STYLE: CSSProperties = {
@@ -67,8 +67,8 @@ const REQUIRED_BADGE_STYLE: CSSProperties = {
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
-    color: '#b91c1c',
-    background: '#fee2e2',
+    color: 'var(--stud-danger)',
+    background: 'var(--stud-danger-tint)',
     borderRadius: 4,
     padding: '1px 4px',
     pointerEvents: 'none',
@@ -78,7 +78,7 @@ const INCOMPLETE_OUTLINE_STYLE: CSSProperties = {
     position: 'absolute',
     inset: -2,
     borderRadius: 6,
-    border: '2px dashed #d97706',
+    border: '2px dashed var(--stud-warning-strong)',
     pointerEvents: 'none',
 };
 
@@ -136,7 +136,7 @@ export function SelectionChrome({
                         position: 'absolute',
                         inset: -2,
                         borderRadius: 6,
-                        border: `2px solid ${selection.color ?? '#9333ea'}`,
+                        border: `2px solid ${selection.color ?? 'var(--stud-selection)'}`,
                         opacity: 0.5,
                         pointerEvents: 'none',
                     }}

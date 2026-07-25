@@ -16,7 +16,7 @@ interface InspectedNode {
     attrs?: Record<string, unknown>;
 }
 
-const EMPTY_STYLE = { padding: 16, color: '#71717a', fontSize: 13 } as const;
+const EMPTY_STYLE = { padding: 16, color: 'var(--stud-ink-muted)', fontSize: 13 } as const;
 
 export function Inspector() {
     const mount = useEditShellMount();

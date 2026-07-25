@@ -55,21 +55,42 @@ const WIDTH: Record<FrameLayoutWidth, string> = {
 };
 
 /**
- * SHARED BASE — the one place width + centering live; every plug composes it. A
- * bare centered, width-capped, `space-y-6`-stacked container. Exposed so a host
- * authoring a fourth surface stays inside the family's width vocabulary.
+ * Canvas — the flat/dotted background treatment (ticket 02 §3: MasterDetail is the
+ * "dotted" grammar; SingleColumn/SubNavColumn are flat). Authored as the STRUCTURAL
+ * cascade twin of the color tokens (ticket 36 / apocryphon
+ * `satellite-re-treatment-is-a-deployment-root-cascade`): a plug states its grammar
+ * DEFAULT by setting `[data-canvas]` on its own container and painting via the
+ * `canvas-surface` utility, which reads `--canvas-bg` off the cascade. It never
+ * hardcodes a `dotted-bg` pattern — so a deployment root (or satellite) that sets
+ * `[data-canvas]` higher up re-treats it with zero JS.
+ */
+export type FrameLayoutCanvas = 'flat' | 'dotted';
+
+/**
+ * SHARED BASE — the one place width + centering (+ the canvas axis) live; every plug
+ * composes it. A bare centered, width-capped, `space-y-6`-stacked container. Exposed
+ * so a host authoring a fourth surface stays inside the family's width/canvas
+ * vocabulary. `canvas` is authored cascade-reachable: it sets the `data-canvas`
+ * attribute (an override surface a satellite re-declares at the root) and paints via
+ * `canvas-surface` off `--canvas-bg` — no hardcoded background pattern.
  */
 export function FrameLayoutShell({
     width = '5xl',
+    canvas,
     className,
     children,
 }: {
     width?: FrameLayoutWidth;
+    canvas?: FrameLayoutCanvas;
     className?: string;
     children: ReactNode;
 }) {
     return (
-        <div className={cn('mx-auto space-y-6', WIDTH[width], className)} data-frame-layout-shell>
+        <div
+            className={cn('mx-auto space-y-6', WIDTH[width], canvas && 'canvas-surface', className)}
+            data-frame-layout-shell
+            data-canvas={canvas}
+        >
             {children}
         </div>
     );
@@ -206,6 +227,12 @@ export interface MasterDetailProps {
     /** The fold breakpoint (default `md`). `lg` for the wider two-pane grammars. */
     breakpoint?: 'md' | 'lg';
     width?: FrameLayoutWidth;
+    /**
+     * Canvas treatment (default `dotted` — MasterDetail is ticket 02 §3's dotted
+     * grammar). Authored off the `[data-canvas]` cascade; a satellite re-defaults it
+     * per-deployment by setting the attribute at the root. See {@link FrameLayoutCanvas}.
+     */
+    canvas?: FrameLayoutCanvas;
     className?: string;
     /**
      * Whether the detail sheet is open. Used only by the `sheet` overlay path
@@ -294,6 +321,7 @@ export function MasterDetail({
     collapse = 'stack',
     breakpoint = 'md',
     width = '6xl',
+    canvas = 'dotted',
     className,
     sheetOpen,
     onSheetOpenChange,
@@ -330,7 +358,7 @@ export function MasterDetail({
     // Overlay presentations render only the master in-flow; the detail lives in the sheet.
     if (overlayDetail) {
         return (
-            <FrameLayoutShell width={width} className={className}>
+            <FrameLayoutShell width={width} canvas={canvas} className={className}>
                 <section
                     className="min-w-0 space-y-3"
                     data-grammar="master-detail"
@@ -354,7 +382,7 @@ export function MasterDetail({
     // inline / panel: two columns above the breakpoint; `collapse="stack"` folds to
     // one column below it (detail stacks under master — pure CSS, no overlay).
     return (
-        <FrameLayoutShell width={width} className={className}>
+        <FrameLayoutShell width={width} canvas={canvas} className={className}>
             <div
                 className={cn('grid grid-cols-1 gap-6', twoCol)}
                 data-grammar="master-detail"

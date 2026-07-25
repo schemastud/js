@@ -44,7 +44,7 @@ function renderNode(node: RemoteReceiverNode, opts: RenderTreeOptions, key: numb
             if (!isDev()) return null; // prod: nothing rendered.
             return createElement(
                 'div',
-                { key, 'data-frame-remote-blocked': node.element, style: { color: '#d6336c', fontSize: 12 } },
+                { key, 'data-frame-remote-blocked': node.element, style: { color: 'var(--stud-danger)', fontSize: 12 } },
                 `⛔ unknown block <${String(node.element)}> — not in host vocabulary`,
             );
         }

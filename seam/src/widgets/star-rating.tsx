@@ -65,7 +65,7 @@ export function StarRatingWidget(props: StarRatingWidgetProps) {
                         aria-label={`${star} star${star > 1 ? 's' : ''}`}
                         disabled={locked}
                         onClick={() => onChange(star)}
-                        style={{ ...STAR_STYLE, color: filled ? '#f59e0b' : '#d4d4d8' }}
+                        style={{ ...STAR_STYLE, color: filled ? 'var(--stud-star)' : 'var(--stud-line-strong)' }}
                     >
                         ★
                     </button>
