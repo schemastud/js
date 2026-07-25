@@ -51,6 +51,7 @@ export {
     type SheetSide,
 } from './sheet';
 export { Input } from './input';
+export { Textarea } from './textarea';
 export { Label } from './label';
 export {
     Select,
