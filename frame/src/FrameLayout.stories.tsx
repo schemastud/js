@@ -30,12 +30,19 @@ import {
  * their own catalog waves.
  *
  * STRUCTURAL cascade (ticket 36): the `canvas` axis is authored off the
- * `[data-canvas]` deployment-root attribute, not a hardcoded pattern — the `DeployRoot`
- * decorator below sets `[data-canvas]`/`[data-density]` at a root wrapper and every
+ * `[data-canvas]` deployment-root attribute, not a hardcoded pattern — the `Canvas`
+ * wrapper below sets `[data-canvas]`/`[data-density]` at a root wrapper and every
  * `FrameLayoutShell` beneath paints via `canvas-surface` off `--canvas-bg` (defined in
  * `.storybook/preview.css`). Setting the attribute at the root re-treats everything under
  * it with zero JS — the structural twin of the color-token cascade, and exactly the surface
- * a satellite overrides. (VR proof the attribute reaches pixels is ticket 37's matrix.)
+ * a satellite overrides.
+ *
+ * VR PROOF (ticket 37): the `RootCascade` story below opts into the structural VR matrix
+ * (`parameters.vr.canvas`) — it composes the real `canvas-surface` utility WITHOUT pinning
+ * `[data-canvas]` itself, so the test-runner's root-level `[data-canvas=flat|dotted]` flip is
+ * the only thing that treats it. That snapshot proves a satellite deployment-root override
+ * reaches pixels; the six pinned stories above stay ambient-only (their wrapper pins the
+ * attribute, so a root flip can't move them — correctly not opted in).
  */
 const meta = {
     title: 'Frame/Inner Layout Family',
@@ -344,4 +351,38 @@ export const Socket: SocketStory = {
             </Canvas>
         );
     },
+};
+
+// ── ROOT CASCADE — the satellite deployment-root proof (ticket 37) ────────────
+// This story composes the real `canvas-surface` utility but deliberately does NOT set
+// `[data-canvas]` on any wrapper — the surface reads `--canvas-bg` off the cascade, so the
+// treatment can only be supplied from an ANCESTOR. `parameters.vr.canvas` opts it into the
+// structural VR matrix: the test-runner flips `[data-canvas=flat|dotted]` on the DEPLOYMENT
+// ROOT (documentElement) and screenshots each, proving a satellite-style root override
+// re-treats a component that never declared the attribute itself. Unlike the six stories
+// above (which pin canvas on their own `Canvas` wrapper and so stay ambient-only), this is
+// the one surface a root-level flip actually moves.
+export const RootCascade: Story = {
+    name: 'Root cascade (satellite [data-canvas] proof · VR)',
+    parameters: { vr: { canvas: true } },
+    render: () => (
+        <div className="canvas-surface min-h-[480px] w-full bg-background px-6 py-8">
+            <SingleColumn width="3xl">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Root-driven canvas</CardTitle>
+                        <CardDescription className="font-mono text-[11px]">
+                            canvas-surface · no local [data-canvas] · treated only by the root
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="text-sm text-muted-foreground">
+                        The dotted work-surface here is painted by a root-level{' '}
+                        <code>[data-canvas=dotted]</code> override — the same channel a satellite
+                        re-declares at its deployment root. Flip it to <code>flat</code> and this
+                        surface goes calm, with zero changes to this component.
+                    </CardContent>
+                </Card>
+            </SingleColumn>
+        </div>
+    ),
 };
