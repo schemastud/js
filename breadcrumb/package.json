@@ -37,6 +37,7 @@
     },
     "devDependencies": {
         "@schemastud/combobox": "*",
+        "@schemastud/ui": "*",
         "@types/react": "^19.0.0",
         "react": "^19.0.0",
         "tsup": "^8.5.1",
