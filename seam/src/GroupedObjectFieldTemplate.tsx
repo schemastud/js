@@ -1,11 +1,17 @@
 import { Theme as ShadcnTheme } from '@rjsf/shadcn';
+import type { ComponentType } from 'react';
 import type { ObjectFieldTemplateProps, RJSFSchema } from '@rjsf/utils';
 
 type PropEl = ObjectFieldTemplateProps['properties'][number];
 
 // The vendored shadcn default — reused verbatim for objects that declare no
-// `x-group`, so nested and ungrouped objects render exactly as before.
-const DefaultObjectFieldTemplate = ShadcnTheme.templates?.ObjectFieldTemplate;
+// `x-group`, so nested and ungrouped objects render exactly as before. The theme's
+// `templates.ObjectFieldTemplate` slot is typed as a loose union across the RJSF
+// version surface; narrow it to the component it actually is at runtime so it can be
+// rendered as JSX (and so the package's dts build stays green).
+const DefaultObjectFieldTemplate = ShadcnTheme.templates?.ObjectFieldTemplate as
+    | ComponentType<ObjectFieldTemplateProps>
+    | undefined;
 
 /**
  * Partition an object's properties into titled `x-group` sections (e.g. Basics /
