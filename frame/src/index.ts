@@ -66,10 +66,13 @@ export {
     createGuardRegistry,
     assertRouteContext,
     resolveAliasTarget,
+    buildRealmRoutes,
     type RouteRegistry,
     type GuardRegistry,
     type RouteComponent,
     type GuardComponent,
+    type RealmRouteObject,
+    type RealmRouteRegistries,
 } from './routes';
 export {
     useResourceList,
