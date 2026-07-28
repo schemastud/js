@@ -64,13 +64,16 @@ export { createFrameHooks, type FrameHooks, type SubmittedHandler, type Submitte
 export {
     createRouteRegistry,
     createGuardRegistry,
+    createShellRegistry,
     assertRouteContext,
     resolveAliasTarget,
     buildRealmRoutes,
     type RouteRegistry,
     type GuardRegistry,
+    type ShellRegistry,
     type RouteComponent,
     type GuardComponent,
+    type ShellComponent,
     type RealmRouteObject,
     type RealmRouteRegistries,
 } from './routes';

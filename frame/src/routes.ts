@@ -30,6 +30,24 @@ export interface GuardRegistry {
     resolveGuard(key: string): GuardComponent | undefined;
 }
 
+/**
+ * A shell layout component — a hand-written layout that owns its `<Outlet/>` + chrome
+ * (tabs, headers). Generated leaves carrying that shell key nest INSIDE it (realm-
+ * architecture ticket 03). It takes no props; it renders the router `<Outlet/>` itself.
+ */
+export type ShellComponent = ComponentType<Record<string, never>>;
+
+/**
+ * The shell registry — the third name→component binding beside routes + guards: it maps
+ * a `RouteContextEntry.shell` key to the layout component the generator nests that leaf
+ * under. `null`/`'app'` is the top-level (no-shell) case and is never looked up here.
+ */
+export interface ShellRegistry {
+    registerShell(key: string, component: ShellComponent): void;
+    hasShell(key: string): boolean;
+    resolveShell(key: string): ShellComponent | undefined;
+}
+
 export function createRouteRegistry(): RouteRegistry {
     const routes = new Map<string, RouteComponent>();
 
@@ -61,6 +79,22 @@ export function createGuardRegistry(): GuardRegistry {
         },
         resolveGuard(key) {
             return guards.get(key);
+        },
+    };
+}
+
+export function createShellRegistry(): ShellRegistry {
+    const shells = new Map<string, ShellComponent>();
+
+    return {
+        registerShell(key, component) {
+            shells.set(key, component);
+        },
+        hasShell(key) {
+            return shells.has(key);
+        },
+        resolveShell(key) {
+            return shells.get(key);
         },
     };
 }
@@ -120,11 +154,14 @@ export function assertRouteContext(
 
 /**
  * One generated router leaf — the shape react-router's `RouteObject` accepts (a `path`
- * + an `element`), produced without a react-router dependency in the foundation.
+ * + an `element`, and — for a shell layout — `children`), produced without a react-router
+ * dependency in the foundation. A shell parent carries `children` + a layout `element`
+ * (no leaf component); a flat leaf carries `element` + no children.
  */
 export interface RealmRouteObject {
     path: string;
     element: ReactElement;
+    children?: RealmRouteObject[];
 }
 
 export interface RealmRouteRegistries {
@@ -132,6 +169,19 @@ export interface RealmRouteRegistries {
     routes: RouteRegistry;
     /** Binds each leaf's `guard` key → the guard component wrapping it. */
     guards: GuardRegistry;
+    /**
+     * Binds each leaf's `shell` key → the layout it nests under. Optional: absent (or a
+     * leaf whose `shell` is null/`'app'`/unregistered) means the leaf stays top-level — so
+     * a flat realm (the operator console) passes no shells and behaves exactly as before.
+     */
+    shells?: ShellRegistry;
+    /**
+     * Hand-written child routes to append INSIDE a shell's layout, keyed by shell key — the
+     * bespoke + record-nested routes a section keeps hand-authored (`silos/:id/*`,
+     * `scopes/:id/golden`, the section overview) which live under the same layout as the
+     * generated leaves but aren't manifest resources.
+     */
+    shellChildren?: Record<string, RealmRouteObject[]>;
     /**
      * Called when a leaf's `routeName` has no bound component. `assertRouteContext` is
      * the loud boot invariant; this is the soft per-leaf fallback so one unbound name
@@ -141,32 +191,68 @@ export interface RealmRouteRegistries {
 }
 
 /**
- * Expand a realm's flat `RouteContext` into router leaves: resolve each `routeName` to
- * its component and, when the leaf carries a `guard`, wrap the element in the guard
- * component. Realm-agnostic — no realm names, no tenancy, no RBAC; the host supplies the
- * concrete entries + registry bindings and slots the result under the realm's routeBase.
+ * Expand a realm's flat `RouteContext` into router leaves: resolve each `routeName` to its
+ * component and, when the leaf carries a `guard`, wrap the element in the guard component.
+ *
+ * Shell-aware (realm-architecture ticket 03): a leaf whose `shell` resolves in the shell
+ * registry is nested under that shell's layout — the generator groups such leaves by shell
+ * key, wraps each group in `{ path: shellKey, element: <Layout/>, children: [...] }` (the
+ * layout owns the `<Outlet/>` + chrome), and appends any hand-written `shellChildren` for
+ * that shell. Leaves with no registered shell stay top-level. Realm-agnostic — no realm
+ * names, no tenancy, no RBAC; the host supplies the entries + registry bindings and slots
+ * the result under the realm's routeBase. Shell groups emit in first-seen order.
  */
 export function buildRealmRoutes(
     entries: RouteContextEntry[],
     registries: RealmRouteRegistries,
 ): RealmRouteObject[] {
     const routes: RealmRouteObject[] = [];
+    // shell key → the group's children array (a live ref spliced into `routes` in order).
+    const shellGroups = new Map<string, RealmRouteObject[]>();
 
-    for (const entry of entries) {
+    const leafElement = (entry: RouteContextEntry): ReactElement | null => {
         const Component = registries.routes.resolveRoute(entry.routeName);
         if (!Component) {
             registries.onUnbound?.(entry);
-            continue;
+            return null;
         }
 
         let element: ReactElement = createElement(Component);
-
         const Guard = entry.guard ? registries.guards.resolveGuard(entry.guard) : undefined;
         if (Guard) {
             element = createElement(Guard, null, element);
         }
+        return element;
+    };
 
-        routes.push({ path: entry.path, element });
+    for (const entry of entries) {
+        const Shell =
+            entry.shell && entry.shell !== 'app'
+                ? registries.shells?.resolveShell(entry.shell)
+                : undefined;
+
+        // A leaf with no registered shell stays flat (the operator-console behaviour).
+        if (!Shell || !entry.shell) {
+            const element = leafElement(entry);
+            if (element) {
+                routes.push({ path: entry.path, element });
+            }
+            continue;
+        }
+
+        // A shelled leaf nests under its layout. The group is created lazily on first sight
+        // (preserving first-seen order in `routes`) and its bespoke shellChildren appended.
+        let children = shellGroups.get(entry.shell);
+        if (!children) {
+            children = [...(registries.shellChildren?.[entry.shell] ?? [])];
+            shellGroups.set(entry.shell, children);
+            routes.push({ path: entry.shell, element: createElement(Shell), children });
+        }
+
+        const element = leafElement(entry);
+        if (element) {
+            children.push({ path: entry.path, element });
+        }
     }
 
     return routes;
