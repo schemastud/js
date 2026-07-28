@@ -106,6 +106,8 @@ export type {
     AdminResourceDefinition,
     RouteContextEntry,
     RouteMounts,
+    RealmDefinition,
+    RealmScope,
     AliasEntry,
     ListShellProps,
     ListSlots,

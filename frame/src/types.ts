@@ -176,6 +176,34 @@ export interface RouteContextEntry {
     resource?: string | null;
 }
 
+// =============================================================================
+// Realm — the router half's first-class unit (realm-architecture ticket 01). A
+// realm is "a manifest + a guarded route tree"; a RealmDefinition carries the
+// identity + routing axes the manifest builder (backend) and the route generator
+// (frontend) both read, replacing the bare `'admin'|'tenant'` string. Realm-
+// agnostic machinery — no realm names, no tenancy policy, no RBAC live here; a
+// host (or the beam realm kit) supplies the concrete instances.
+// =============================================================================
+
+// The identity axis of a realm — the load-bearing distinction. `central` is a
+// single non-tenanted context; `tenant` is the current workspace; `user` is the
+// account/identity across workspaces. On a single-tenant instance tenant+user
+// collapse to one identity.
+export type RealmScope = 'central' | 'tenant' | 'user';
+
+export interface RealmDefinition {
+    // Stable realm identity; the manifest fetch key + resource-realm map key.
+    key: string;
+    // The SPA mount base for this realm's generated route tree (`/admin`, `/`, `/settings`).
+    routeBase: string;
+    // The default host guard key wrapping this realm's leaves (`root` → RequireRoot; null = the shell's own auth).
+    guard: string | null;
+    // The identity axis — `central` · `tenant` · `user`.
+    scope: RealmScope;
+    // Whether this realm resolves a tenant (per-realm optional; not a global switch).
+    tenancy: boolean;
+}
+
 // One back-compat redirect, emitted in the manifest so the JS router is a pure
 // renderer (no separate client alias table). A `:id` in both `from` and `to`
 // interpolates client-side; `preserveQuery` carries the query string through. A
