@@ -198,10 +198,12 @@ export interface RealmDefinition {
     routeBase: string;
     // The default host guard key wrapping this realm's leaves (`root` → RequireRoot; null = the shell's own auth).
     guard: string | null;
-    // The identity axis — `central` · `tenant` · `user`.
-    scope: RealmScope;
-    // Whether this realm resolves a tenant (per-realm optional; not a global switch).
-    tenancy: boolean;
+    // Whether this realm is the single non-tenanted central context (true = admin/central). The identity
+    // axis rides the realm `key`; `RealmScope` was retired for this boolean (realm-architecture ticket 08),
+    // mirroring the PHP `RealmDefinition` DTO.
+    central: boolean;
+    // Optional realm route/nav stack composition (PHP `stack: array = []`).
+    stack?: string[];
 }
 
 // One back-compat redirect, emitted in the manifest so the JS router is a pure
