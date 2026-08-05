@@ -10,6 +10,13 @@ import {
     CardTitle,
     DataTable,
     Input,
+    Sidebar,
+    SidebarContent,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
+    SidebarProvider,
     Switch,
     cn,
     parseSort,
@@ -85,6 +92,30 @@ describe('@schemastud/ui primitives mount in isolation', () => {
         );
         expect(screen.getByText('System').className).toContain('font-semibold');
         expect(screen.getByRole('switch', { name: 'enabled' })).toBeDefined();
+    });
+
+    it('Sidebar renders its menu inside a provider off host-owned tokens (portable, no @/ coupling)', () => {
+        render(
+            <SidebarProvider>
+                <Sidebar collapsible="icon">
+                    <SidebarHeader>
+                        <span>brand</span>
+                    </SidebarHeader>
+                    <SidebarContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton>Dashboard</SidebarMenuButton>
+                            </SidebarMenuItem>
+                        </SidebarMenu>
+                    </SidebarContent>
+                </Sidebar>
+            </SidebarProvider>,
+        );
+        expect(screen.getByText('brand')).toBeDefined();
+        const item = screen.getByText('Dashboard');
+        expect(item).toBeDefined();
+        // The menu button carries the sidebar token classes, not a hard-coded color.
+        expect(item.className).toContain('sidebar-accent');
     });
 
     it('cn + sort vocabulary are pure and exported', () => {

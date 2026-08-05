@@ -7,7 +7,9 @@ local `@/components/*`.
 Ships: `Button`, `Badge`, `Card` (+ `CardHeader` / `CardTitle` / `CardDescription` /
 `CardContent` / `CardFooter`), `Dialog`, `Input`, `Label`, `Select` / `SimpleSelect`,
 `Switch`, a dependency-free `Popover`, a headless TanStack `DataTable` (with its shared
-sort vocabulary), and `cn`.
+sort vocabulary), `Separator`, `Skeleton`, `Tooltip`, the `useIsMobile` hook, the full
+`Sidebar` block (collapsible desktop rail ⟷ mobile `Sheet` drawer + every `Sidebar*` menu
+part — the primitive a host account/app shell hangs its nav on), and `cn`.
 
 ## The two rules that make it portable
 
