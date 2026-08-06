@@ -2,7 +2,9 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
     // Single browser-side React surface — pure runtime chrome, no build-time plugin.
-    entry: { index: 'src/index.ts' },
+    // `.` = the generic engine (react-rnd-free). `./os` = the Frame OS desktop layer (window
+    // manager + the react-rnd-bound WindowFrame), split so engine-only consumers never pull react-rnd.
+    entry: { index: 'src/index.ts', os: 'src/os/index.ts' },
     format: ['esm'],
     dts: true,
     sourcemap: true,

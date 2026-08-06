@@ -1,0 +1,510 @@
+/**
+ * The capability-complete window-manager reducer (Frame OS ticket 03, ADR-0011 §1 + ADR-0012 §B2).
+ *
+ * A pure, framework-neutral, exhaustively unit-testable reducer that owns the desktop window model:
+ * the open set, z-order, focus, min/max state, and the snap/tile/dock geometry logic. It supersedes
+ * the shipped open/focus/minimize/close-only reducer (`@splicewire/beam-ux/shell`), which was
+ * geometry-free.
+ *
+ * **The geometry wheel stays out of here.** This module computes geometry *values* (rects) but never
+ * imports a geometry library: `react-rnd` is imported at exactly one place — the `WindowFrame`
+ * component — and a guard test fails if it leaks anywhere else (keeping `dockview` reachable as the
+ * deferred second wheel behind the same seam). No React, no Inertia, no DOM.
+ *
+ * **No privileged root window.** Every window is an equal peer carrying `role` metadata the
+ * implementation sets (`persistent?`, `closable?`, `zAnchor?`); the reducer merely honors those
+ * fields when it computes z-order and handles close.
+ */
+
+/** A desktop viewport size — the frame within which snap/tile/dock/maximize geometry is computed. */
+export type Bounds = { width: number; height: number };
+
+/** An absolute window rectangle in desktop coordinates. */
+export type Geometry = { x: number; y: number; width: number; height: number };
+
+/** The snap targets: screen halves, quadrants, and full-screen. */
+export type SnapZone =
+    | 'left'
+    | 'right'
+    | 'top'
+    | 'bottom'
+    | 'top-left'
+    | 'top-right'
+    | 'bottom-left'
+    | 'bottom-right'
+    | 'maximized';
+
+/** A dock edge — the window pins to a fixed strip along one screen edge. */
+export type DockEdge = 'left' | 'right' | 'top' | 'bottom';
+
+/**
+ * The z-order bucket a window sits in. `floor` windows always stack below `normal`, `top` always
+ * above — focus raises a window only within its own bucket, so a pinned floor (e.g. a desktop
+ * backdrop) or a pinned top (e.g. a persistent HUD) keeps its band. Default `normal`.
+ */
+export type ZAnchor = 'floor' | 'normal' | 'top';
+
+/** Role metadata the implementation sets on a window; the reducer honors it, never invents it. */
+export type WindowRole = {
+    /** A persistent window is never removed by `close` (the op is a no-op). Default false. */
+    persistent?: boolean;
+    /** A non-closable window ignores `close` (the op is a no-op). Default true (closable). */
+    closable?: boolean;
+    /** Which z-order band this window lives in. Default `normal`. */
+    zAnchor?: ZAnchor;
+};
+
+/** One managed window: its geometry, lifecycle flags, snap state, and role. */
+export type ManagedWindow = {
+    /** The app/page key this window frames — its stable identity and z-order token. */
+    key: string;
+    /** The current floating rectangle. When maximized/snapped, this holds the derived rect. */
+    geometry: Geometry;
+    /** Minimized windows stay in the manager (dock task lit) but are not painted on the desktop. */
+    minimized: boolean;
+    /** Maximized fills the workspace bounds; `restore` remembers the pre-maximize rect. */
+    maximized: boolean;
+    /** The active snap zone, or null when free-floating / maximized. */
+    snap: SnapZone | null;
+    /** The rectangle to restore to after un-maximize / un-snap. Null when the window is free. */
+    restore: Geometry | null;
+    /** Role metadata (persistence, closability, z-anchor). */
+    role: WindowRole;
+};
+
+/**
+ * The full window-manager state (ticket 03 contract).
+ * - `windows` — open windows keyed by app key (minimized ones included).
+ * - `zOrder` — every window key back-to-front; invariant: `floor` keys precede `normal` precede
+ *   `top`, so paint order and focus both honor the anchor bands.
+ * - `focused` — the focused window key (the highest-z non-minimized window), or null.
+ * - `snap` — a transient snap-preview zone a drag-to-snap UI can set/clear; null when idle.
+ * - `workspace` — the desktop bounds snap/tile/dock/maximize geometry is computed against.
+ */
+export type WindowManagerState = {
+    windows: Record<string, ManagedWindow>;
+    zOrder: string[];
+    focused: string | null;
+    snap: SnapZone | null;
+    workspace: { bounds: Bounds };
+};
+
+/** The op set (ticket 03): `open close focus move resize minimize maximize restore snap tile dock`. */
+export type WindowManagerAction =
+    | { type: 'open'; key: string; geometry?: Partial<Geometry>; role?: WindowRole }
+    | { type: 'close'; key: string }
+    | { type: 'focus'; key: string }
+    | { type: 'move'; key: string; x: number; y: number }
+    | { type: 'resize'; key: string; width: number; height: number; x?: number; y?: number }
+    | { type: 'minimize'; key: string }
+    | { type: 'maximize'; key: string }
+    | { type: 'restore'; key: string }
+    | { type: 'snap'; key: string; zone: SnapZone }
+    | { type: 'tile'; keys?: string[] }
+    | { type: 'dock'; key: string; edge: DockEdge; size?: number }
+    // Infra ops (not user window ops): re-project geometry when the viewport changes, and set the
+    // transient snap-preview a drag UI shows. Kept explicit so the reducer stays the single source.
+    | { type: 'bounds'; bounds: Bounds }
+    | { type: 'snapPreview'; zone: SnapZone | null };
+
+export const DEFAULT_BOUNDS: Bounds = { width: 1280, height: 800 };
+
+export const initialWindowManagerState: WindowManagerState = {
+    windows: {},
+    zOrder: [],
+    focused: null,
+    snap: null,
+    workspace: { bounds: DEFAULT_BOUNDS },
+};
+
+// ── z-order helpers ──────────────────────────────────────────────────────────────────────────────
+
+const ANCHOR_RANK: Record<ZAnchor, number> = { floor: 0, normal: 1, top: 2 };
+
+function anchorOf(windows: Record<string, ManagedWindow>, key: string): ZAnchor {
+    return windows[key]?.role.zAnchor ?? 'normal';
+}
+
+/**
+ * Re-sort `zOrder` so the band invariant holds (`floor` < `normal` < `top`) while preserving the
+ * relative order within each band. A stable partition — the single place the invariant is enforced.
+ */
+function normalizeZOrder(zOrder: string[], windows: Record<string, ManagedWindow>): string[] {
+    return [...zOrder].sort((a, b) => ANCHOR_RANK[anchorOf(windows, a)] - ANCHOR_RANK[anchorOf(windows, b)]);
+}
+
+/** Raise `key` to the front of its own anchor band (highest z within the band), keeping the invariant. */
+function raiseWithinBand(zOrder: string[], windows: Record<string, ManagedWindow>, key: string): string[] {
+    const without = zOrder.filter((k) => k !== key);
+    const band = ANCHOR_RANK[anchorOf(windows, key)];
+    // Insert after the last key whose band <= this band (i.e. at the top of this band, below higher bands).
+    let insertAt = without.length;
+    for (let i = 0; i < without.length; i++) {
+        if (ANCHOR_RANK[anchorOf(windows, without[i])] > band) {
+            insertAt = i;
+            break;
+        }
+    }
+    return [...without.slice(0, insertAt), key, ...without.slice(insertAt)];
+}
+
+/** The focused window = the topmost (last in zOrder) non-minimized window, or null. */
+function topmostVisible(state: { zOrder: string[]; windows: Record<string, ManagedWindow> }): string | null {
+    for (let i = state.zOrder.length - 1; i >= 0; i--) {
+        const w = state.windows[state.zOrder[i]];
+        if (w && !w.minimized) return w.key;
+    }
+    return null;
+}
+
+// ── geometry helpers ─────────────────────────────────────────────────────────────────────────────
+
+const DEFAULT_WINDOW: Geometry = { x: 64, y: 64, width: 720, height: 480 };
+const CASCADE_STEP = 28;
+
+/** A fresh window's default geometry, cascaded by how many windows are already open. */
+function cascadeGeometry(count: number, override?: Partial<Geometry>): Geometry {
+    const base: Geometry = {
+        x: DEFAULT_WINDOW.x + count * CASCADE_STEP,
+        y: DEFAULT_WINDOW.y + count * CASCADE_STEP,
+        width: DEFAULT_WINDOW.width,
+        height: DEFAULT_WINDOW.height,
+    };
+    return { ...base, ...override };
+}
+
+/** The absolute rect for a snap zone within `bounds`. */
+export function snapRect(zone: SnapZone, bounds: Bounds): Geometry {
+    const { width: W, height: H } = bounds;
+    const halfW = Math.round(W / 2);
+    const halfH = Math.round(H / 2);
+    switch (zone) {
+        case 'maximized':
+            return { x: 0, y: 0, width: W, height: H };
+        case 'left':
+            return { x: 0, y: 0, width: halfW, height: H };
+        case 'right':
+            return { x: W - halfW, y: 0, width: halfW, height: H };
+        case 'top':
+            return { x: 0, y: 0, width: W, height: halfH };
+        case 'bottom':
+            return { x: 0, y: H - halfH, width: W, height: halfH };
+        case 'top-left':
+            return { x: 0, y: 0, width: halfW, height: halfH };
+        case 'top-right':
+            return { x: W - halfW, y: 0, width: halfW, height: halfH };
+        case 'bottom-left':
+            return { x: 0, y: H - halfH, width: halfW, height: halfH };
+        case 'bottom-right':
+            return { x: W - halfW, y: H - halfH, width: halfW, height: halfH };
+    }
+}
+
+/** The rect for a docked strip along `edge`, occupying `size` px (default 1/4 of the relevant axis). */
+function dockRect(edge: DockEdge, size: number | undefined, bounds: Bounds): Geometry {
+    const { width: W, height: H } = bounds;
+    switch (edge) {
+        case 'left':
+            return { x: 0, y: 0, width: size ?? Math.round(W / 4), height: H };
+        case 'right': {
+            const w = size ?? Math.round(W / 4);
+            return { x: W - w, y: 0, width: w, height: H };
+        }
+        case 'top':
+            return { x: 0, y: 0, width: W, height: size ?? Math.round(H / 4) };
+        case 'bottom': {
+            const h = size ?? Math.round(H / 4);
+            return { x: 0, y: H - h, width: W, height: h };
+        }
+    }
+}
+
+/** Re-derive a window's geometry from its maximized/snap state against the current bounds. */
+function reproject(win: ManagedWindow, bounds: Bounds): ManagedWindow {
+    if (win.maximized) return { ...win, geometry: snapRect('maximized', bounds) };
+    if (win.snap) return { ...win, geometry: snapRect(win.snap, bounds) };
+    return win;
+}
+
+// ── the reducer ──────────────────────────────────────────────────────────────────────────────────
+
+export function windowManagerReducer(
+    state: WindowManagerState,
+    action: WindowManagerAction,
+): WindowManagerState {
+    switch (action.type) {
+        case 'open': {
+            const existing = state.windows[action.key];
+            if (existing) {
+                // Idempotent: re-opening focuses + un-minimizes, keeps geometry.
+                const windows = { ...state.windows, [action.key]: { ...existing, minimized: false } };
+                const zOrder = raiseWithinBand(state.zOrder, windows, action.key);
+                return { ...state, windows, zOrder, focused: action.key, snap: null };
+            }
+            const role = action.role ?? {};
+            const count = Object.keys(state.windows).length;
+            const win: ManagedWindow = {
+                key: action.key,
+                geometry: cascadeGeometry(count, action.geometry),
+                minimized: false,
+                maximized: false,
+                snap: null,
+                restore: null,
+                role,
+            };
+            const windows = { ...state.windows, [action.key]: win };
+            const zOrder = raiseWithinBand([...state.zOrder, action.key], windows, action.key);
+            return { ...state, windows, zOrder, focused: action.key, snap: null };
+        }
+        case 'close': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            // Honor the role fields: a persistent or non-closable window ignores close.
+            if (win.role.persistent || win.role.closable === false) return state;
+            const windows = { ...state.windows };
+            delete windows[action.key];
+            const zOrder = state.zOrder.filter((k) => k !== action.key);
+            return { ...state, windows, zOrder, focused: topmostVisible({ zOrder, windows }) };
+        }
+        case 'focus': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            const windows = win.minimized
+                ? { ...state.windows, [action.key]: { ...win, minimized: false } }
+                : state.windows;
+            const zOrder = raiseWithinBand(state.zOrder, windows, action.key);
+            return { ...state, windows, zOrder, focused: action.key };
+        }
+        case 'move': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            // Moving frees the window from maximize/snap (it becomes floating at the dropped point).
+            const geometry: Geometry = { ...win.geometry, x: action.x, y: action.y };
+            const windows = {
+                ...state.windows,
+                [action.key]: { ...win, geometry, maximized: false, snap: null, restore: null },
+            };
+            return { ...state, windows, snap: null };
+        }
+        case 'resize': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            const geometry: Geometry = {
+                x: action.x ?? win.geometry.x,
+                y: action.y ?? win.geometry.y,
+                width: action.width,
+                height: action.height,
+            };
+            const windows = {
+                ...state.windows,
+                [action.key]: { ...win, geometry, maximized: false, snap: null, restore: null },
+            };
+            return { ...state, windows };
+        }
+        case 'minimize': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            const windows = { ...state.windows, [action.key]: { ...win, minimized: true } };
+            return { ...state, windows, focused: topmostVisible({ zOrder: state.zOrder, windows }) };
+        }
+        case 'maximize': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            const restore = win.restore ?? win.geometry;
+            const windows = {
+                ...state.windows,
+                [action.key]: {
+                    ...win,
+                    maximized: true,
+                    snap: null,
+                    minimized: false,
+                    restore,
+                    geometry: snapRect('maximized', state.workspace.bounds),
+                },
+            };
+            const zOrder = raiseWithinBand(state.zOrder, windows, action.key);
+            return { ...state, windows, zOrder, focused: action.key };
+        }
+        case 'restore': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            const geometry = win.restore ?? win.geometry;
+            const windows = {
+                ...state.windows,
+                [action.key]: { ...win, maximized: false, snap: null, restore: null, geometry },
+            };
+            return { ...state, windows };
+        }
+        case 'snap': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            const restore = win.restore ?? win.geometry;
+            const windows = {
+                ...state.windows,
+                [action.key]: {
+                    ...win,
+                    snap: action.zone,
+                    maximized: action.zone === 'maximized',
+                    minimized: false,
+                    restore,
+                    geometry: snapRect(action.zone, state.workspace.bounds),
+                },
+            };
+            const zOrder = raiseWithinBand(state.zOrder, windows, action.key);
+            return { ...state, windows, zOrder, focused: action.key, snap: null };
+        }
+        case 'dock': {
+            const win = state.windows[action.key];
+            if (!win) return state;
+            const restore = win.restore ?? win.geometry;
+            const windows = {
+                ...state.windows,
+                [action.key]: {
+                    ...win,
+                    snap: null,
+                    maximized: false,
+                    minimized: false,
+                    restore,
+                    geometry: dockRect(action.edge, action.size, state.workspace.bounds),
+                },
+            };
+            const zOrder = raiseWithinBand(state.zOrder, windows, action.key);
+            return { ...state, windows, zOrder, focused: action.key };
+        }
+        case 'tile': {
+            const keys = (action.keys ?? state.zOrder).filter(
+                (k) => state.windows[k] && !state.windows[k].minimized,
+            );
+            if (keys.length === 0) return state;
+            const tiled = tileRects(keys.length, state.workspace.bounds);
+            const windows = { ...state.windows };
+            keys.forEach((k, i) => {
+                const win = windows[k];
+                windows[k] = { ...win, maximized: false, snap: null, restore: null, geometry: tiled[i] };
+            });
+            return { ...state, windows, snap: null };
+        }
+        case 'bounds': {
+            const workspace = { bounds: action.bounds };
+            const windows: Record<string, ManagedWindow> = {};
+            for (const [k, w] of Object.entries(state.windows)) windows[k] = reproject(w, action.bounds);
+            return { ...state, windows, workspace };
+        }
+        case 'snapPreview':
+            return { ...state, snap: action.zone };
+        default:
+            return state;
+    }
+}
+
+/** A near-square grid of `count` rects filling `bounds`, row-major. */
+export function tileRects(count: number, bounds: Bounds): Geometry[] {
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const cellW = Math.floor(bounds.width / cols);
+    const cellH = Math.floor(bounds.height / rows);
+    const rects: Geometry[] = [];
+    for (let i = 0; i < count; i++) {
+        const col = i % cols;
+        const row = Math.floor(i / cols);
+        rects.push({ x: col * cellW, y: row * cellH, width: cellW, height: cellH });
+    }
+    return rects;
+}
+
+// ── selectors ────────────────────────────────────────────────────────────────────────────────────
+
+/** Open (non-minimized) windows, back-to-front (zOrder order), each carrying its full record. */
+export function visibleWindows(state: WindowManagerState): ManagedWindow[] {
+    return state.zOrder.map((k) => state.windows[k]).filter((w): w is ManagedWindow => !!w && !w.minimized);
+}
+
+/** True when a window for `key` exists (open or minimized). */
+export function isTaskOpen(state: WindowManagerState, key: string): boolean {
+    return key in state.windows;
+}
+
+/** The paint z-index for a window key (its index in zOrder; higher = nearer front). */
+export function zIndexOf(state: WindowManagerState, key: string): number {
+    return state.zOrder.indexOf(key);
+}
+
+// ── the persisted workspace dialect (our own JSON — no cross-tool standard exists) ─────────────────
+
+/** The serialized per-window record — open set + geometry + min/max + snap + role, per ticket 03. */
+export type PersistedWindow = {
+    key: string;
+    geometry: Geometry;
+    minimized: boolean;
+    maximized: boolean;
+    snap: SnapZone | null;
+    role: WindowRole;
+};
+
+/** The serialized workspace — versioned so the dialect can evolve without breaking old snapshots. */
+export type PersistedWorkspace = {
+    version: 1;
+    windows: PersistedWindow[];
+    zOrder: string[];
+    focused: string | null;
+};
+
+export const WORKSPACE_VERSION = 1 as const;
+
+/** Serialize the durable slice of the state for per-user persistence (bounds are viewport-derived). */
+export function serializeWorkspace(state: WindowManagerState): PersistedWorkspace {
+    return {
+        version: WORKSPACE_VERSION,
+        windows: state.zOrder
+            .map((k) => state.windows[k])
+            .filter((w): w is ManagedWindow => !!w)
+            .map((w) => ({
+                key: w.key,
+                geometry: w.geometry,
+                minimized: w.minimized,
+                maximized: w.maximized,
+                snap: w.snap,
+                role: w.role,
+            })),
+        zOrder: [...state.zOrder],
+        focused: state.focused,
+    };
+}
+
+/**
+ * Rebuild a full state from a persisted workspace against the current viewport bounds. Unknown /
+ * versionless input restores to the initial state (degrade-not-throw). Maximized/snapped windows are
+ * re-projected to the given bounds so a restored layout fits the current viewport.
+ */
+export function deserializeWorkspace(
+    persisted: PersistedWorkspace | null | undefined,
+    bounds: Bounds = DEFAULT_BOUNDS,
+): WindowManagerState {
+    if (!persisted || persisted.version !== WORKSPACE_VERSION) {
+        return { ...initialWindowManagerState, workspace: { bounds } };
+    }
+    const windows: Record<string, ManagedWindow> = {};
+    for (const p of persisted.windows) {
+        const win: ManagedWindow = {
+            key: p.key,
+            geometry: p.geometry,
+            minimized: p.minimized,
+            maximized: p.maximized,
+            snap: p.snap,
+            restore: p.maximized || p.snap ? p.geometry : null,
+            role: p.role,
+        };
+        windows[p.key] = reproject(win, bounds);
+    }
+    const zOrder = normalizeZOrder(
+        persisted.zOrder.filter((k) => windows[k]),
+        windows,
+    );
+    return {
+        windows,
+        zOrder,
+        focused: persisted.focused && windows[persisted.focused] ? persisted.focused : topmostVisible({ zOrder, windows }),
+        snap: null,
+        workspace: { bounds },
+    };
+}
