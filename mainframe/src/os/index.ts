@@ -37,3 +37,15 @@ export { useWindowManager, type WindowManager, type UseWindowManagerOptions } fr
 
 // The geometry seam — the ONE react-rnd import site.
 export { WindowFrame, type WindowFrameProps } from './WindowFrame';
+
+// The `os` Mainframe mode (empty structure): the desktop layout + window layer + the two custom slots.
+export {
+    OsMainframe,
+    registerOsMode,
+    useOs,
+    OS_WINDOW_SLOTS,
+    OS_WINDOW_DRAG_HANDLE,
+    type OsWindowSpec,
+    type OsHostContext,
+    type OsContextValue,
+} from './OsMainframe';
