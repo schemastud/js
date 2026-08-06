@@ -78,6 +78,13 @@
         overflow: hidden;
     }
 
+    /* The optional `main` backdrop (wallpaper/watermark) — behind the window layer. */
+    .os-desktop-backdrop {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+    }
+
     .os-desktop-windows {
         position: absolute;
         inset: 0;

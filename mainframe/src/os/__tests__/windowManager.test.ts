@@ -267,6 +267,42 @@ describe('workspace persistence round-trip', () => {
         const restored = deserializeWorkspace(persisted, { width: 2000, height: 1200 });
         expect(restored.windows.a.geometry).toEqual({ x: 0, y: 0, width: 2000, height: 1200 });
     });
+
+    it('preserves the pre-maximize restore rect across a round-trip (regression: was lost)', () => {
+        let s = reduce(withBounds(), { type: 'open', key: 'a', geometry: { x: 100, y: 100, width: 300, height: 200 } });
+        s = reduce(s, { type: 'maximize', key: 'a' });
+
+        const restored = deserializeWorkspace(serializeWorkspace(s), B);
+        // After a reload, un-maximizing must return to the ORIGINAL floating rect, not the max rect.
+        const unmax = reduce(restored, { type: 'restore', key: 'a' });
+        expect(unmax.windows.a.geometry).toEqual({ x: 100, y: 100, width: 300, height: 200 });
+    });
+
+    it('a legacy snapshot without a restore field degrades gracefully (falls back to geometry)', () => {
+        const legacy = {
+            version: 1 as const,
+            windows: [{ key: 'a', geometry: { x: 0, y: 0, width: 500, height: 400 }, minimized: false, maximized: false, snap: null, role: {} }],
+            zOrder: ['a'],
+            focused: 'a',
+        };
+        // @ts-expect-error — modelling a pre-restore-field snapshot (no `restore` key)
+        const restored = deserializeWorkspace(legacy, B);
+        expect(restored.windows.a.restore).toBeNull();
+        expect(restored.focused).toBe('a');
+    });
+
+    it('does not restore a minimized window as focused (regression: focus fell on a hidden window)', () => {
+        let s = openMany(['a', 'b']);
+        s = reduce(s, { type: 'focus', key: 'a' });
+        s = reduce(s, { type: 'minimize', key: 'a' });
+        // At this point focused is 'b' (topmost visible). Force a snapshot that names the minimized 'a'.
+        const persisted = { ...serializeWorkspace(s), focused: 'a' };
+
+        const restored = deserializeWorkspace(persisted, B);
+        // 'a' is minimized → focus must fall through to the topmost visible ('b'), never a hidden window.
+        expect(restored.windows.a.minimized).toBe(true);
+        expect(restored.focused).toBe('b');
+    });
 });
 
 describe('defaults', () => {

@@ -253,11 +253,16 @@ export const OsMainframe: Mainframe = ({ slots, ctx }) => {
             </div>
 
             <div className="os-desktop">
-                {/* The `main` render-prop frames the desktop content; the window layer lives here. */}
+                {/*
+                 * `main` → the desktop that HOSTS the window manager (ticket 04 remap). The optional
+                 * host-contributed `main` render-prop is the desktop BACKDROP (wallpaper/watermark),
+                 * rendered behind the window layer; the DesktopLayer (the ticket-03 window manager) is
+                 * the desktop's window host on top. Together they are "main → desktop hosting the WM".
+                 */}
+                {slots.has('main') && <div className="os-desktop-backdrop">{slots.main(ctx.payload)}</div>}
                 <OsChromeInDesktopCtx.Provider value={{ dock, launcher: launcher && launcher.length ? launcher : null }}>
                     <DesktopLayer host={host} />
                 </OsChromeInDesktopCtx.Provider>
-                {slots.main(ctx.payload)}
             </div>
 
             {slots.has('status') && (

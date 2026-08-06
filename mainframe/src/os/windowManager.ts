@@ -438,6 +438,8 @@ export type PersistedWindow = {
     minimized: boolean;
     maximized: boolean;
     snap: SnapZone | null;
+    /** The pre-maximize/pre-snap floating rect, so a restore after reload returns to the true size. */
+    restore: Geometry | null;
     role: WindowRole;
 };
 
@@ -464,6 +466,7 @@ export function serializeWorkspace(state: WindowManagerState): PersistedWorkspac
                 minimized: w.minimized,
                 maximized: w.maximized,
                 snap: w.snap,
+                restore: w.restore,
                 role: w.role,
             })),
         zOrder: [...state.zOrder],
@@ -491,7 +494,8 @@ export function deserializeWorkspace(
             minimized: p.minimized,
             maximized: p.maximized,
             snap: p.snap,
-            restore: p.maximized || p.snap ? p.geometry : null,
+            // Prefer the persisted pre-max/pre-snap rect; fall back for legacy snapshots without it.
+            restore: p.restore ?? (p.maximized || p.snap ? p.geometry : null),
             role: p.role,
         };
         windows[p.key] = reproject(win, bounds);
@@ -500,10 +504,14 @@ export function deserializeWorkspace(
         persisted.zOrder.filter((k) => windows[k]),
         windows,
     );
+    // Restore the persisted focus only if that window still exists AND is visible (not minimized);
+    // otherwise fall through to the topmost visible — preserving the "focused = topmost visible" invariant.
+    const persistedFocusVisible =
+        persisted.focused && windows[persisted.focused] && !windows[persisted.focused].minimized;
     return {
         windows,
         zOrder,
-        focused: persisted.focused && windows[persisted.focused] ? persisted.focused : topmostVisible({ zOrder, windows }),
+        focused: persistedFocusVisible ? persisted.focused : topmostVisible({ zOrder, windows }),
         snap: null,
         workspace: { bounds },
     };
