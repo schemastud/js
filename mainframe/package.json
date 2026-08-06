@@ -14,7 +14,8 @@
         "./os": {
             "types": "./dist/os.d.ts",
             "import": "./dist/os.js"
-        }
+        },
+        "./os/shell.css": "./src/os/shell.css"
     },
     "sideEffects": false,
     "files": [

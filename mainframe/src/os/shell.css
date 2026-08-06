@@ -1,0 +1,216 @@
+/**
+ * The `os` shell structural stylesheet + token contract (Frame OS ticket 05, ADR-0012 §C).
+ *
+ * Ships a NEUTRAL, grayscale-functional shell with ZERO host CSS: every reference is written
+ * `var(--shell-*, <neutral-default>)`, so an un-themed mount is usable. A host brands the chrome by
+ * remapping ONLY the flat `--shell-*` set on the shell root (`[data-shell-root]` / `.os-root`) — a
+ * ~10-line token edit, never a component rewrite.
+ *
+ * Isolation runs on two named cascade layers, `frame.chrome` (ordered first) and `frame.content`
+ * (ordered after), plus a `frame.tw` layer reserved for the host's Tailwind. Chrome styling lives in
+ * `frame.chrome` and uses ONLY the `--shell-*` namespace; window CONTENT is a scope element
+ * (`[data-frame-scope="content"]`) that re-roots the content token contract — a bare isolation
+ * boundary that defines NO content tokens itself, so each realm surface carries its own theme root
+ * (WYSIWYG is structural). The `--shell-*` namespace is disjoint from any content token, so chrome
+ * tokens can't bleed into content and content tokens can't bleed into chrome.
+ *
+ * `remote`/`iframe` fill modes isolate at their own boundary — no in-tree mechanism is added for them.
+ * No shadow DOM is used (held in reserve for a future untrusted-in-tree case). An OS-native tool opts
+ * into the chrome theme by carrying `[data-inherits-shell-theme]` on its content scope.
+ */
+
+/* Declare the layer order once: chrome before content before Tailwind. */
+@layer frame.chrome, frame.content, frame.tw;
+
+/* ── The neutral token defaults + chrome ─────────────────────────────────────────────────────── */
+@layer frame.chrome {
+    /*
+     * The flat --shell-* contract. Defined on the shell root; a host remaps these (and only these)
+     * to brand. Each is ALSO defaulted inline at every use-site via var(--shell-*, <default>), so a
+     * host that sets none still renders grayscale-functional.
+     */
+    [data-shell-root],
+    .os-root {
+        --shell-surface: #f4f4f5;
+        --shell-surface-raised: #ffffff;
+        --shell-fg: #1c1c1e;
+        --shell-fg-muted: #6b7280;
+        --shell-accent: #52525b;
+        --shell-edge: #d4d4d8;
+        --shell-radius: 8px;
+        --shell-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+        --shell-font: system-ui, sans-serif;
+        --shell-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .os-root {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+        background: var(--shell-surface, #f4f4f5);
+        color: var(--shell-fg, #1c1c1e);
+        font-family: var(--shell-font, system-ui, sans-serif);
+    }
+
+    .os-menubar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        background: var(--shell-surface-raised, #ffffff);
+        border-bottom: 1px solid var(--shell-edge, #d4d4d8);
+        font-size: 0.8125rem;
+    }
+
+    .os-menubar-start,
+    .os-menubar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .os-desktop {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .os-desktop-windows {
+        position: absolute;
+        inset: 0;
+    }
+
+    .os-dock {
+        position: absolute;
+        left: 50%;
+        bottom: 0.75rem;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.375rem 0.625rem;
+        background: var(--shell-surface-raised, #ffffff);
+        border: 1px solid var(--shell-edge, #d4d4d8);
+        border-radius: var(--shell-radius, 8px);
+        box-shadow: var(--shell-shadow, 0 8px 24px rgba(0, 0, 0, 0.16));
+        z-index: 2147483000; /* above all windows */
+    }
+
+    .os-launcher {
+        position: absolute;
+        inset: 0;
+        z-index: 2147483001;
+        pointer-events: none;
+    }
+
+    .os-launcher > * {
+        pointer-events: auto;
+    }
+
+    .os-statusbus {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.1875rem 0.75rem;
+        background: var(--shell-surface-raised, #ffffff);
+        border-top: 1px solid var(--shell-edge, #d4d4d8);
+        color: var(--shell-fg-muted, #6b7280);
+        font-family: var(--shell-font-mono, ui-monospace, monospace);
+        font-size: 0.75rem;
+    }
+
+    /* The window shell (frame + title bar) is chrome; the CONTENT inside is not (see frame.content). */
+    .os-window {
+        display: flex;
+        background: var(--shell-surface-raised, #ffffff);
+        border: 1px solid var(--shell-edge, #d4d4d8);
+        border-radius: var(--shell-radius, 8px);
+        box-shadow: var(--shell-shadow, 0 8px 24px rgba(0, 0, 0, 0.16));
+        overflow: hidden;
+    }
+
+    .os-window.is-focused {
+        border-color: var(--shell-accent, #52525b);
+    }
+
+    .os-window-body {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+    }
+
+    .os-window-titlebar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        background: var(--shell-surface, #f4f4f5);
+        border-bottom: 1px solid var(--shell-edge, #d4d4d8);
+        color: var(--shell-fg, #1c1c1e);
+        font-family: var(--shell-font, system-ui, sans-serif);
+        font-size: 0.8125rem;
+        cursor: default;
+        user-select: none;
+    }
+
+    .os-window-chrome-start,
+    .os-window-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .os-window-title {
+        font-weight: 600;
+    }
+
+    .os-window-btn {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: var(--shell-fg-muted, #6b7280);
+        width: 1.25rem;
+        height: 1.25rem;
+        border-radius: 4px;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .os-window-btn:hover {
+        background: var(--shell-edge, #d4d4d8);
+        color: var(--shell-fg, #1c1c1e);
+    }
+}
+
+/* ── The content isolation boundary ──────────────────────────────────────────────────────────── */
+@layer frame.content {
+    /*
+     * The window content is a SCOPE ELEMENT: a bare isolation boundary. It defines NO content tokens
+     * — the realm surface mounted inside carries its OWN theme root, so it renders exactly like its
+     * standalone route (WYSIWYG). The only structural rule here is layout containment; nothing here
+     * reads --shell-* (chrome tokens do not reach content), and the shell defines no content token
+     * (content tokens do not reach chrome).
+     */
+    [data-frame-scope='content'] {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: auto;
+        /* Re-root: establish a fresh containing context so a realm surface's own theme root governs. */
+        isolation: isolate;
+    }
+
+    /*
+     * Opt-in: an OS-native tool window (settings, launcher, inspector) that WANTS the chrome theme
+     * carries [data-inherits-shell-theme] on its content scope. Everything else isolates by default.
+     */
+    [data-frame-scope='content'][data-inherits-shell-theme] {
+        color: var(--shell-fg, #1c1c1e);
+        font-family: var(--shell-font, system-ui, sans-serif);
+        background: var(--shell-surface, #f4f4f5);
+    }
+}

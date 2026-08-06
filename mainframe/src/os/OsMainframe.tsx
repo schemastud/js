@@ -60,6 +60,12 @@ export interface OsWindowSpec {
     role?: WindowRole;
     /** Optional initial geometry override. */
     geometry?: { x?: number; y?: number; width?: number; height?: number };
+    /**
+     * OS-native tool windows (settings/launcher/inspector) opt INTO the chrome `--shell-*` theme by
+     * setting this; everything else isolates by construction (its realm surface self-themes). Style
+     * isolation ticket 05 (ADR-0012 §C).
+     */
+    inheritsShellTheme?: boolean;
 }
 
 /** The host-threaded `os`-mode context (read off `MainframeContext.os`). */
@@ -153,7 +159,16 @@ function OsWindow({ spec }: { spec: OsWindowSpec }) {
             <MainframeProvider injection={spec.injection}>
                 <div className="os-window-body">
                     <WindowChrome spec={spec} focused={focused} />
-                    <div className="os-window-content">
+                    {/*
+                     * The content scope element (ticket 05): a bare isolation boundary re-rooting the
+                     * content token contract, so the realm surface self-themes (WYSIWYG). An OS-native
+                     * tool opts into the chrome theme via `inheritsShellTheme`.
+                     */}
+                    <div
+                        className="os-window-content"
+                        data-frame-scope="content"
+                        {...(spec.inheritsShellTheme ? { 'data-inherits-shell-theme': '' } : {})}
+                    >
                         <MainframeOutlet mode={spec.mode} ctx={spec.ctx} />
                     </div>
                 </div>
@@ -228,7 +243,7 @@ export const OsMainframe: Mainframe = ({ slots, ctx }) => {
     const launcher = slots.has('overlay') ? slots.items('overlay') : null;
 
     return (
-        <div className="os-root">
+        <div className="os-root" data-shell-root>
             <div className="os-menubar" role="menubar">
                 <div className="os-menubar-start">
                     {slots.node('brand')}
