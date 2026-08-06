@@ -25,7 +25,7 @@
  * Styling is structural only (class names `os-*`); no palette ships here — the `--shell-*` token
  * contract is ticket 05.
  */
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { RemoteSurface } from '@schemastud/frame-remote/host';
 
 import type { CustomSlotSpec, Mainframe, MainframeContext, MainframeRegistry } from '../mainframe-registry';
@@ -320,6 +320,28 @@ function OsWindow({ spec }: { spec: OsWindowSpec }) {
 /** The desktop region: the window layer over the ticket-03 window manager. Empty when no windows open. */
 function DesktopLayer({ host }: { host: OsHostContext }) {
     const wm = useWindowManager({ persisted: host.persisted, bounds: host.bounds });
+    const desktopRef = useRef<HTMLDivElement>(null);
+
+    // Sync the window-manager bounds to the REAL desktop viewport so maximize/snap/tile fill it
+    // (without this the WM uses DEFAULT_BOUNDS 1280x800 and a maximized window under-fills a larger
+    // desktop). Measures on mount + on every desktop resize; the reducer re-projects maximized/snapped
+    // windows to the new bounds. Guarded for SSR/jsdom (no ResizeObserver / no layout) — there the
+    // seeded host.bounds/default stands and the unit tests dispatch bounds explicitly.
+    useEffect(() => {
+        const el = desktopRef.current;
+        if (!el || typeof ResizeObserver === 'undefined') return;
+        const measure = () => {
+            const width = el.clientWidth;
+            const height = el.clientHeight;
+            if (width > 0 && height > 0) wm.setBounds({ width, height });
+        };
+        measure();
+        const ro = new ResizeObserver(measure);
+        ro.observe(el);
+        return () => ro.disconnect();
+        // wm.setBounds is a stable callback; measure once on mount + on resize.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Open the host's initial set once (e.g. the primary maximized surface).
     useEffect(() => {
@@ -348,7 +370,7 @@ function DesktopLayer({ host }: { host: OsHostContext }) {
 
     return (
         <OsCtx.Provider value={value}>
-            <div className="os-desktop-windows">
+            <div className="os-desktop-windows" ref={desktopRef}>
                 {open.map((w) => {
                     const spec = specByKey.get(w.key);
                     return spec ? <OsWindow key={w.key} spec={spec} /> : null;
