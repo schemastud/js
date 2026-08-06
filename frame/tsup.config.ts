@@ -21,5 +21,6 @@ export default defineConfig({
         '@schemastud/seam',
         '@schemastud/facets',
         '@schemastud/ui',
+        'zustand',
     ],
 });

@@ -61,6 +61,7 @@ export {
     type ResourceRefConfig,
 } from './ResourceRefWidget';
 export { createFrameHooks, type FrameHooks, type SubmittedHandler, type SubmittedContext } from './hooks';
+export { useFrameSidePanelStore, type FrameSidePanelEntry } from './frameSidePanel';
 export {
     createRouteRegistry,
     createGuardRegistry,
