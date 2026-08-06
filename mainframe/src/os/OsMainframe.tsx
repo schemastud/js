@@ -26,12 +26,18 @@
  * contract is ticket 05.
  */
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react';
+import { RemoteSurface } from '@schemastud/frame-remote/host';
 
 import type { CustomSlotSpec, Mainframe, MainframeContext, MainframeRegistry } from '../mainframe-registry';
 import { MainframeProvider, MainframeOutlet, useResolvedSlots, type MainframeInjection } from '../react';
 import { WindowFrame } from './WindowFrame';
 import { useWindowManager, type WindowManager } from './useWindowManager';
 import { type PersistedWorkspace, type Bounds, type WindowRole, visibleWindows, zIndexOf } from './windowManager';
+import {
+    type WindowHost,
+    type NestedWindowHost,
+    IframeFillModeNotShippedError,
+} from './windowHost';
 
 /** The two genuinely-new `os`-mode regions (the ONLY additions beyond the frozen core/optional set). */
 export const OS_WINDOW_SLOTS: readonly CustomSlotSpec[] = [
@@ -50,11 +56,19 @@ export const OS_WINDOW_DRAG_HANDLE = 'os-window-titlebar';
 export interface OsWindowSpec {
     key: string;
     title: string;
-    /** The inner Mainframe mode this window renders (e.g. a realm/`domain` mode). */
-    mode: string;
-    /** The inner scope's injection — its own slot + mainframe registries and `can`. */
-    injection: MainframeInjection;
-    /** Extra context threaded to the inner outlet (payload, theme, …). */
+    /**
+     * The window FILL MODE (Frame OS ticket 16). Optional for back-compat: when omitted, the flat
+     * `mode`/`injection`/`ctx` fields below ARE the `nested` (trusted-default) host — every existing
+     * window and ticket-04/05 test keeps working unchanged. Set `host` to opt into a foreign fill
+     * mode: `remote` (an isolated `frame-remote` surface for untrusted/metered surfaces) or `iframe`
+     * (descriptor-only, unbuilt — the renderer throws). See `windowHost.ts`.
+     */
+    host?: WindowHost;
+    /** The inner Mainframe mode this window renders (e.g. a realm/`domain` mode). Nested-default fill. */
+    mode?: string;
+    /** The inner scope's injection — its own slot + mainframe registries and `can`. Nested-default fill. */
+    injection?: MainframeInjection;
+    /** Extra context threaded to the inner outlet (payload, theme, …). Nested-default fill. */
     ctx?: Omit<MainframeContext, 'mode'>;
     /** Window role policy honored by the reducer (persistent/closable/zAnchor). */
     role?: WindowRole;
@@ -106,23 +120,52 @@ function osHostContext(ctx: MainframeContext): OsHostContext {
 }
 
 /**
- * The window title bar + its `window.chrome`/`window.toolbar` slots — rendered INSIDE the window's own
- * nested scope, so each window's chrome is owned by its inner scope (the recursion contract). The
- * default controls (minimize/maximize/close) drive the shared window manager via `useOs()`.
+ * Resolve a spec into its concrete {@link WindowHost}. An explicit `spec.host` wins; otherwise the
+ * flat `mode`/`injection`/`ctx` fields are the `nested` (trusted-default) host — the back-compat path
+ * every ticket-04/05 window uses. A spec with neither an explicit host nor a `mode`/`injection` is a
+ * programming error (a window with no way to fill its body).
  */
-function WindowChrome({ spec, focused }: { spec: OsWindowSpec; focused: boolean }) {
+function resolveWindowHost(spec: OsWindowSpec): WindowHost {
+    if (spec.host) return spec.host;
+    if (spec.mode == null || spec.injection == null) {
+        throw new Error(
+            `OsWindowSpec "${spec.key}" has no fill mode: set \`host\`, or the flat \`mode\`+\`injection\` (nested default).`,
+        );
+    }
+    return { kind: 'nested', mode: spec.mode, injection: spec.injection, ctx: spec.ctx };
+}
+
+/**
+ * The window title bar controls (minimize/maximize/close) driving the shared window manager, plus
+ * optional `window.chrome`/`window.toolbar` slot content. For a `nested` window the slot content is
+ * resolved INSIDE the window's own nested scope (the recursion contract) and passed in as
+ * `chromeStart`/`toolbar`/`chromeEnd`; a `remote`/`iframe` window has no nested slot scope, so it
+ * passes no slot content — its title bar carries only the title + the default controls.
+ */
+function WindowChrome({
+    spec,
+    focused,
+    chromeStart,
+    toolbar,
+    chromeEnd,
+}: {
+    spec: OsWindowSpec;
+    focused: boolean;
+    chromeStart?: ReactNode;
+    toolbar?: ReactNode;
+    chromeEnd?: ReactNode;
+}) {
     const { wm } = useOs();
-    const slots = useResolvedSlots(spec.mode);
     const win = wm.state.windows[spec.key];
     return (
         <div className={`os-window-titlebar${focused ? ' is-focused' : ''}`} data-window={spec.key}>
             <div className="os-window-chrome-start">
-                {slots.items('window.chrome', 'start')}
+                {chromeStart}
                 <span className="os-window-title">{spec.title}</span>
             </div>
-            <div className="os-window-toolbar">{slots.items('window.toolbar')}</div>
+            <div className="os-window-toolbar">{toolbar}</div>
             <div className="os-window-controls os-window-chrome-end">
-                {slots.items('window.chrome', 'end')}
+                {chromeEnd}
                 <button type="button" className="os-window-btn" aria-label="Minimize" onClick={() => wm.minimize(spec.key)}>–</button>
                 <button
                     type="button"
@@ -138,12 +181,126 @@ function WindowChrome({ spec, focused }: { spec: OsWindowSpec; focused: boolean 
     );
 }
 
-/** One open window: the geometry frame + the nested Mainframe scope rendering the real surface. */
+/**
+ * The window's content-scope wrapper (ticket 05): a bare isolation boundary re-rooting the content
+ * token contract, so a realm surface self-themes (WYSIWYG). An OS-native tool opts into the chrome
+ * theme via `inheritsShellTheme`. Shared by BOTH fill modes so a `nested` and a `remote` window sit
+ * in an equal window peer with the same chrome/geometry/content scope.
+ */
+function WindowContentScope({ spec, children }: { spec: OsWindowSpec; children: ReactNode }) {
+    return (
+        <div
+            className="os-window-content"
+            data-frame-scope="content"
+            {...(spec.inheritsShellTheme ? { 'data-inherits-shell-theme': '' } : {})}
+        >
+            {children}
+        </div>
+    );
+}
+
+/**
+ * The `nested` fill: the window's own nested Mainframe scope owns its chrome (resolving the
+ * `window.chrome`/`window.toolbar` custom slots INSIDE the scope — the recursion contract) and renders
+ * the REAL realm surface via `MainframeOutlet`.
+ */
+function NestedWindowBody({ spec, host, focused }: { spec: OsWindowSpec; host: NestedWindowHost; focused: boolean }) {
+    return (
+        <MainframeProvider injection={host.injection}>
+            <NestedWindowInner spec={spec} host={host} focused={focused} />
+        </MainframeProvider>
+    );
+}
+
+/** Rendered INSIDE the nested provider so `useResolvedSlots` reads the window's own slot scope. */
+function NestedWindowInner({ spec, host, focused }: { spec: OsWindowSpec; host: NestedWindowHost; focused: boolean }) {
+    const slots = useResolvedSlots(host.mode);
+    return (
+        <div className="os-window-body">
+            <WindowChrome
+                spec={spec}
+                focused={focused}
+                chromeStart={slots.items('window.chrome', 'start')}
+                toolbar={slots.items('window.toolbar')}
+                chromeEnd={slots.items('window.chrome', 'end')}
+            />
+            <WindowContentScope spec={spec}>
+                <MainframeOutlet mode={host.mode} ctx={host.ctx} />
+            </WindowContentScope>
+        </div>
+    );
+}
+
+/**
+ * The `remote` fill (ticket 16): an ISOLATED `@schemastud/frame-remote` surface. NO nested Mainframe
+ * scope is mounted, so the isolated guest never sees the first-party slot registries or DOM. The host's
+ * `mount(capabilityToken)` factory boots the QuickJS-WASM VM + builds the `HostReceiver` (brokering the
+ * guest's capability requests against the SERVER-MINTED token); we CONSUME the resulting `RemoteSurface`
+ * props and paint it inside the same window chrome/geometry/content scope as a `nested` peer. The window
+ * title bar carries no `window.chrome`/`window.toolbar` slot content — there is no nested scope to
+ * resolve them from — only the title + the default OS controls.
+ */
+function RemoteWindowBody({
+    spec,
+    focused,
+    surfaceProps,
+}: {
+    spec: OsWindowSpec;
+    focused: boolean;
+    surfaceProps: ReturnType<Extract<WindowHost, { kind: 'remote' }>['mount']>;
+}) {
+    return (
+        <div className="os-window-body">
+            <WindowChrome spec={spec} focused={focused} />
+            <WindowContentScope spec={spec}>
+                <div className="os-window-remote" data-frame-remote data-window={spec.key}>
+                    <RemoteSurface {...surfaceProps} />
+                </div>
+            </WindowContentScope>
+        </div>
+    );
+}
+
+/**
+ * One open window: the geometry frame + the fill-mode fork.
+ *
+ *   - `nested` → the in-process nested Mainframe scope rendering the real surface (the default).
+ *   - `remote` → the isolated `frame-remote` `RemoteSurface`, with the server-minted capability
+ *                token threaded to the host's `mount` factory.
+ *   - `iframe` → descriptor-only: throws {@link IframeFillModeNotShippedError} (no code path ships).
+ *
+ * The trust tier of the surface picks the mode upstream (`fillModeForTier` in `windowHost.ts`):
+ * trusted → nested, untrusted/metered → remote; iframe is never auto-selected.
+ *
+ * `mount` is invoked once per open window (memoized on the host identity) so the VM boots once, not
+ * on every geometry-driven re-render.
+ */
 function OsWindow({ spec }: { spec: OsWindowSpec }) {
     const { wm } = useOs();
     const win = wm.state.windows[spec.key];
+    const host = useMemo(() => resolveWindowHost(spec), [spec]);
+    // The remote VM boots exactly once per open window (not on every move/resize re-render).
+    const remoteSurfaceProps = useMemo(
+        () => (host.kind === 'remote' ? host.mount(host.capabilityToken) : null),
+        [host],
+    );
     if (!win) return null;
     const focused = wm.state.focused === spec.key;
+
+    let body: ReactNode;
+    switch (host.kind) {
+        case 'nested':
+            body = <NestedWindowBody spec={spec} host={host} focused={focused} />;
+            break;
+        case 'remote':
+            // remoteSurfaceProps is non-null when host.kind === 'remote' (same memo dependency).
+            body = <RemoteWindowBody spec={spec} focused={focused} surfaceProps={remoteSurfaceProps!} />;
+            break;
+        case 'iframe':
+            // Descriptor-only, no code path shipped (ADR-0012 §B1) — fail loud, never silently blank.
+            throw new IframeFillModeNotShippedError(spec.key);
+    }
+
     return (
         <WindowFrame
             geometry={win.geometry}
@@ -155,24 +312,7 @@ function OsWindow({ spec }: { spec: OsWindowSpec }) {
             onResize={(w, h, x, y) => wm.resize(spec.key, w, h, x, y)}
             onFocus={() => wm.focus(spec.key)}
         >
-            {/* The recursion: the window's own nested scope owns its chrome + renders the real surface. */}
-            <MainframeProvider injection={spec.injection}>
-                <div className="os-window-body">
-                    <WindowChrome spec={spec} focused={focused} />
-                    {/*
-                     * The content scope element (ticket 05): a bare isolation boundary re-rooting the
-                     * content token contract, so the realm surface self-themes (WYSIWYG). An OS-native
-                     * tool opts into the chrome theme via `inheritsShellTheme`.
-                     */}
-                    <div
-                        className="os-window-content"
-                        data-frame-scope="content"
-                        {...(spec.inheritsShellTheme ? { 'data-inherits-shell-theme': '' } : {})}
-                    >
-                        <MainframeOutlet mode={spec.mode} ctx={spec.ctx} />
-                    </div>
-                </div>
-            </MainframeProvider>
+            {body}
         </WindowFrame>
     );
 }

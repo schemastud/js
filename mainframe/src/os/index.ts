@@ -49,3 +49,16 @@ export {
     type OsHostContext,
     type OsContextValue,
 } from './OsMainframe';
+
+// The window FILL-MODE union (Frame OS ticket 16): nested (trusted-default) / remote (isolated
+// frame-remote, untrusted/metered) / iframe (descriptor-only, unbuilt).
+export {
+    type WindowHost,
+    type NestedWindowHost,
+    type RemoteWindowHost,
+    type IframeWindowHost,
+    type WindowTrustTier,
+    IframeFillModeNotShippedError,
+    isRemoteHost,
+    fillModeForTier,
+} from './windowHost';
