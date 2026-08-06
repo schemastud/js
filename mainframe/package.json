@@ -1,0 +1,52 @@
+{
+    "name": "@schemastud/mainframe",
+    "version": "0.1.0",
+    "description": "The generic Mainframe engine (React-only, host-agnostic): the frozen slot contract, an SSR-safe named-slot registry, a mode registry, a `can`-gated resolver, and the host→Mainframe React delegation seam. Relocated out of @splicewire/beam-mainframe (Frame OS ADR-0011) so any host composes the frame without a CMS or beam dependency. Carries react-rnd as the window-frame geometry atom for the Frame OS `os` mode.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "sideEffects": false,
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "publishConfig": {
+        "registry": "https://registry.npmjs.org",
+        "access": "public"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/schemastud/mainframe.git"
+    },
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run --passWithNoTests",
+        "typecheck": "tsc --noEmit"
+    },
+    "peerDependencies": {
+        "react": ">=18"
+    },
+    "dependencies": {
+        "react-rnd": "^10.5.2"
+    },
+    "devDependencies": {
+        "@testing-library/react": "^16.1.0",
+        "@types/node": "^22.20.1",
+        "@types/react": "^19.0.0",
+        "jsdom": "^25.0.1",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.2",
+        "vitest": "^4.1.10"
+    }
+}
