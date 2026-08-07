@@ -295,8 +295,14 @@ export function windowManagerReducer(
         case 'open': {
             const existing = state.windows[action.key];
             if (existing) {
-                // Idempotent: re-opening focuses + un-minimizes, keeps geometry.
-                const windows = { ...state.windows, [action.key]: { ...existing, minimized: false } };
+                // Idempotent: re-opening focuses + un-minimizes, keeps geometry — BUT honors an explicit
+                // `role`/`presentation` on the re-open (merges the role, and if asked to stage, promotes
+                // this window to the stage even if it was persisted as a float). This is what lets the
+                // current route re-stage its realm over a restored workspace (host re-opens the stage
+                // window with `{ role: { persistent: true }, presentation: 'stage' }` each mount).
+                const merged = { ...existing, minimized: false, role: { ...existing.role, ...action.role } };
+                let windows = { ...state.windows, [action.key]: merged };
+                if (action.presentation === 'stage') windows = applyStage(windows, action.key, state.workspace.bounds);
                 const zOrder = raiseWithinBand(state.zOrder, windows, action.key);
                 return { ...state, windows, zOrder, focused: action.key, snap: null };
             }
@@ -543,25 +549,31 @@ export type PersistedWorkspace = {
 
 export const WORKSPACE_VERSION = 1 as const;
 
-/** Serialize the durable slice of the state for per-user persistence (bounds are viewport-derived). */
+/**
+ * Serialize the durable slice of the state for per-user persistence (bounds are viewport-derived).
+ * The STAGE window is EXCLUDED: the stage is route-ephemeral (the host re-establishes it from the
+ * current route on every mount), so persisting it would let a stale stage haunt a different route.
+ * Only FLOATS persist across reloads/navigations.
+ */
 export function serializeWorkspace(state: WindowManagerState): PersistedWorkspace {
+    const floats = state.zOrder
+        .map((k) => state.windows[k])
+        .filter((w): w is ManagedWindow => !!w && w.presentation !== 'stage');
+    const floatKeys = new Set(floats.map((w) => w.key));
     return {
         version: WORKSPACE_VERSION,
-        windows: state.zOrder
-            .map((k) => state.windows[k])
-            .filter((w): w is ManagedWindow => !!w)
-            .map((w) => ({
-                key: w.key,
-                geometry: w.geometry,
-                minimized: w.minimized,
-                maximized: w.maximized,
-                snap: w.snap,
-                restore: w.restore,
-                role: w.role,
-                presentation: w.presentation,
-            })),
-        zOrder: [...state.zOrder],
-        focused: state.focused,
+        windows: floats.map((w) => ({
+            key: w.key,
+            geometry: w.geometry,
+            minimized: w.minimized,
+            maximized: w.maximized,
+            snap: w.snap,
+            restore: w.restore,
+            role: w.role,
+            presentation: w.presentation,
+        })),
+        zOrder: state.zOrder.filter((k) => floatKeys.has(k)),
+        focused: state.focused && floatKeys.has(state.focused) ? state.focused : null,
     };
 }
 

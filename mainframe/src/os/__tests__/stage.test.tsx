@@ -74,12 +74,24 @@ describe('stage reducer ops', () => {
         expect(s.windows.a.geometry).toEqual({ x: 0, y: 0, width: 1600, height: 900 });
     });
 
-    it('presentation round-trips through persistence', () => {
+    it('persistence excludes the stage — only floats round-trip (the stage is route-ephemeral)', () => {
         let s = openMany(['a', 'b']);
         s = reduce(s, { type: 'stage', key: 'b' });
         const restored = deserializeWorkspace(serializeWorkspace(s), B);
-        expect(stageKey(restored)).toBe('b');
+        // The staged window 'b' is NOT persisted (the host re-establishes the stage from the current
+        // route each mount); the float 'a' round-trips as a float.
+        expect(stageKey(restored)).toBeNull();
+        expect(restored.windows.b).toBeUndefined();
         expect(restored.windows.a.presentation).toBe('float');
+    });
+
+    it('re-opening a persisted float with presentation:stage promotes it to the stage', () => {
+        // Simulates the host re-staging the current route's realm over a restored workspace.
+        let s = openMany(['a', 'b']); // both floats
+        s = reduce(s, { type: 'open', key: 'b', role: { persistent: true }, presentation: 'stage' });
+        expect(stageKey(s)).toBe('b');
+        expect(s.windows.b.role.persistent).toBe(true);
+        expect(s.windows.a.presentation).toBe('float');
     });
 
     it('a legacy snapshot without presentation restores every window as a float', () => {
