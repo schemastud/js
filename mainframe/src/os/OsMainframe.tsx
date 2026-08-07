@@ -228,18 +228,32 @@ function NestedWindowBody({ spec, host, focused }: { spec: OsWindowSpec; host: N
     );
 }
 
+/**
+ * A PINNED stage carries NO window chrome at all — no title bar, no controls. It's the persistent
+ * route surface ("the site sitting inside the OS"): the content fills the whole stage. A user-PROMOTED
+ * stage (not persistent) keeps its bar (with the "pop out" control) so it stays demotable; floats keep
+ * the full bar. The os mode marks the route-stage (`initialStage`) persistent, so it reads as pinned.
+ */
+function isPinnedStage(win: { presentation: string; role?: WindowRole } | undefined): boolean {
+    return !!win && win.presentation === 'stage' && (win.role?.persistent === true || win.role?.closable === false);
+}
+
 /** Rendered INSIDE the nested provider so `useResolvedSlots` reads the window's own slot scope. */
 function NestedWindowInner({ spec, host, focused }: { spec: OsWindowSpec; host: NestedWindowHost; focused: boolean }) {
+    const { wm } = useOs();
     const slots = useResolvedSlots(host.mode);
+    const pinned = isPinnedStage(wm.state.windows[spec.key]);
     return (
         <div className="os-window-body">
-            <WindowChrome
-                spec={spec}
-                focused={focused}
-                chromeStart={slots.items('window.chrome', 'start')}
-                toolbar={slots.items('window.toolbar')}
-                chromeEnd={slots.items('window.chrome', 'end')}
-            />
+            {!pinned && (
+                <WindowChrome
+                    spec={spec}
+                    focused={focused}
+                    chromeStart={slots.items('window.chrome', 'start')}
+                    toolbar={slots.items('window.toolbar')}
+                    chromeEnd={slots.items('window.chrome', 'end')}
+                />
+            )}
             <WindowContentScope spec={spec}>
                 <MainframeOutlet mode={host.mode} ctx={host.ctx} />
             </WindowContentScope>
@@ -265,9 +279,11 @@ function RemoteWindowBody({
     focused: boolean;
     surfaceProps: ReturnType<Extract<WindowHost, { kind: 'remote' }>['mount']>;
 }) {
+    const { wm } = useOs();
+    const pinned = isPinnedStage(wm.state.windows[spec.key]);
     return (
         <div className="os-window-body">
-            <WindowChrome spec={spec} focused={focused} />
+            {!pinned && <WindowChrome spec={spec} focused={focused} />}
             <WindowContentScope spec={spec}>
                 <div className="os-window-remote" data-frame-remote data-window={spec.key}>
                     <RemoteSurface {...surfaceProps} />
@@ -381,7 +397,10 @@ function DesktopLayer({ host }: { host: OsHostContext }) {
     useEffect(() => {
         if (host.initialStage) {
             const spec = host.apps.find((a) => a.key === host.initialStage);
-            wm.open(host.initialStage, { geometry: spec?.geometry, role: spec?.role, presentation: 'stage' });
+            // The route-stage is PERSISTENT: it's the current page, not a window you close/minimize — so
+            // it renders chrome-less (no title bar), the site sitting inside the OS. (A float the user
+            // later promotes to stage is NOT persistent, so it keeps its bar + the "pop out" control.)
+            wm.open(host.initialStage, { geometry: spec?.geometry, role: { ...spec?.role, persistent: true }, presentation: 'stage' });
         }
         for (const key of host.initialOpen ?? []) {
             if (key === host.initialStage) continue;

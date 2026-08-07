@@ -135,6 +135,16 @@ describe('stage rendering', () => {
         expect(container.querySelector('.os-window[data-window="site"]')).toBeNull();
     });
 
+    it('a pinned (persistent) route-stage renders NO window chrome — the site fills the stage', () => {
+        const apps: OsWindowSpec[] = [{ key: 'site', title: 'Site', mode: 'realm', injection: inner('site') }];
+        // initialStage opens the route-stage persistent → pinned → no title bar.
+        const { container } = renderOs(apps, { initialStage: 'site' });
+        const stageEl = container.querySelector('.os-stage[data-window="site"]');
+        expect(stageEl).not.toBeNull();
+        expect(stageEl!.querySelector('.os-window-titlebar')).toBeNull();
+        expect(screen.getByTestId('surface-site')).toBeTruthy(); // the real surface still renders
+    });
+
     it('promoting a float via its "Send to stage" control makes it the backdrop', async () => {
         const apps: OsWindowSpec[] = [
             { key: 'site', title: 'Site', mode: 'realm', injection: inner('site') },
