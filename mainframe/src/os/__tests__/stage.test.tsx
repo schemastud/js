@@ -47,7 +47,7 @@ describe('stage reducer ops', () => {
         expect(stageKey(s)).toBe('b');
         expect(s.windows.b.presentation).toBe('stage');
         // 'a' demoted back to a float at its pre-stage rect.
-        expect(s.windows.a.presentation).toBe('window');
+        expect(s.windows.a.presentation).toBe('float');
         expect(s.windows.a.geometry).toEqual({ x: 30, y: 40, width: 300, height: 200 });
     });
 
@@ -55,7 +55,7 @@ describe('stage reducer ops', () => {
         let s = reduce(withBounds(), { type: 'open', key: 'a', geometry: { x: 50, y: 60, width: 400, height: 300 } });
         s = reduce(s, { type: 'stage', key: 'a' });
         s = reduce(s, { type: 'unstage', key: 'a' });
-        expect(s.windows.a.presentation).toBe('window');
+        expect(s.windows.a.presentation).toBe('float');
         expect(s.windows.a.geometry).toEqual({ x: 50, y: 60, width: 400, height: 300 });
         expect(stageKey(s)).toBeNull();
     });
@@ -79,7 +79,7 @@ describe('stage reducer ops', () => {
         s = reduce(s, { type: 'stage', key: 'b' });
         const restored = deserializeWorkspace(serializeWorkspace(s), B);
         expect(stageKey(restored)).toBe('b');
-        expect(restored.windows.a.presentation).toBe('window');
+        expect(restored.windows.a.presentation).toBe('float');
     });
 
     it('a legacy snapshot without presentation restores every window as a float', () => {
@@ -91,7 +91,7 @@ describe('stage reducer ops', () => {
         };
         // @ts-expect-error — modelling a pre-stage snapshot (no `presentation`)
         const restored = deserializeWorkspace(legacy, B);
-        expect(restored.windows.a.presentation).toBe('window');
+        expect(restored.windows.a.presentation).toBe('float');
         expect(stageKey(restored)).toBeNull();
     });
 });

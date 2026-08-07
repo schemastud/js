@@ -49,11 +49,11 @@ export type ZAnchor = 'floor' | 'normal' | 'top';
  * - `stage` — the PRIMARY surface. It fills the desktop as the backdrop (floor-anchored,
  *   viewport-sized, non-draggable), and the OS chrome wraps it — the current site/realm feels like
  *   it's just running inside the OS. **At most one window is the stage at a time.**
- * - `window` — a normal floating window that sits ON TOP of the stage (the default).
+ * - `float` — a normal floating window that sits ON TOP of the stage (the default).
  * A floating window can be promoted with the `stage` op ("send to stage"), which demotes the prior
- * stage back to a float. Promoting is form of "take over as the main thing".
+ * stage back to a float. Promoting is a form of "take over as the main thing".
  */
-export type Presentation = 'stage' | 'window';
+export type Presentation = 'stage' | 'float';
 
 /** Role metadata the implementation sets on a window; the reducer honors it, never invents it. */
 export type WindowRole = {
@@ -81,7 +81,7 @@ export type ManagedWindow = {
     restore: Geometry | null;
     /** Role metadata (persistence, closability, z-anchor). */
     role: WindowRole;
-    /** Presentation role — `stage` (the primary backdrop surface) or `window` (floating). Default `window`. */
+    /** Presentation role — `stage` (the primary backdrop surface) or `float` (a floating window). Default `float`. */
     presentation: Presentation;
 };
 
@@ -269,7 +269,7 @@ function applyStage(
     // Demote the incumbent stage (if any, and not the target itself).
     for (const [k, w] of Object.entries(next)) {
         if (w.presentation === 'stage' && k !== key) {
-            next[k] = { ...w, presentation: 'window', geometry: w.restore ?? w.geometry, restore: null, maximized: false, snap: null };
+            next[k] = { ...w, presentation: 'float', geometry: w.restore ?? w.geometry, restore: null, maximized: false, snap: null };
         }
     }
     // Promote the target — save its float geometry so unstage can restore it.
@@ -310,7 +310,7 @@ export function windowManagerReducer(
                 snap: null,
                 restore: null,
                 role,
-                presentation: 'window',
+                presentation: 'float',
             };
             let windows = { ...state.windows, [action.key]: win };
             // Open directly onto the stage when asked (e.g. the current route's realm is the stage).
@@ -329,7 +329,7 @@ export function windowManagerReducer(
             if (!win || win.presentation !== 'stage') return state;
             const windows = {
                 ...state.windows,
-                [action.key]: { ...win, presentation: 'window' as const, geometry: win.restore ?? win.geometry, restore: null },
+                [action.key]: { ...win, presentation: 'float' as const, geometry: win.restore ?? win.geometry, restore: null },
             };
             return { ...state, windows };
         }
@@ -529,7 +529,7 @@ export type PersistedWindow = {
     /** The pre-maximize/pre-snap floating rect, so a restore after reload returns to the true size. */
     restore: Geometry | null;
     role: WindowRole;
-    /** Presentation role (`stage`/`window`), so the primary surface survives a reload. */
+    /** Presentation role (`stage`/`float`), so the primary surface survives a reload. */
     presentation: Presentation;
 };
 
@@ -589,7 +589,7 @@ export function deserializeWorkspace(
             restore: p.restore ?? (p.maximized || p.snap ? p.geometry : null),
             role: p.role,
             // Legacy snapshots (pre-stage) default to a floating window.
-            presentation: p.presentation ?? 'window',
+            presentation: p.presentation ?? 'float',
         };
         windows[p.key] = reproject(win, bounds);
     }
