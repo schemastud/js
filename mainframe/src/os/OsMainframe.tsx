@@ -32,7 +32,7 @@ import type { CustomSlotSpec, Mainframe, MainframeContext, MainframeRegistry } f
 import { MainframeProvider, MainframeOutlet, useResolvedSlots, type MainframeInjection } from '../react';
 import { WindowFrame } from './WindowFrame';
 import { useWindowManager, type WindowManager } from './useWindowManager';
-import { type PersistedWorkspace, type Bounds, type WindowRole, visibleWindows, zIndexOf } from './windowManager';
+import { type PersistedWorkspace, type Bounds, type WindowRole, floatingWindows, stageKey, zIndexOf } from './windowManager';
 import {
     type WindowHost,
     type NestedWindowHost,
@@ -86,7 +86,12 @@ export interface OsWindowSpec {
 export interface OsHostContext {
     /** The app roster — every launchable app / open-able window. */
     apps: OsWindowSpec[];
-    /** Keys to open on first mount (e.g. a maximized primary surface). */
+    /**
+     * The app key to open as the STAGE — the primary backdrop the OS wraps (typically the current
+     * route's realm, so a full-page navigation just re-primaries). At most one.
+     */
+    initialStage?: string;
+    /** Keys to open as floating windows on first mount. */
     initialOpen?: string[];
     /** A persisted per-user workspace to restore. */
     persisted?: PersistedWorkspace | null;
@@ -102,6 +107,8 @@ export interface OsContextValue {
     apps: OsWindowSpec[];
     /** Open (or focus, if already open) the window for an app key. */
     openApp: (key: string) => void;
+    /** Open an app directly ONTO the stage (the primary backdrop) — e.g. the current route's realm. */
+    stageApp: (key: string) => void;
 }
 
 const OsCtx = createContext<OsContextValue | null>(null);
@@ -116,7 +123,7 @@ export function useOs(): OsContextValue {
 /** Read the `os` host context off the Mainframe ctx (safe default when a host threads none). */
 function osHostContext(ctx: MainframeContext): OsHostContext {
     const os = (ctx as { os?: OsHostContext }).os;
-    return { apps: os?.apps ?? [], initialOpen: os?.initialOpen, persisted: os?.persisted, bounds: os?.bounds };
+    return { apps: os?.apps ?? [], initialStage: os?.initialStage, initialOpen: os?.initialOpen, persisted: os?.persisted, bounds: os?.bounds };
 }
 
 /**
@@ -166,13 +173,22 @@ function WindowChrome({
             <div className="os-window-toolbar">{toolbar}</div>
             <div className="os-window-controls os-window-chrome-end">
                 {chromeEnd}
+                {/* Stage toggle: a float can "take the stage" (become the primary backdrop); the stage
+                    can "pop out" back to a floating window. This is the site-sits-inside-the-OS control. */}
+                {win?.presentation === 'stage' ? (
+                    <button type="button" className="os-window-btn" aria-label="Pop out" title="Pop out of the stage" onClick={() => wm.unstage(spec.key)}>⿴</button>
+                ) : (
+                    <button type="button" className="os-window-btn" aria-label="Send to stage" title="Send to the stage" onClick={() => wm.stage(spec.key)}>⤢</button>
+                )}
                 <button type="button" className="os-window-btn" aria-label="Minimize" onClick={() => wm.minimize(spec.key)}>–</button>
-                <button
-                    type="button"
-                    className="os-window-btn"
-                    aria-label={win?.maximized ? 'Restore' : 'Maximize'}
-                    onClick={() => (win?.maximized ? wm.restore(spec.key) : wm.maximize(spec.key))}
-                >▢</button>
+                {win?.presentation !== 'stage' && (
+                    <button
+                        type="button"
+                        className="os-window-btn"
+                        aria-label={win?.maximized ? 'Restore' : 'Maximize'}
+                        onClick={() => (win?.maximized ? wm.restore(spec.key) : wm.maximize(spec.key))}
+                    >▢</button>
+                )}
                 {spec.role?.closable === false || spec.role?.persistent ? null : (
                     <button type="button" className="os-window-btn" aria-label="Close" onClick={() => wm.close(spec.key)}>✕</button>
                 )}
@@ -275,36 +291,37 @@ function RemoteWindowBody({
  * `mount` is invoked once per open window (memoized on the host identity) so the VM boots once, not
  * on every geometry-driven re-render.
  */
-function OsWindow({ spec }: { spec: OsWindowSpec }) {
-    const { wm } = useOs();
-    const win = wm.state.windows[spec.key];
+/** The fill-mode fork (nested/remote/iframe) → the window body node. Shared by float + stage. */
+function WindowBody({ spec, focused }: { spec: OsWindowSpec; focused: boolean }) {
     const host = useMemo(() => resolveWindowHost(spec), [spec]);
     // The remote VM boots exactly once per open window (not on every move/resize re-render).
     const remoteSurfaceProps = useMemo(
         () => (host.kind === 'remote' ? host.mount(host.capabilityToken) : null),
         [host],
     );
-    if (!win) return null;
-    const focused = wm.state.focused === spec.key;
-
-    let body: ReactNode;
     switch (host.kind) {
         case 'nested':
-            body = <NestedWindowBody spec={spec} host={host} focused={focused} />;
-            break;
+            return <NestedWindowBody spec={spec} host={host} focused={focused} />;
         case 'remote':
             // remoteSurfaceProps is non-null when host.kind === 'remote' (same memo dependency).
-            body = <RemoteWindowBody spec={spec} focused={focused} surfaceProps={remoteSurfaceProps!} />;
-            break;
+            return <RemoteWindowBody spec={spec} focused={focused} surfaceProps={remoteSurfaceProps!} />;
         case 'iframe':
             // Descriptor-only, no code path shipped (ADR-0012 §B1) — fail loud, never silently blank.
             throw new IframeFillModeNotShippedError(spec.key);
     }
+}
 
+/** One open FLOATING window: the draggable geometry frame + the fill-mode body. */
+function OsWindow({ spec }: { spec: OsWindowSpec }) {
+    const { wm } = useOs();
+    const win = wm.state.windows[spec.key];
+    if (!win) return null;
+    const focused = wm.state.focused === spec.key;
     return (
         <WindowFrame
             geometry={win.geometry}
-            zIndex={zIndexOf(wm.state, spec.key)}
+            // +1 so a float always paints above the stage backdrop (z-index 0).
+            zIndex={zIndexOf(wm.state, spec.key) + 1}
             dragHandleClassName={OS_WINDOW_DRAG_HANDLE}
             disableDragging={win.maximized}
             className={`os-window${focused ? ' is-focused' : ''}`}
@@ -312,8 +329,25 @@ function OsWindow({ spec }: { spec: OsWindowSpec }) {
             onResize={(w, h, x, y) => wm.resize(spec.key, w, h, x, y)}
             onFocus={() => wm.focus(spec.key)}
         >
-            {body}
+            <WindowBody spec={spec} focused={focused} />
         </WindowFrame>
+    );
+}
+
+/**
+ * The STAGE window (the primary backdrop): the current site/realm "sitting inside the OS". It fills
+ * the desktop, sits BEHIND the floating windows, and is NOT a draggable `WindowFrame` — it's the
+ * canvas the OS wraps. Its slim title bar carries the "pop out" control (demote back to a float).
+ */
+function StageWindow({ spec }: { spec: OsWindowSpec }) {
+    const { wm } = useOs();
+    const win = wm.state.windows[spec.key];
+    if (!win) return null;
+    const focused = wm.state.focused === spec.key;
+    return (
+        <div className="os-stage" data-window={spec.key} onMouseDownCapture={() => wm.focus(spec.key)}>
+            <WindowBody spec={spec} focused={focused} />
+        </div>
     );
 }
 
@@ -343,9 +377,14 @@ function DesktopLayer({ host }: { host: OsHostContext }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Open the host's initial set once (e.g. the primary maximized surface).
+    // Open the host's initial set once: the stage (primary backdrop) first, then any floats.
     useEffect(() => {
+        if (host.initialStage) {
+            const spec = host.apps.find((a) => a.key === host.initialStage);
+            wm.open(host.initialStage, { geometry: spec?.geometry, role: spec?.role, presentation: 'stage' });
+        }
         for (const key of host.initialOpen ?? []) {
+            if (key === host.initialStage) continue;
             const spec = host.apps.find((a) => a.key === key);
             wm.open(key, { geometry: spec?.geometry, role: spec?.role });
         }
@@ -361,17 +400,25 @@ function DesktopLayer({ host }: { host: OsHostContext }) {
                 const spec = host.apps.find((a) => a.key === key);
                 wm.open(key, { geometry: spec?.geometry, role: spec?.role });
             },
+            stageApp: (key: string) => {
+                const spec = host.apps.find((a) => a.key === key);
+                wm.open(key, { geometry: spec?.geometry, role: spec?.role, presentation: 'stage' });
+            },
         }),
         [wm, host.apps],
     );
 
     const specByKey = useMemo(() => new Map(host.apps.map((a) => [a.key, a])), [host.apps]);
-    const open = visibleWindows(wm.state);
+    // The stage (primary backdrop, rendered first/behind) + the floating windows (on top).
+    const stage = stageKey(wm.state);
+    const stageSpec = stage ? specByKey.get(stage) : undefined;
+    const floats = floatingWindows(wm.state);
 
     return (
         <OsCtx.Provider value={value}>
             <div className="os-desktop-windows" ref={desktopRef}>
-                {open.map((w) => {
+                {stageSpec ? <StageWindow key={stageSpec.key} spec={stageSpec} /> : null}
+                {floats.map((w) => {
                     const spec = specByKey.get(w.key);
                     return spec ? <OsWindow key={w.key} spec={spec} /> : null;
                 })}

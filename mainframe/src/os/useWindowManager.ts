@@ -12,6 +12,7 @@ import {
     type DockEdge,
     type Geometry,
     type PersistedWorkspace,
+    type Presentation,
     type SnapZone,
     type WindowManagerState,
     type WindowRole,
@@ -23,9 +24,13 @@ import {
 
 export interface WindowManager {
     state: WindowManagerState;
-    open: (key: string, opts?: { geometry?: Partial<Geometry>; role?: WindowRole }) => void;
+    open: (key: string, opts?: { geometry?: Partial<Geometry>; role?: WindowRole; presentation?: Presentation }) => void;
     close: (key: string) => void;
     focus: (key: string) => void;
+    /** Promote a window to the stage (the primary backdrop); demotes the prior stage to a float. */
+    stage: (key: string) => void;
+    /** Demote a window from the stage back to a floating window. */
+    unstage: (key: string) => void;
     move: (key: string, x: number, y: number) => void;
     resize: (key: string, width: number, height: number, x?: number, y?: number) => void;
     minimize: (key: string) => void;
@@ -59,9 +64,11 @@ export function useWindowManager(options: UseWindowManagerOptions = {}): WindowM
     );
     const [state, dispatch] = useReducer(windowManagerReducer, initial);
 
-    const open = useCallback<WindowManager['open']>((key, opts) => dispatch({ type: 'open', key, geometry: opts?.geometry, role: opts?.role }), []);
+    const open = useCallback<WindowManager['open']>((key, opts) => dispatch({ type: 'open', key, geometry: opts?.geometry, role: opts?.role, presentation: opts?.presentation }), []);
     const close = useCallback((key: string) => dispatch({ type: 'close', key }), []);
     const focus = useCallback((key: string) => dispatch({ type: 'focus', key }), []);
+    const stage = useCallback((key: string) => dispatch({ type: 'stage', key }), []);
+    const unstage = useCallback((key: string) => dispatch({ type: 'unstage', key }), []);
     const move = useCallback((key: string, x: number, y: number) => dispatch({ type: 'move', key, x, y }), []);
     const resize = useCallback<WindowManager['resize']>((key, width, height, x, y) => dispatch({ type: 'resize', key, width, height, x, y }), []);
     const minimize = useCallback((key: string) => dispatch({ type: 'minimize', key }), []);
@@ -74,5 +81,5 @@ export function useWindowManager(options: UseWindowManagerOptions = {}): WindowM
     const snapPreview = useCallback((zone: SnapZone | null) => dispatch({ type: 'snapPreview', zone }), []);
     const serialize = useCallback(() => serializeWorkspace(state), [state]);
 
-    return { state, open, close, focus, move, resize, minimize, maximize, restore, snap, tile, dock, setBounds, snapPreview, serialize };
+    return { state, open, close, focus, stage, unstage, move, resize, minimize, maximize, restore, snap, tile, dock, setBounds, snapPreview, serialize };
 }

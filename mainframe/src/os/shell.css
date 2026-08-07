@@ -90,6 +90,26 @@
         inset: 0;
     }
 
+    /* The STAGE — the primary surface the OS wraps (the site "sitting inside"). Fills the desktop,
+       sits BEHIND the floating windows (z-index 0; floats paint at >=1), and is not draggable. */
+    .os-stage {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        display: flex;
+        background: var(--shell-surface-raised, #ffffff);
+    }
+
+    .os-stage .os-window-body {
+        width: 100%;
+        height: 100%;
+    }
+
+    /* The stage's title bar is a slim system strip, not a draggable window bar. */
+    .os-stage .os-window-titlebar {
+        cursor: default;
+    }
+
     .os-dock {
         position: absolute;
         left: 50%;

@@ -44,6 +44,17 @@ export type DockEdge = 'left' | 'right' | 'top' | 'bottom';
  */
 export type ZAnchor = 'floor' | 'normal' | 'top';
 
+/**
+ * A window's presentation role (the "site sits inside the OS" model):
+ * - `stage` — the PRIMARY surface. It fills the desktop as the backdrop (floor-anchored,
+ *   viewport-sized, non-draggable), and the OS chrome wraps it — the current site/realm feels like
+ *   it's just running inside the OS. **At most one window is the stage at a time.**
+ * - `window` — a normal floating window that sits ON TOP of the stage (the default).
+ * A floating window can be promoted with the `stage` op ("send to stage"), which demotes the prior
+ * stage back to a float. Promoting is form of "take over as the main thing".
+ */
+export type Presentation = 'stage' | 'window';
+
 /** Role metadata the implementation sets on a window; the reducer honors it, never invents it. */
 export type WindowRole = {
     /** A persistent window is never removed by `close` (the op is a no-op). Default false. */
@@ -70,6 +81,8 @@ export type ManagedWindow = {
     restore: Geometry | null;
     /** Role metadata (persistence, closability, z-anchor). */
     role: WindowRole;
+    /** Presentation role — `stage` (the primary backdrop surface) or `window` (floating). Default `window`. */
+    presentation: Presentation;
 };
 
 /**
@@ -91,9 +104,13 @@ export type WindowManagerState = {
 
 /** The op set (ticket 03): `open close focus move resize minimize maximize restore snap tile dock`. */
 export type WindowManagerAction =
-    | { type: 'open'; key: string; geometry?: Partial<Geometry>; role?: WindowRole }
+    | { type: 'open'; key: string; geometry?: Partial<Geometry>; role?: WindowRole; presentation?: Presentation }
     | { type: 'close'; key: string }
     | { type: 'focus'; key: string }
+    // Promote a window to the stage (the primary backdrop). Demotes the prior stage to a float.
+    | { type: 'stage'; key: string }
+    // Demote a window from the stage back to a floating window (its `restore` geometry).
+    | { type: 'unstage'; key: string }
     | { type: 'move'; key: string; x: number; y: number }
     | { type: 'resize'; key: string; width: number; height: number; x?: number; y?: number }
     | { type: 'minimize'; key: string }
@@ -153,6 +170,15 @@ function topmostVisible(state: { zOrder: string[]; windows: Record<string, Manag
     for (let i = state.zOrder.length - 1; i >= 0; i--) {
         const w = state.windows[state.zOrder[i]];
         if (w && !w.minimized) return w.key;
+    }
+    return null;
+}
+
+/** The topmost non-minimized FLOATING window (skips the stage backdrop), or null. */
+function topmostFloat(state: { zOrder: string[]; windows: Record<string, ManagedWindow> }): string | null {
+    for (let i = state.zOrder.length - 1; i >= 0; i--) {
+        const w = state.windows[state.zOrder[i]];
+        if (w && !w.minimized && w.presentation !== 'stage') return w.key;
     }
     return null;
 }
@@ -219,11 +245,44 @@ function dockRect(edge: DockEdge, size: number | undefined, bounds: Bounds): Geo
     }
 }
 
-/** Re-derive a window's geometry from its maximized/snap state against the current bounds. */
+/** Re-derive a window's geometry from its stage/maximized/snap state against the current bounds. */
 function reproject(win: ManagedWindow, bounds: Bounds): ManagedWindow {
+    // The stage always fills the viewport (it's the backdrop the OS wraps).
+    if (win.presentation === 'stage') return { ...win, geometry: snapRect('maximized', bounds) };
     if (win.maximized) return { ...win, geometry: snapRect('maximized', bounds) };
     if (win.snap) return { ...win, geometry: snapRect(win.snap, bounds) };
     return win;
+}
+
+/**
+ * Promote `key` to the stage (the primary backdrop): fill the viewport, and demote any prior stage
+ * back to a floating window at its saved float geometry. Returns a new windows map (pure).
+ */
+function applyStage(
+    windows: Record<string, ManagedWindow>,
+    key: string,
+    bounds: Bounds,
+): Record<string, ManagedWindow> {
+    const win = windows[key];
+    if (!win) return windows;
+    const next = { ...windows };
+    // Demote the incumbent stage (if any, and not the target itself).
+    for (const [k, w] of Object.entries(next)) {
+        if (w.presentation === 'stage' && k !== key) {
+            next[k] = { ...w, presentation: 'window', geometry: w.restore ?? w.geometry, restore: null, maximized: false, snap: null };
+        }
+    }
+    // Promote the target — save its float geometry so unstage can restore it.
+    next[key] = {
+        ...win,
+        presentation: 'stage',
+        restore: win.presentation === 'stage' ? win.restore : (win.restore ?? win.geometry),
+        geometry: snapRect('maximized', bounds),
+        maximized: false,
+        snap: null,
+        minimized: false,
+    };
+    return next;
 }
 
 // ── the reducer ──────────────────────────────────────────────────────────────────────────────────
@@ -251,10 +310,28 @@ export function windowManagerReducer(
                 snap: null,
                 restore: null,
                 role,
+                presentation: 'window',
             };
-            const windows = { ...state.windows, [action.key]: win };
+            let windows = { ...state.windows, [action.key]: win };
+            // Open directly onto the stage when asked (e.g. the current route's realm is the stage).
+            if (action.presentation === 'stage') windows = applyStage(windows, action.key, state.workspace.bounds);
             const zOrder = raiseWithinBand([...state.zOrder, action.key], windows, action.key);
             return { ...state, windows, zOrder, focused: action.key, snap: null };
+        }
+        case 'stage': {
+            if (!state.windows[action.key]) return state;
+            const windows = applyStage(state.windows, action.key, state.workspace.bounds);
+            // Keep the newly-staged window in the manager; focus stays on the topmost visible float.
+            return { ...state, windows, focused: topmostFloat({ zOrder: state.zOrder, windows }) ?? action.key };
+        }
+        case 'unstage': {
+            const win = state.windows[action.key];
+            if (!win || win.presentation !== 'stage') return state;
+            const windows = {
+                ...state.windows,
+                [action.key]: { ...win, presentation: 'window' as const, geometry: win.restore ?? win.geometry, restore: null },
+            };
+            return { ...state, windows };
         }
         case 'close': {
             const win = state.windows[action.key];
@@ -429,6 +506,17 @@ export function zIndexOf(state: WindowManagerState, key: string): number {
     return state.zOrder.indexOf(key);
 }
 
+/** The current stage (primary backdrop) window key, or null if the desktop is pure-floating. */
+export function stageKey(state: WindowManagerState): string | null {
+    for (const k of state.zOrder) if (state.windows[k]?.presentation === 'stage') return k;
+    return null;
+}
+
+/** Open (non-minimized) FLOATING windows (excludes the stage), back-to-front. */
+export function floatingWindows(state: WindowManagerState): ManagedWindow[] {
+    return visibleWindows(state).filter((w) => w.presentation !== 'stage');
+}
+
 // ── the persisted workspace dialect (our own JSON — no cross-tool standard exists) ─────────────────
 
 /** The serialized per-window record — open set + geometry + min/max + snap + role, per ticket 03. */
@@ -441,6 +529,8 @@ export type PersistedWindow = {
     /** The pre-maximize/pre-snap floating rect, so a restore after reload returns to the true size. */
     restore: Geometry | null;
     role: WindowRole;
+    /** Presentation role (`stage`/`window`), so the primary surface survives a reload. */
+    presentation: Presentation;
 };
 
 /** The serialized workspace — versioned so the dialect can evolve without breaking old snapshots. */
@@ -468,6 +558,7 @@ export function serializeWorkspace(state: WindowManagerState): PersistedWorkspac
                 snap: w.snap,
                 restore: w.restore,
                 role: w.role,
+                presentation: w.presentation,
             })),
         zOrder: [...state.zOrder],
         focused: state.focused,
@@ -497,6 +588,8 @@ export function deserializeWorkspace(
             // Prefer the persisted pre-max/pre-snap rect; fall back for legacy snapshots without it.
             restore: p.restore ?? (p.maximized || p.snap ? p.geometry : null),
             role: p.role,
+            // Legacy snapshots (pre-stage) default to a floating window.
+            presentation: p.presentation ?? 'window',
         };
         windows[p.key] = reproject(win, bounds);
     }
