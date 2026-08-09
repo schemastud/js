@@ -65,3 +65,22 @@ export {
     isRemoteHost,
     fillModeForTier,
 } from './windowHost';
+
+// The realm-AGNOSTIC desktop CHROME (editor-promotion ticket 07 / ADR-0017): the generic dock /
+// launcher / clock / upsell popover / workspace persistence over the `os` window manager, plus the
+// operator META-EDITOR overlay geometry. Reads a flat `DesktopApp[]` + generic booleans/callbacks;
+// imports NO realm/manifest type (the beam layer computes the roster). See `desktopChrome.tsx`.
+export {
+    buildDesktopChrome,
+    Dock,
+    Launcher,
+    Clock,
+    UpsellPopover,
+    WorkspacePersistence,
+    OperatorOverlay,
+    type DesktopApp,
+    type DesktopUpsell,
+    type DesktopChromeConfig,
+    type OperatorOverlayProps,
+    type OverlayWindow,
+} from './desktopChrome';
