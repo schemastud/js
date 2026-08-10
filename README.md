@@ -15,9 +15,9 @@ The `@schemastud` JS package family, as a single npm workspace.
 
 Packages are workspace roots **at their existing paths** (not nested under `packages/*`). This is
 deliberate: the fleet consumes several of them via `file:` overlays pinned to
-`…/packages/schemastud/<pkg>` (e.g. `numero`, `stephenrushing`, and the live `splicewire-app/ui`
-FC/RCP wiring). Keeping the paths stable means the consolidation into this workspace breaks no
-consumer and no in-flight refactor.
+`…/packages/schemastud/<pkg>` (e.g. `numero`, `stephenrushing`, `beam`, and the live
+`splicewire-app/ui` FC/RCP wiring). Keeping the paths stable means the consolidation into this
+workspace breaks no consumer and no in-flight refactor.
 
 ## Dev
 
