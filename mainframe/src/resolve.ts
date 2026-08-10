@@ -12,7 +12,7 @@
  * slot name (defined by no registered mainframe) → dev-warn; known-but-unplaced → silent (the mode
  * simply never reads it).
  */
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, type ReactNode } from 'react';
 
 import {
     DEFAULT_ORDER,
@@ -153,7 +153,11 @@ export function resolveSlots({ contributions, registrations, can }: ResolveParam
             const sorted = sortedOrdered(slot);
             const filtered =
                 zone == null ? sorted : sorted.filter((c) => (c.zone ?? DEFAULT_ZONE) === zone);
-            return filtered.map((c) => c.node);
+            // Stamp each item with its stable contribution key so a consumer rendering the array
+            // inline (`{slots.items('overlay')}`) is React-key-clean without re-keying at every site.
+            return filtered.map((c) =>
+                isValidElement(c.node) && c.node.key == null ? cloneElement(c.node, { key: c.key }) : c.node,
+            );
         },
         main(payload) {
             return winner('main')?.render?.(payload);

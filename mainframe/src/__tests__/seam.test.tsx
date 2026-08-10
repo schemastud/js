@@ -160,6 +160,15 @@ describe('resolver (frozen contract behavior)', () => {
         expect(resolved.items('topBar.actions', 'start')).toHaveLength(2);
     });
 
+    it('stamps each item element with its contribution key (React-key-clean inline render)', () => {
+        const resolved = resolveWith((r) => {
+            r.contribute({ slot: 'topBar.actions', key: 'a', node: <span>A</span>, zone: 'start', order: 10 });
+            r.contribute({ slot: 'topBar.actions', key: 'b', node: <span>B</span>, zone: 'start', order: 20 });
+        });
+        // Consumers render `{slots.items(...)}` inline; each element must carry a stable key.
+        expect(resolved.items('topBar.actions').map((n) => (n as { key: string | null }).key)).toEqual(['a', 'b']);
+    });
+
     it('gates contributions by `can` — the entitlement axis, orthogonal to placement', () => {
         const resolved = resolveWith(
             (r) => {
