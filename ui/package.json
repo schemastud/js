@@ -31,7 +31,8 @@
         "test": "vitest run",
         "typecheck": "tsc --noEmit",
         "lint:imports": "node scripts/check-imports.mjs",
-        "prepublishOnly": "npm run build"
+        "prepublishOnly": "npm run build",
+        "prepare": "npm run build"
     },
     "dependencies": {
         "class-variance-authority": "^0.7.1",
