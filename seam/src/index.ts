@@ -15,6 +15,7 @@ export {
 } from './skin-registry';
 export { BlockChromeFallback } from './block-chrome';
 export { ButtonGroupWidget } from './widgets/button-group';
+export { ComboboxWidget } from './widgets/combobox';
 export { StarRatingWidget } from './widgets/star-rating';
 export { resolveExternalRefs } from './refs';
 export { relaxNullableRequired } from './relax';

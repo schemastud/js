@@ -19,8 +19,12 @@ function ensureBuiltinWidgets(registry: WidgetRegistry | undefined | null): void
         return;
     }
     if (installedRegistries.has(registry)) return;
-    installedRegistries.add(registry);
+    // Mark AFTER the call succeeds, not before — found live: marking first means a
+    // registerResourceRefWidget() that throws (or a caller that somehow reaches here
+    // twice re-entrantly) leaves the guard permanently tripped with the widget never
+    // actually installed, and no way to retry.
     registerResourceRefWidget(registry);
+    installedRegistries.add(registry);
 }
 
 /**

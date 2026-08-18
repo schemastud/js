@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useFrameInjection } from './context';
 import { DefaultContainer, DefaultFormBody, DefaultSaveBar, DefaultToggle } from './slots/defaults';
 import { useFormSchema, useResourceRecord, useSaveResource } from './data';
-import { stripHostWidgets } from './raw-mode';
+import { bridgeHostWidgets, stripHostWidgets } from './raw-mode';
 import type { EditShellProps, FormMode, Row } from './types';
 
 /**
@@ -72,7 +72,7 @@ export function EditShell({
     const served = schemaQuery.data ?? { type: 'object', properties: {} };
     // The mode contract: `enriched` resolves host widgets (enrich, etc.); `bare`
     // strips them so the field falls to its inferred control (same served schema).
-    const schema = form === 'bare' ? stripHostWidgets(served) : served;
+    const schema = form === 'bare' ? stripHostWidgets(served) : bridgeHostWidgets(served);
 
     return (
         <Container>

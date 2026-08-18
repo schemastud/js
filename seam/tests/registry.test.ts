@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createWidgetRegistry } from '../src/registry';
+import { ComboboxWidget } from '../src/widgets/combobox';
 
 describe('widget resolution contract', () => {
     const registry = createWidgetRegistry();
@@ -9,6 +10,12 @@ describe('widget resolution contract', () => {
             registry.resolveWidget({ type: 'string', enum: ['a', 'b'], 'x-widget': 'textarea' }),
         ).toBe('textarea');
         expect(registry.resolveWidget({ type: 'string', 'x-widget': 'file' })).toBe('file');
+    });
+
+    it('combobox is baked into every fresh registry (not singleton-only, unlike button-group/star-rating)', () => {
+        expect(registry.resolveWidget({ type: 'string', 'x-widget': 'combobox' })).toBe(ComboboxWidget);
+        const fresh = createWidgetRegistry();
+        expect(fresh.resolveWidget({ type: 'string', 'x-widget': 'combobox' })).toBe(ComboboxWidget);
     });
 
     it('small enums (≤4) render as radio; larger enums fall to the select default', () => {

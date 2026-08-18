@@ -7,6 +7,7 @@ import type {
     WidgetResolution,
 } from './types';
 import { ButtonGroupWidget } from './widgets/button-group';
+import { ComboboxWidget } from './widgets/combobox';
 import { StarRatingWidget } from './widgets/star-rating';
 
 const FORMAT_INPUTS = ['date', 'date-time', 'email', 'uri'];
@@ -42,7 +43,14 @@ const defaultEntries: RegistryEntry[] = [
 ];
 
 export function createWidgetRegistry(): WidgetRegistry {
-    const entries: RegistryEntry[] = [...defaultEntries];
+    // Baked into the FACTORY (not registered onto the `defaultRegistry` singleton
+    // only, the way `button-group`/`star-rating` are below) — a host that calls
+    // `createWidgetRegistry()` for its own instance (frame's `FrameProvider` does
+    // this, not the singleton) still gets it, no separate host-side registration.
+    const entries: RegistryEntry[] = [
+        { predicate: (s) => s['x-widget'] === 'combobox', widget: ComboboxWidget },
+        ...defaultEntries,
+    ];
 
     function registerWidget(
         predicateOrKey: string | ((schema: SchemaNode) => boolean),
