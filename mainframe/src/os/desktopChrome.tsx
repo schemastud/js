@@ -387,6 +387,8 @@ export interface OperatorOverlayProps {
     renderLauncher: (args: { wm: WindowManager; onClose: () => void }) => ReactNode;
     /** The launcher trigger (orb) label. */
     orbLabel?: string;
+    /** Optional glyph node for the orb (else the plain `.mark` square) — same seam as {@link DesktopApp.icon}. */
+    orbIcon?: ReactNode;
     /**
      * Invoked with the WM once, so the host can subscribe to it (e.g. suppress in-window GET
      * navigations). Optional. Returns a cleanup.
@@ -407,6 +409,7 @@ export function OperatorOverlay({
     resolveWindow,
     renderLauncher,
     orbLabel = 'Operator',
+    orbIcon,
     onWindowManager,
     onWindowBodyClickCapture,
 }: OperatorOverlayProps) {
@@ -572,7 +575,7 @@ export function OperatorOverlay({
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
             >
-                <span className="mark" />
+                {orbIcon ?? <span className="mark" />}
                 {orbLabel}
             </button>
         </div>
