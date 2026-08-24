@@ -383,3 +383,82 @@ describe('ListShell — editable row-cell wiring (FC-23)', () => {
         expect(screen.queryByTestId('cell-input')).toBeNull();
     });
 });
+
+describe('ListShell — contributed columns under dotted pointers (ticket 19)', () => {
+    // A producer above frame folds a named slice onto each row; the manifest declares its
+    // participation under `as.prop`. Frame knows nothing about the producer — only that a
+    // field pointer may have depth.
+    const NESTED_ROWS: Row[] = [
+        { id: '1', title: 'Alpha', commerce: { plan: 'Pro', billStatus: 'finalized' } },
+        { id: '2', title: 'Beta', commerce: null },
+    ];
+
+    const manifest = {
+        byNode: {
+            title: { 'list-column': { participates: true, label: 'Title', sort: 0 } },
+            'commerce.plan': { 'list-column': { participates: true, label: 'Plan', sort: 10 } },
+        },
+        inherits: { 'row-cell': ['edit'] as const },
+        known: ['edit', 'detail', 'list-column', 'list-item', 'row-cell'],
+    } as any;
+
+    function nestedTransport(): FrameTransport {
+        return makeTransport({
+            list: vi.fn(async () => ({ data: NESTED_ROWS, total: 2, page: 1, perPage: 25 })),
+        } as Partial<FrameTransport>);
+    }
+
+    it('resolves a contributed column into the column set off the manifest alone', () => {
+        // No host column for it: participation IS the declaration, so the seam emits it.
+        const resolved = resolveColumns('widgets', undefined, [], manifest);
+
+        expect(resolved.map((c) => c.field)).toEqual(['title', 'commerce.plan']);
+        expect(resolved[1].header).toBe('Plan');
+    });
+
+    it('a host column may pin a contributed field by its dotted name', () => {
+        // `participation.has(col.field)` matches on the dotted string as-is — the manifest
+        // check needed no path resolution, only the value read did.
+        expect(() =>
+            resolveColumns('widgets', undefined, [{ field: 'commerce.plan' }], manifest),
+        ).not.toThrow();
+    });
+
+    it('renders the contributed value by walking the path, not indexing flat', async () => {
+        const Wrapper = wrap(makeInjection(nestedTransport()));
+
+        render(<ListShell resource="widgets" columns={[]} manifest={manifest} />, {
+            wrapper: Wrapper,
+        });
+
+        await waitFor(() => expect(screen.getAllByText('Alpha')[0]).toBeTruthy());
+        // The whole point: a flat `record['commerce.plan']` renders nothing here.
+        expect(screen.getAllByText('Pro')[0]).toBeTruthy();
+    });
+
+    it('a row whose slice ran and returned null renders empty, not a crash', async () => {
+        const Wrapper = wrap(makeInjection(nestedTransport()));
+
+        render(<ListShell resource="widgets" columns={[]} manifest={manifest} />, {
+            wrapper: Wrapper,
+        });
+
+        await waitFor(() => expect(screen.getAllByText('Beta')[0]).toBeTruthy());
+        expect(screen.queryByText('null')).toBeNull();
+        expect(screen.queryByText('undefined')).toBeNull();
+    });
+
+    it('a contributed field never becomes an inline editor — the seam is read-only', async () => {
+        // Belt to the server's braces: a producer folding a slice is refused `row-cell`
+        // participation where it declares it, so this manifest cannot legally exist. If it
+        // ever did, an editor here would commit into a slice with no writer.
+        const Wrapper = wrap(makeInjection(nestedTransport()));
+
+        render(<ListShell resource="widgets" columns={[]} manifest={manifest} onCellCommit={vi.fn()} />, {
+            wrapper: Wrapper,
+        });
+
+        await waitFor(() => expect(screen.getAllByText('Pro')[0]).toBeTruthy());
+        expect(document.querySelector('[data-frame-cell]')).toBeNull();
+    });
+});

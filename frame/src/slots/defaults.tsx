@@ -1,6 +1,7 @@
 import { SchemaForm } from '@schemastud/seam';
 import type { ComponentType, ReactNode } from 'react';
 import { useFrameInjection } from '../context';
+import { getPath } from '../getPath';
 import type {
     CellSlotProps,
     FormBodySlotProps,
@@ -32,7 +33,9 @@ export function DefaultToolbar({ resource, onNew, canCreate }: ToolbarSlotProps)
 
 export function DefaultCell({ column, record }: CellSlotProps) {
     if (column.cell) return <>{column.cell(record)}</>;
-    const value = record[column.field];
+    // Dotted-pointer aware: a column may name a node inside a folded sub-projection
+    // (`commerce.plan`), which a flat index would miss.
+    const value = getPath(record, column.field);
     return <>{value === null || value === undefined ? '' : String(value)}</>;
 }
 

@@ -2,6 +2,7 @@ import type { ComponentType } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import { ListFilters, useListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
+import { getPath } from './getPath';
 import { resolveColumns } from './resolveColumns';
 import { EditableCell } from './EditableCell';
 import {
@@ -160,11 +161,19 @@ function withEditableCells(
         // Host override wins for its field — never wrap it.
         if (col.cell) return col;
 
+        // FLAT on purpose: `byNode` is keyed by the full pointer, dots included, so
+        // `byNode['commerce.plan']` is the correct lookup and traversing would look for a
+        // `commerce` node that does not exist. Only the VALUE read below is path-resolved.
         const byCtx = manifest.byNode[col.field];
         const rowCell = byCtx?.['row-cell'];
         if (!rowCell?.participates) return col;
 
         const edit = byCtx?.edit;
+        // Also flat, and unreachable for a dotted pointer: a JSON Schema nests through a
+        // `properties` hop per level, so plain dot-traversal would be the wrong traversal — and a
+        // producer that folds a sub-projection onto a row is refused `row-cell` participation
+        // where it declares it, because a folded slice has no write arm for `onCellCommit` to
+        // reach. The refusal is what keeps this line honest; do not "fix" it by traversing.
         const node: SchemaNode = properties[col.field] ?? { type: 'string' };
 
         return {
@@ -174,7 +183,7 @@ function withEditableCells(
                     node={node}
                     rowCell={rowCell}
                     edit={edit}
-                    value={record[col.field]}
+                    value={getPath(record, col.field)}
                     registry={registry}
                     onCommit={(value) => onCellCommit?.(record, col.field, value)}
                 />

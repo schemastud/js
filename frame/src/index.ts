@@ -46,6 +46,7 @@ export {
     type FlushFn,
 } from './EditShellMount';
 export { resolveColumns } from './resolveColumns';
+export { getPath } from './getPath';
 export { createFormResolver, kindOfSchema } from './FormResolver';
 export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
 export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';

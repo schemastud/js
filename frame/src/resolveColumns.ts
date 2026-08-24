@@ -15,6 +15,11 @@ const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
  * entry naming a field with NO `list-column` participation is a wiring error (throws
  * in dev, passes through in prod). When NO manifest is supplied the seam is a pure
  * passthrough — exactly today's behavior, so existing surfaces migrate for free.
+ *
+ * A field may be a DOTTED pointer (`commerce.plan`) when a producer above frame folds a named
+ * sub-projection onto the row. Nothing here needs to change for it: `byNode` is keyed by the full
+ * pointer, so participation lookup, ordering and the host-column check all match on the dotted
+ * string as-is. Depth only matters where the VALUE is read — see `getPath`.
  */
 export const resolveColumns: ResolveColumns = (
     _resource,

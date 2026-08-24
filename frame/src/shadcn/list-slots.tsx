@@ -2,6 +2,7 @@ import type { ComponentType, MouseEvent } from 'react';
 import { parseSort, serializeSort, sortStateFor, toggleSortKey } from '@schemastud/facets';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useFrameInjection } from '../context';
+import { getPath } from '../getPath';
 import { DefaultCell } from '../slots/defaults';
 import type {
     CellSlotProps,
@@ -139,7 +140,8 @@ function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
 /** Adds empty-value + boolean rendering over the plain default; otherwise delegates. */
 export function ShadcnCell(props: CellSlotProps) {
     if (props.column.cell) return <>{props.column.cell(props.record)}</>;
-    const value = props.record[props.column.field];
+    // Dotted-pointer aware — see DefaultCell.
+    const value = getPath(props.record, props.column.field);
     if (value === null || value === undefined || value === '') {
         return <span className="text-muted-foreground">—</span>;
     }
