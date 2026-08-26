@@ -67,6 +67,7 @@ registry.registerWidget((s) => s['x-widget'] === 'citation', CitationWidget);
 
 - Backends that serialize an empty associative payload as `[]` (PHP among them) get their
   formData coerced to `{}` against object schemas.
-- `required` entries whose property type union includes `'null'` are relaxed at the form layer
-  (`relaxNullableRequired`) — the write path stays the validation authority.
+- Nullable `$ref`s (`{$ref, nullable: true}`) are re-expressed as `anyOf[$ref, null]`
+  (`normalizeNullableRefs`) — AJV rejects `nullable` without a `type` sibling. `required` is
+  passed through untouched: the server's list is the form's list.
 - Arrays without an `items` definition are hidden rather than rendered as RJSF error blocks.

@@ -4,7 +4,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { defaultRegistry } from './registry';
 import { resolveExternalRefs } from './refs';
-import { relaxNullableRequired } from './relax';
+import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
 import { buildUiSchema, mergeUiSchema } from './ui-schema';
 import { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
@@ -76,23 +76,25 @@ export function SchemaForm({
         };
     }, [schema, schemaFetcher]);
 
-    const relaxedSchema = useMemo(
-        () => (resolvedSchema ? relaxNullableRequired(resolvedSchema) : null),
+    // Only the nullable-`$ref` notation is bridged; the server's `required` reaches RJSF
+    // verbatim, so the form blocks on exactly what the write path rejects.
+    const formSchema = useMemo(
+        () => (resolvedSchema ? normalizeNullableRefs(resolvedSchema) : null),
         [resolvedSchema],
     );
 
     const generatedUiSchema = useMemo(
-        () => (relaxedSchema ? buildUiSchema(relaxedSchema, activeRegistry) : {}),
-        [relaxedSchema, activeRegistry],
+        () => (formSchema ? buildUiSchema(formSchema, activeRegistry) : {}),
+        [formSchema, activeRegistry],
     );
 
-    if (!relaxedSchema) {
+    if (!formSchema) {
         return null;
     }
 
     return (
         <ThemedForm
-            schema={relaxedSchema as RJSFSchema}
+            schema={formSchema as RJSFSchema}
             uiSchema={mergeUiSchema(generatedUiSchema, uiSchema) as UiSchema}
             validator={validator ?? defaultValidator}
             // Partition `x-group` properties into titled sections; degrades to the

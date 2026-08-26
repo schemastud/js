@@ -18,7 +18,7 @@ export { ButtonGroupWidget } from './widgets/button-group';
 export { ComboboxWidget } from './widgets/combobox';
 export { StarRatingWidget } from './widgets/star-rating';
 export { resolveExternalRefs } from './refs';
-export { relaxNullableRequired } from './relax';
+export { normalizeNullableRefs } from './nullable-refs';
 export { SchemaForm, WidgetRegistryContext, type SchemaFormProps } from './SchemaForm';
 export { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
 export type {

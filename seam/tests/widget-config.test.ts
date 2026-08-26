@@ -181,13 +181,13 @@ describe('local $ref composite resolution', () => {
 });
 
 describe('nullable-$ref expansion end to end', () => {
-    it('relax expands {$ref, nullable} into anyOf and the walker still emits ui:field with fieldReplacesAnyOrOneOf', async () => {
-        const { relaxNullableRequired } = await import('../src/relax');
+    it('normalizeNullableRefs expands {$ref, nullable} into anyOf and the walker still emits ui:field with fieldReplacesAnyOrOneOf', async () => {
+        const { normalizeNullableRefs } = await import('../src/nullable-refs');
         const registry = createWidgetRegistry();
         const RichContent = () => null;
         registry.registerWidget('rich-content', RichContent);
 
-        const relaxed = relaxNullableRequired({
+        const normalized = normalizeNullableRefs({
             type: 'object',
             properties: {
                 bodyDoc: {
@@ -200,11 +200,11 @@ describe('nullable-$ref expansion end to end', () => {
             $defs: { Doc: { type: 'object', properties: { type: { type: 'string' } } } },
         });
 
-        const bodyDoc = (relaxed.properties as Record<string, Record<string, unknown>>).bodyDoc;
+        const bodyDoc = (normalized.properties as Record<string, Record<string, unknown>>).bodyDoc;
         expect(bodyDoc.anyOf).toEqual([{ $ref: '#/$defs/Doc' }, { type: 'null' }]);
         expect(bodyDoc.nullable).toBeUndefined();
 
-        const ui = buildUiSchema(relaxed, registry);
+        const ui = buildUiSchema(normalized, registry);
         expect((ui.bodyDoc as Record<string, unknown>)['ui:field']).toBe(RichContent);
         expect((ui.bodyDoc as Record<string, unknown>)['ui:options']).toEqual({
             fieldReplacesAnyOrOneOf: true,
