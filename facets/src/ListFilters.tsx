@@ -18,6 +18,7 @@ export function ListFilters(state: ListFiltersState) {
     return (
         <div className="space-y-3">
             <FacetsBar
+                resource={resource}
                 schema={schema}
                 values={filterValues}
                 sort={sort}

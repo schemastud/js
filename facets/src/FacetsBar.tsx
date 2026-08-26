@@ -1,6 +1,6 @@
 import { ArrowDownAZ, ArrowUpAZ, ListFilter, Plus, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useFacetsInjection } from './context';
+import { FacetsResourceProvider, useFacetsInjection } from './context';
 import { useFilterOptions } from './data';
 import { MultiSelectFilter } from './MultiSelectFilter';
 import { parseSort, serializeSort } from './sort';
@@ -102,12 +102,20 @@ function FacetControl({
  * hand-rolled anchored panels), never a native `<select>`.
  */
 export function FacetsBar({
+    resource,
     schema,
     values,
     sort,
     onFilterChange,
     onSortChange,
 }: {
+    /**
+     * The resource key this bar filters. Required since the filter endpoints became per-resource
+     * (splicewire api-surface-coherence 35) — the options lookup a facet performs now needs a
+     * resource to address, and to be authorized against. Provided to the leaves through
+     * `FacetsResourceProvider` rather than threaded as a prop through the chip-rendering tree.
+     */
+    resource: string;
     schema: FilterSchema;
     values: Record<string, string>;
     sort: string | null;
@@ -182,6 +190,7 @@ export function FacetsBar({
     };
 
     return (
+        <FacetsResourceProvider resource={resource}>
         <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2">
             {/* Warm chip labels for active option-backed facets (deep-link / refresh). */}
             {activeFacets
@@ -344,5 +353,6 @@ export function FacetsBar({
                 )}
             </div>
         </div>
+        </FacetsResourceProvider>
     );
 }

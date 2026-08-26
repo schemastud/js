@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useFacetsInjection } from './context';
+import { useFacetsInjection, useFacetsResource } from './context';
 import type { FilterSchema, FilterOption, SavedFilter, SavedFilterQueryParameters } from './types';
 
 /**
@@ -22,13 +22,20 @@ export function useFilterSchema(resource: string) {
  * Options Source client: resolve a named Options Source (silos, tags, …) to its
  * rows, with type-ahead via `search`. Cached per (ref, search) for the session.
  */
-export function useFilterOptions(ref: string | undefined, search: string) {
+export function useFilterOptions(ref: string | undefined, search: string, resource?: string) {
     const { transport } = useFacetsInjection();
+    const contextResource = useFacetsResource();
+    const target = resource ?? contextResource;
     return useQuery({
-        queryKey: ['filter-options', ref, search],
-        enabled: Boolean(ref),
+        queryKey: ['filter-options', target, ref, search],
+        enabled: Boolean(ref) && Boolean(target),
         staleTime: 60_000,
-        queryFn: () => transport.getFilterOptions(ref as string, search) as Promise<FilterOption[]>,
+        queryFn: () =>
+            transport.getFilterOptions(
+                target as string,
+                ref as string,
+                search,
+            ) as Promise<FilterOption[]>,
     });
 }
 

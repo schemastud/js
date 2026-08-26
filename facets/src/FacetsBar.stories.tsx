@@ -48,6 +48,7 @@ function BarHost({
     return (
         <MockFacetsProvider>
             <FacetsBar
+                resource="fragments"
                 schema={DEMO_SCHEMA}
                 values={values}
                 sort={sort}

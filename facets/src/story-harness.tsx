@@ -144,7 +144,7 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FacetsTra
             if (fixtures.loading) return NEVER;
             return Promise.resolve(fixtures.schema ?? DEMO_SCHEMA);
         },
-        getFilterOptions: (ref) => {
+        getFilterOptions: (_resource, ref) => {
             if (fixtures.loading) return NEVER;
             return Promise.resolve((fixtures.options ?? DEMO_OPTIONS)[ref] ?? []);
         },

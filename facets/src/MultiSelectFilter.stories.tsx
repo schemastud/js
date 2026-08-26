@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { within } from 'storybook/test';
+import { FacetsResourceProvider } from './context';
 import { MultiSelectFilter } from './MultiSelectFilter';
 import type { FilterDescriptor } from './types';
 import { MockFacetsProvider } from './story-harness';
@@ -60,11 +61,13 @@ function FilterHost({
     return (
         <MockFacetsProvider fixtures={loading ? { loading: true } : undefined}>
             <div style={{ width: 280 }}>
-                <MultiSelectFilter
-                    descriptor={descriptor}
-                    value={value}
-                    onChange={(v) => setValue(v ?? '')}
-                />
+                <FacetsResourceProvider resource="fragments">
+                    <MultiSelectFilter
+                        descriptor={descriptor}
+                        value={value}
+                        onChange={(v) => setValue(v ?? '')}
+                    />
+                </FacetsResourceProvider>
             </div>
         </MockFacetsProvider>
     );

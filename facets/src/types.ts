@@ -101,7 +101,13 @@ export interface SavedFilter {
  */
 export interface FacetsTransport {
     getFilterSchema(resource: string): Promise<FilterSchema>;
-    getFilterOptions(ref: string, search: string): Promise<FilterOption[]>;
+    /**
+     * Resolve a named options source for a resource. `resource` was added when the filter surface
+     * became per-resource (splicewire api-surface-coherence 35): the flat, resource-less options
+     * route it replaced had nothing to authorize against and enumerated every value list to any
+     * authenticated caller.
+     */
+    getFilterOptions(resource: string, ref: string, search: string): Promise<FilterOption[]>;
     getSavedFilters(resource: string): Promise<SavedFilter[]>;
     saveFilter(
         resource: string,

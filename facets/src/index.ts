@@ -1,5 +1,5 @@
 // Injection seam
-export { FacetsProvider, useFacetsInjection } from './context';
+export { FacetsProvider, FacetsResourceProvider, useFacetsInjection, useFacetsResource } from './context';
 
 // Surface components
 export { FacetsBar } from './FacetsBar';
