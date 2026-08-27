@@ -4,6 +4,7 @@ import { useFrameInjection } from '../context';
 import { getPath } from '../getPath';
 import type {
     CellSlotProps,
+    ErrorSlotProps,
     FormBodySlotProps,
     FormMode,
     FrameColumn,
@@ -43,6 +44,36 @@ export function DefaultEmpty() {
     return (
         <div data-frame-slot="Empty" style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>
             No records.
+        </div>
+    );
+}
+
+/**
+ * The list read FAILED (api-surface-coherence 107) — say so, and offer the retry.
+ *
+ * Deliberately shows the message the transport carried rather than a fixed string: the
+ * defect this slot exists for was a 500 whose body named the exact missing table, hidden
+ * behind "No records." for a day.
+ */
+export function DefaultErrorState({ error, retry }: ErrorSlotProps) {
+    const message =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : null;
+
+    return (
+        <div
+            data-frame-slot="ErrorState"
+            role="alert"
+            style={{ padding: '2rem', textAlign: 'center' }}
+        >
+            <div>Could not load this list.</div>
+            {message ? (
+                <div style={{ marginTop: '0.5rem', opacity: 0.7, fontSize: '0.875em' }}>
+                    {message}
+                </div>
+            ) : null}
+            <button type="button" onClick={retry} style={{ marginTop: '0.75rem' }}>
+                Retry
+            </button>
         </div>
     );
 }

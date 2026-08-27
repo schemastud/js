@@ -8,6 +8,7 @@ import { EditableCell } from './EditableCell';
 import {
     DefaultCell,
     DefaultEmpty,
+    DefaultErrorState,
     DefaultLoading,
     DefaultPagination,
     DefaultTable,
@@ -57,6 +58,7 @@ export function ListShell({
     const Cell = slots?.Cell ?? DefaultCell;
     const RowActions = slots?.RowActions;
     const Empty = slots?.Empty ?? DefaultEmpty;
+    const ErrorState = slots?.ErrorState ?? DefaultErrorState;
     const Loading = slots?.Loading ?? DefaultLoading;
     const Pagination = slots?.Pagination ?? DefaultPagination;
 
@@ -109,6 +111,11 @@ export function ListShell({
 
             {query.isLoading ? (
                 <Loading />
+            ) : query.isError ? (
+                // BEFORE `rows.length === 0`, not after: a failed read also has zero rows, so
+                // ordering these the other way is exactly the bug this branch exists to end —
+                // every 5xx on every Frame list rendered as "No records." (api-surface-coherence 107).
+                <ErrorState error={query.error} retry={() => void query.refetch()} />
             ) : rows.length === 0 ? (
                 <Empty />
             ) : (

@@ -238,7 +238,24 @@ export interface ListSlots {
     RowActions: ComponentType<{ record: Row }>;
     Empty: ComponentType<any>;
     Loading: ComponentType<any>;
+    /**
+     * Rendered when the list READ FAILED, in place of `Empty` (api-surface-coherence 107).
+     *
+     * Optional so no existing host that builds a whole `ListSlots` object breaks; the shell
+     * falls back to its own default. It is a separate slot rather than a flag on `Empty`
+     * because the two say opposite things: `Empty` asserts the server answered and there is
+     * nothing there, and for as long as this slot did not exist, every 5xx on every list in
+     * the estate asserted that too — a hard server error rendering as a clean empty state.
+     */
+    ErrorState?: ComponentType<ErrorSlotProps>;
     Pagination: ComponentType<PaginationSlotProps>;
+}
+
+export interface ErrorSlotProps {
+    /** The transport/query error. `unknown` because a transport may reject with anything. */
+    error: unknown;
+    /** Re-run the list read. */
+    retry: () => void;
 }
 
 export interface PaginationSlotProps {

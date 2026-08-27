@@ -6,6 +6,7 @@ import { getPath } from '../getPath';
 import { DefaultCell } from '../slots/defaults';
 import type {
     CellSlotProps,
+    ErrorSlotProps,
     FrameColumn,
     ListSlots,
     PaginationSlotProps,
@@ -162,6 +163,34 @@ export function ShadcnEmpty() {
     );
 }
 
+/**
+ * The shadcn-skinned failed-read state (api-surface-coherence 107) — the visual twin of
+ * {@see ShadcnEmpty}, deliberately NOT sharing its markup: they must not be mistakable
+ * for one another, which is the entire defect this slot closes.
+ */
+export function ShadcnErrorState({ error, retry }: ErrorSlotProps) {
+    const { primitives } = useFrameInjection();
+    const { Button } = primitives;
+    const message =
+        error instanceof Error ? error.message : typeof error === 'string' ? error : null;
+
+    return (
+        <div
+            data-frame-slot="ErrorState"
+            role="alert"
+            className="rounded-lg border border-destructive/40 bg-destructive/5 px-6 py-12 text-center text-sm"
+        >
+            <div className="font-medium text-destructive">Could not load this list.</div>
+            {message ? (
+                <div className="mt-2 text-muted-foreground">{message}</div>
+            ) : null}
+            <Button type="button" size="sm" variant="outline" className="mt-4" onClick={retry}>
+                Retry
+            </Button>
+        </div>
+    );
+}
+
 export function ShadcnToolbar({ resource, onNew, canCreate }: ToolbarSlotProps) {
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
@@ -236,6 +265,7 @@ export const shadcnListSlots = {
     Table: ShadcnTable,
     Cell: ShadcnCell,
     Empty: ShadcnEmpty,
+    ErrorState: ShadcnErrorState,
     Toolbar: ShadcnToolbar,
     Pagination: ShadcnPagination,
 } satisfies Partial<ListSlots>;

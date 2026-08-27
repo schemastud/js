@@ -170,6 +170,48 @@ describe('ListShell', () => {
         await waitFor(() => expect(screen.getByText('No records.')).toBeTruthy());
     });
 
+    // api-surface-coherence 107: a FAILED read is not an EMPTY one. Before the ErrorState
+    // slot existed, every 5xx on every frame list fell through to `rows.length === 0` and
+    // rendered "No records." — a hard server error presenting as a clean empty state.
+    it('renders the error state, not the empty state, when the list read fails', async () => {
+        const transport = makeTransport({
+            list: vi.fn(async () => {
+                throw new Error('Request failed with status code 500');
+            }),
+        });
+        const Wrapper = wrap(makeInjection(transport));
+
+        render(<ListShell resource="widgets" columns={[{ field: 'title' }]} />, {
+            wrapper: Wrapper,
+        });
+
+        await waitFor(() =>
+            expect(document.querySelector('[data-frame-slot="ErrorState"]')).toBeTruthy(),
+        );
+        expect(screen.getByText('Request failed with status code 500')).toBeTruthy();
+        expect(screen.queryByText('No records.')).toBeNull();
+    });
+
+    it('a host ErrorState override replaces the default failed-read state', async () => {
+        const transport = makeTransport({
+            list: vi.fn(async () => {
+                throw new Error('boom');
+            }),
+        });
+        const Wrapper = wrap(makeInjection(transport));
+
+        render(
+            <ListShell
+                resource="widgets"
+                columns={[{ field: 'title' }]}
+                slots={{ ErrorState: () => <div>custom error</div> }}
+            />,
+            { wrapper: Wrapper },
+        );
+
+        await waitFor(() => expect(screen.getByText('custom error')).toBeTruthy());
+    });
+
     it('overriding one slot via `slots?` swaps only that slot', async () => {
         const transport = makeTransport();
         const Wrapper = wrap(makeInjection(transport));
