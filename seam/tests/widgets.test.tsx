@@ -50,8 +50,13 @@ describe('x-widget presentation widgets', () => {
             const stars = container.querySelectorAll('[data-star]');
             expect(stars).toHaveLength(5);
 
-            // First three stars filled (amber), last two empty.
-            const filled = [...stars].filter((s) => (s as HTMLElement).style.color === 'rgb(245, 158, 11)');
+            // First three stars filled, last two empty. Asserted on the TOKEN, not on a resolved
+            // colour: `23ffcf4` moved this widget's inline colour from the literal `#f59e0b` to
+            // `var(--stud-star)` and left this line asserting `rgb(245, 158, 11)`. jsdom does not
+            // resolve custom properties in `style.color`, so the filter matched nothing and the
+            // test read as "no stars are filled" — a stale assertion, not a regression. The token
+            // still resolves to that same amber (.storybook/preview.css:98).
+            const filled = [...stars].filter((s) => (s as HTMLElement).style.color === 'var(--stud-star)');
             expect(filled).toHaveLength(3);
 
             fireEvent.click(container.querySelector('[data-star="4"]')!);
