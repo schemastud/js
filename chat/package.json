@@ -38,7 +38,7 @@
     },
     "peerDependencies": {
         "@schemastud/blockdoc": "^0.1.0",
-        "@schemastud/seam": "^0.1.0",
+        "@schemastud/seam": "^0.2.0",
         "react": ">=18",
         "react-dom": ">=18"
     },

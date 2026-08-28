@@ -48,7 +48,7 @@
     },
     "dependencies": {
         "@schemastud/facets": "^0.1.0",
-        "@schemastud/seam": "^0.1.0",
+        "@schemastud/seam": "^0.2.0",
         "@schemastud/ui": "^0.1.0"
     },
     "devDependencies": {
