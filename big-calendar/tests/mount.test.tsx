@@ -43,7 +43,7 @@ function event(over: Partial<FoundationCalendarEvent> = {}): FoundationCalendarE
         start,
         end: start,
         allDay: true,
-        compositionId: 'comp_digest',
+        sourceId: 'comp_digest',
         laneId: 'default',
         colorToken: 'sky',
         resident: true,
@@ -59,7 +59,7 @@ function fakeClient(events: FoundationCalendarEvent[], over: Partial<CalendarCli
     return {
         listEvents: () => Promise.resolve(events),
         reAnchor: vi.fn(() => Promise.resolve()),
-        createRelease: nope as CalendarClient['createRelease'],
+        createEvent: nope as CalendarClient['createEvent'],
         editCell: vi.fn(() => Promise.resolve()),
         materialize: nope as CalendarClient['materialize'],
         override: nope as CalendarClient['override'],

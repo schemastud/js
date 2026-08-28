@@ -24,7 +24,7 @@ export function planEventDrop<E extends FoundationCalendarEvent>(event: E, newDa
 
 /**
  * Clicking an event opens the ONE edit panel in the mode residence dictates (PRD §5.2):
- * a resident Release edits; a non-resident occurrence enters reference/materialize mode.
+ * a resident event edits; a non-resident occurrence enters reference/materialize mode.
  */
 export function planEventSelect<E extends FoundationCalendarEvent>(event: E): EditPanelMode {
     return event.resident ? 'resident-edit' : 'reference';

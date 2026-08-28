@@ -71,7 +71,7 @@ export const DEMO_EVENTS: FoundationCalendarEvent[] = [
         title: 'Launch: Summer Drop',
         ...day(2026, 6, 3),
         allDay: true,
-        compositionId: 'comp-1',
+        sourceId: 'comp-1',
         laneId: 'lane-a',
         colorToken: 'emerald',
         resident: true,
@@ -83,7 +83,7 @@ export const DEMO_EVENTS: FoundationCalendarEvent[] = [
         title: 'Preview: Behind the Scenes',
         ...day(2026, 6, 9),
         allDay: true,
-        compositionId: 'comp-1',
+        sourceId: 'comp-1',
         laneId: 'lane-a',
         colorToken: 'sky',
         resident: true,
@@ -95,7 +95,7 @@ export const DEMO_EVENTS: FoundationCalendarEvent[] = [
         title: 'Recurring: Weekly Digest',
         ...day(2026, 6, 15),
         allDay: true,
-        compositionId: 'comp-2',
+        sourceId: 'comp-2',
         laneId: 'lane-b',
         colorToken: 'violet',
         resident: false, // virtual / read-only occurrence (dashed ghost)
@@ -107,7 +107,7 @@ export const DEMO_EVENTS: FoundationCalendarEvent[] = [
         title: 'Feature: Creator Spotlight',
         ...day(2026, 6, 21),
         allDay: true,
-        compositionId: 'comp-1',
+        sourceId: 'comp-1',
         laneId: 'lane-a',
         colorToken: 'amber',
         resident: true,
@@ -119,7 +119,7 @@ export const DEMO_EVENTS: FoundationCalendarEvent[] = [
         title: 'Newsletter: Mid-month',
         ...day(2026, 6, 15),
         allDay: true,
-        compositionId: 'comp-2',
+        sourceId: 'comp-2',
         laneId: 'lane-b',
         colorToken: 'rose',
         resident: true,
@@ -131,7 +131,7 @@ export const DEMO_EVENTS: FoundationCalendarEvent[] = [
         title: 'Draft: Autumn Teaser',
         ...day(2026, 6, 28),
         allDay: true,
-        compositionId: 'comp-1',
+        sourceId: 'comp-1',
         laneId: 'lane-a',
         colorToken: 'indigo',
         resident: false,
@@ -161,7 +161,7 @@ export function createMockClient(
             return Promise.resolve(events);
         },
         reAnchor: () => Promise.resolve(),
-        createRelease: (input) =>
+        createEvent: (input) =>
             Promise.resolve({
                 ...DEMO_EVENTS[0],
                 id: `new-${Date.now()}`,

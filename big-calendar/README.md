@@ -17,7 +17,7 @@ Everything host-specific is injected through `<BigCalendarProvider services={…
 
 | Kind | Purpose | Default |
 |---|---|---|
-| `client` (required) | transport — `listEvents` / `reAnchor` / `createRelease` / `editCell` / `materialize` / `override` | — |
+| `client` (required) | transport — `listEvents` / `reAnchor` / `createEvent` / `editCell` / `materialize` / `override` | — |
 | `notify` / `onError` | feedback; `notify.action` carries a host-side undo callback | `console.debug` / `console.error` |
 | `renderEditPanel` / `renderEventBadge` / `renderFilters` / `renderLaneHeader` | host chrome slots | minimal popover / plain title bar / none / raw `laneId` |
 | `subscribe` | real-time; returns an unsubscribe fn | no-op |

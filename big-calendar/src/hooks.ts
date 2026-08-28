@@ -13,7 +13,7 @@ export const calendarKeys = {
 /**
  * The events query + the real-time subscription wiring (PRD §7.2). On mount the injected
  * `subscribe` is called; on change the relevant query keys are invalidated (scoped by
- * `compositionId`/`ref` when supplied, else a broad refetch). The host provides an
+ * `sourceId`/`ref` when supplied, else a broad refetch). The host provides an
  * already-wired transport; the foundation stays source-blind.
  */
 export function useCalendarEvents<E = FoundationCalendarEvent>(range?: { start: Date; end: Date }) {

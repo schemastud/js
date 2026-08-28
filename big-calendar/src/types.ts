@@ -6,9 +6,11 @@ import type { ReactNode } from 'react';
  * `@splicewire/_resources`, so the satellite's `client` adapter maps the projection DTO
  * INTO this shape. Everything the renderer needs is here and already resolved:
  *
- *  - `compositionId` is TOP-LEVEL, opaque-but-routable (the client echoes it back on
- *    writes to route to the right composition) — NOT in the `meta` bag, but still
- *    semantically opaque to the foundation.
+ *  - `sourceId` is TOP-LEVEL, opaque-but-routable (the client echoes it back on writes so
+ *    they reach the right owner) — NOT in the `meta` bag, but still semantically opaque here.
+ *    ⚠️ It was `compositionId` until the consumer's adapter had to fill it with an owning
+ *    CALENDAR id and park the real composition in `meta`, under a docblock explaining the
+ *    discrepancy. A field whose name needs an apology is the wrong name.
  *  - `laneId` is the opaque lane axis (= a channel), never interpreted.
  *  - `colorToken` is ALREADY resolved by the mount's hue axis (kind | provenance); the
  *    foundation just paints it.
@@ -23,7 +25,7 @@ export interface FoundationCalendarEvent {
     start: Date;
     end: Date;
     allDay: true;
-    compositionId: string;
+    sourceId: string;
     laneId: string;
     colorToken: string;
     resident: boolean;
@@ -39,20 +41,20 @@ export type OverrideAction =
 
 /**
  * The injected transport adapter — the ONE required data seam (PRD §7.2). The host wraps
- * whatever transport it has and points it at the correct tenant/composition; the surface
- * is tenant-blind and composition-blind. Generic over the event DTO with a default bound
+ * whatever transport it has and points it at the correct tenant and owner; the surface is
+ * tenant-blind and owner-blind. Generic over the event DTO with a default bound
  * to {@see FoundationCalendarEvent}.
  */
 export interface CalendarClient<E = FoundationCalendarEvent> {
     /** All events for a range. `range` is v1-IGNORED (the +3mo server default renders), kept so a view-driven horizon never breaks the interface. */
     listEvents(range?: { start: Date; end: Date }): Promise<E[]>;
-    /** Re-anchor a resident Release to a new date (resident drag + the edit panel's date field — one write, two entry points). */
+    /** Re-anchor a resident event to a new date (resident drag + the edit panel's date field — one write, two entry points). */
     reAnchor(ref: string, newDate: Date): Promise<void>;
-    /** Create a one-off Release on a date (empty-cell click; the edit panel's create mode). */
-    createRelease(input: { date: Date } & Record<string, unknown>): Promise<E>;
+    /** Create a one-off event on a date (empty-cell click; the edit panel's create mode). */
+    createEvent(input: { date: Date } & Record<string, unknown>): Promise<E>;
     /** Edit a stored cell's fields. */
     editCell(ref: string, patch: Record<string, unknown>): Promise<void>;
-    /** "Fire here" / dereference-in-place — materialize a non-resident occurrence into a stored Release. */
+    /** "Fire here" / dereference-in-place — materialize a non-resident occurrence into a stored event. */
     materialize(ref: string): Promise<E>;
     /** Override a non-resident occurrence: pin | skip | replaceTemplate. */
     override(ref: string, action: OverrideAction): Promise<E>;
@@ -71,7 +73,7 @@ export interface NotifyMessage {
  * foundation receives an already-wired service and stays source-blind.
  */
 export type Subscribe = (
-    onChange: (changed?: { compositionId?: string; ref?: string }) => void,
+    onChange: (changed?: { sourceId?: string; ref?: string }) => void,
 ) => () => void;
 
 /** One entry on the opaque lane axis (PRD §3.1) — the satellite injects channels here. */
@@ -82,8 +84,8 @@ export interface LaneAxis {
 
 /**
  * The edit panel opens in ONE of three modes over ONE render slot (PRD §5.2): editing a
- * resident Release, referencing a non-resident occurrence (materialize/override), or
- * creating a new Release on a clicked date. `resident-vs-reference` is a mode flag, not a
+ * resident event, referencing a non-resident occurrence (materialize/override), or
+ * creating a new event on a clicked date. `resident-vs-reference` is a mode flag, not a
  * fork — the host fills `renderEditPanel` and switches on `mode`.
  */
 export type EditPanelMode = 'resident-edit' | 'reference' | 'create';
