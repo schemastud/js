@@ -81,8 +81,24 @@ Add it to `FORBIDDEN_VOCAB` with the foundation's replacement named in the `why`
 that says only "forbidden" makes the author delete the line; one that names the neutral
 equivalent makes them fix the seam.
 
-## The twin
+## The twin — and the axis it is NOT a twin on
 
-`@splicewire/beam-workflows` carries a sibling import gate. It has **not** been extended to
-vocabulary. Whether it should be is an open question — the argument here transfers, but
-whether that package makes the same source-blind claim has not been checked.
+`@splicewire/beam-workflows` carries a sibling gate. It is deliberately **not** extended to
+vocabulary, and it should not be.
+
+The two gates share the **host-coupling** half — no `@/…`, no sonner, no axios, no ziggy-js, no
+Inertia — and that is all "twin" ever meant. This package carries one extra rule (`@splicewire/*`,
+now plus the vocabulary list) because it makes one extra claim.
+
+`beam-workflows` never made that claim. It is `@splicewire/*`, product tier, describing itself as
+*"the workflows-**domain** beam surfaces… mirrors the PHP package **by domain**… type off the
+generated `Workflow*` projections"*, and it says **portable and tenancy-agnostic**, never
+source-blind. Its own gate has no `@splicewire/*` rule at all, and its types say `Workflow` 35
+times.
+
+Extending the vocabulary list there would enforce a rule the package never adopted — this file's
+own defect in reverse: an instrument reporting violations of a claim nobody made. It would fail on
+`Workflow` in a package whose entire job is workflows.
+
+**The test for a third package is the claim, not the family.** Read what it says it is before
+pointing this gate at it.
