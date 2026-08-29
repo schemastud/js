@@ -109,8 +109,11 @@ export {
     useSaveResource,
     useRemoveResource,
 } from './data';
+export { resolveRowActions, KNOWN_ROW_ACTIONS, type RowAction } from './rowActions';
 export {
     DefaultToolbar,
+    DefaultRowActions,
+    createNoun,
     DefaultCell,
     DefaultEmpty,
     DefaultErrorState,
@@ -144,6 +147,7 @@ export type {
     ListShellProps,
     ListSlots,
     ToolbarSlotProps,
+    RowActionsSlotProps,
     CellSlotProps,
     ErrorSlotProps,
     PaginationSlotProps,

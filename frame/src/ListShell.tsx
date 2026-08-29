@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import { useMemo, type ComponentType } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import { ListFilters, useListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
@@ -11,9 +11,11 @@ import {
     DefaultErrorState,
     DefaultLoading,
     DefaultPagination,
+    DefaultRowActions,
     DefaultTable,
     DefaultToolbar,
 } from './slots/defaults';
+import { resolveRowActions } from './rowActions';
 import { useResourceList } from './data';
 import type { ContextManifest } from './contexts';
 import type { FrameColumn, ListShellProps, Row } from './types';
@@ -67,7 +69,35 @@ export function ListShell({
     // render sortable headers (the plain default simply ignores it).
     const Table: ComponentType<any> = slots?.Table ?? listSlots?.Table ?? DefaultTable;
     const Cell = slots?.Cell ?? listSlots?.Cell ?? DefaultCell;
-    const RowActions = slots?.RowActions ?? listSlots?.RowActions;
+    // The verbs the RESOURCE declared. Frame's own row-actions column appears only when this is
+    // non-empty — the gate is the DECLARATION, never the availability of a component. Gating it
+    // on the design-system preset instead would have grown a delete column on every list at the
+    // flagship the moment `shadcnListSlots` was named at the provider, which it is.
+    const declaredRowActions = resolveRowActions(manifest);
+    // Host tiers stay UNCONDITIONAL (unchanged): naming this slot on a page, or app-wide, is an
+    // explicit statement. Frame's default is the last resort and the only declaration-gated one.
+    const RowActions =
+        slots?.RowActions ??
+        listSlots?.RowActions ??
+        (declaredRowActions.length > 0 ? DefaultRowActions : undefined);
+    // Bind the three resource-level props once. Memoized because the Table receives a COMPONENT
+    // TYPE: a fresh closure every render remounts the button, which drops the delete mutation's
+    // own `isPending` and flickers the control mid-request.
+    const BoundRowActions = useMemo(
+        () =>
+            RowActions
+                ? ({ record }: { record: Row }) => (
+                      <RowActions
+                          record={record}
+                          resource={resource}
+                          actions={declaredRowActions}
+                          singularLabel={manifest?.singularLabel || undefined}
+                      />
+                  )
+                : undefined,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [RowActions, resource, declaredRowActions.join(','), manifest?.singularLabel],
+    );
     const Empty = slots?.Empty ?? listSlots?.Empty ?? DefaultEmpty;
     const ErrorState = slots?.ErrorState ?? listSlots?.ErrorState ?? DefaultErrorState;
     const Loading = slots?.Loading ?? listSlots?.Loading ?? DefaultLoading;
@@ -117,6 +147,7 @@ export function ListShell({
                     resource={resource}
                     canCreate={canCreate}
                     framesCreate={framesCreate}
+                    singularLabel={manifest?.singularLabel || undefined}
                     onNew={onOpen ? () => onOpen({ id: null }) : undefined}
                 />
             </div>
@@ -139,7 +170,7 @@ export function ListShell({
                         rows={rows}
                         onOpen={onOpen}
                         Cell={Cell}
-                        RowActions={RowActions}
+                        RowActions={BoundRowActions}
                         sort={{
                             // Column headers and the facets-bar Sort control share ONE
                             // `sort` param — the shadcn Table slot renders click-to-sort

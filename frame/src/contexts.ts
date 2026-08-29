@@ -65,6 +65,21 @@ export interface ContextManifest {
      * two live host toolbars that would have been deleted had this been folded into `canCreate`.
      */
     createAffordance?: 'frame' | 'host';
+    /**
+     * What this resource calls ONE record — the noun a create affordance puts after "New"
+     * ("New scaffold pack"), RESOLVED server-side from the declared `singularLabel` or, absent
+     * one, the plural display label inflected.
+     *
+     * It rides this block rather than the definition for the same reason `layout` and
+     * `createAffordance` do — a shell is handed its manifest and never the definition — and it
+     * is resolved server-side because the client has neither the label nor an inflector. That
+     * is precisely why frame's own toolbar has been offering "New scaffold-packs": the raw
+     * resource KEY was the only noun it had.
+     *
+     * Optional, and absent/empty falls back to the key, so every pre-existing manifest and
+     * hand-built fixture renders exactly as before.
+     */
+    singularLabel?: string;
 }
 
 /** The full context vocabulary, in wire order. */

@@ -1,6 +1,8 @@
 import { SchemaForm } from '@schemastud/seam';
 import type { ComponentType, ReactNode } from 'react';
+import { Trash2 } from 'lucide-react';
 import { useFrameInjection } from '../context';
+import { useRemoveResource } from '../data';
 import { getPath } from '../getPath';
 import type {
     CellSlotProps,
@@ -10,6 +12,7 @@ import type {
     FrameColumn,
     PaginationSlotProps,
     Row,
+    RowActionsSlotProps,
     SaveBarSlotProps,
     ToolbarSlotProps,
 } from '../types';
@@ -19,7 +22,13 @@ import type {
 // single slot via `slots?` only to deviate.
 // -----------------------------------------------------------------------------
 
-export function DefaultToolbar({ resource, onNew, canCreate, framesCreate }: ToolbarSlotProps) {
+export function DefaultToolbar({
+    resource,
+    onNew,
+    canCreate,
+    framesCreate,
+    singularLabel,
+}: ToolbarSlotProps) {
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     // `framesCreate === false` is the resource saying the create affordance is not frame's to
@@ -29,10 +38,108 @@ export function DefaultToolbar({ resource, onNew, canCreate, framesCreate }: Too
     return (
         <div data-frame-slot="Toolbar" style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button type="button" onClick={onNew} data-frame-action="new">
-                New {resource}
+                New {createNoun(resource, singularLabel)}
             </Button>
         </div>
     );
+}
+
+/**
+ * The noun a "New …" affordance says. The resolved singular when the manifest carried one,
+ * else the raw resource key — which is the pre-manifest behaviour, kept so a fixture or an
+ * older server renders exactly as before rather than losing its label.
+ *
+ * Lower-cased because it sits mid-sentence after "New"; the declaration spells it as a display
+ * label ("Scaffold packs" → "Scaffold pack") and "New Scaffold pack" reads as a typo.
+ */
+export function createNoun(resource: string, singularLabel?: string): string {
+    return singularLabel ? singularLabel.toLocaleLowerCase() : resource;
+}
+
+/**
+ * Frame's own row-actions column, rendered from the resource's `#[RowActions]` declaration.
+ *
+ * Three flagship surfaces had copy-pasted this component verbatim — same `useRemoveResource`,
+ * same `window.confirm`, same trash icon — differing only in the noun, which the declaration
+ * was already carrying two fields away (`singularLabel`).
+ *
+ * ⚠️ Two gates, and they are not the same question. `actions` is what the RESOURCE declared
+ * (a presentation fact, resolved from the manifest); `can('delete', resource)` is what THIS
+ * ACTOR may do. Neither substitutes for the other, and folding them would be the estate's
+ * recurring defect — a presentation default silently revoking, or silently re-opening, a
+ * capability someone else declared.
+ *
+ * Styling is inline + primitives only, never class names: a host's Tailwind does not scan
+ * `node_modules`, so a `className` here renders correct markup with no styles behind an
+ * HTTP 200. The inline rules also out-specify whatever the host's Button primitive brings,
+ * which is what keeps this a quiet ghost icon rather than a solid primary button per row.
+ */
+export function DefaultRowActions({
+    record,
+    resource,
+    actions,
+    singularLabel,
+}: RowActionsSlotProps) {
+    const { primitives, can } = useFrameInjection();
+    const { Button } = primitives;
+    const remove = useRemoveResource(resource);
+
+    if (!actions.includes('delete') || !can('delete', resource)) return null;
+
+    const noun = createNoun(resource, singularLabel);
+    const id = String(record.id ?? '');
+
+    return (
+        <div
+            data-frame-slot="RowActions"
+            style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}
+        >
+            <Button
+                type="button"
+                data-frame-action="delete"
+                aria-label={`Delete ${noun}`}
+                title={`Delete ${noun}`}
+                disabled={remove.isPending || id === ''}
+                style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '1.75rem',
+                    height: '1.75rem',
+                    padding: 0,
+                    background: 'transparent',
+                    border: 'none',
+                    boxShadow: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--destructive, #dc2626)',
+                    opacity: remove.isPending ? 0.5 : 1,
+                }}
+                onClick={(event: { stopPropagation: () => void }) => {
+                    // The row itself is the open affordance; without this the confirm fires
+                    // AND the record opens behind it.
+                    event.stopPropagation();
+                    if (window.confirm(`Delete ${noun} "${recordName(record)}"?`)) {
+                        remove.mutate(id);
+                    }
+                }}
+            >
+                <Trash2 aria-hidden style={{ width: '1rem', height: '1rem' }} />
+            </Button>
+        </div>
+    );
+}
+
+/**
+ * What to call this row in the confirm sentence. `name` / `title` / `label` in that order —
+ * the three the estate's records actually carry — then the id, then nothing rather than the
+ * literal string "undefined".
+ */
+function recordName(record: Row): string {
+    for (const field of ['name', 'title', 'label'] as const) {
+        const value = record[field];
+        if (typeof value === 'string' && value !== '') return value;
+    }
+    return String(record.id ?? '');
 }
 
 export function DefaultCell({ column, record }: CellSlotProps) {

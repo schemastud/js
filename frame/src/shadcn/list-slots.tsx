@@ -2,6 +2,7 @@ import type { ComponentType, MouseEvent } from 'react';
 import { parseSort, serializeSort, sortStateFor, toggleSortKey } from '@schemastud/facets';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useFrameInjection } from '../context';
+import { createNoun } from '../slots/defaults';
 import { getPath } from '../getPath';
 import { DefaultCell } from '../slots/defaults';
 import type {
@@ -191,7 +192,13 @@ export function ShadcnErrorState({ error, retry }: ErrorSlotProps) {
     );
 }
 
-export function ShadcnToolbar({ resource, onNew, canCreate, framesCreate }: ToolbarSlotProps) {
+export function ShadcnToolbar({
+    resource,
+    onNew,
+    canCreate,
+    framesCreate,
+    singularLabel,
+}: ToolbarSlotProps) {
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     // See DefaultToolbar — a resource whose create affordance is the host's (or which does not
@@ -200,7 +207,7 @@ export function ShadcnToolbar({ resource, onNew, canCreate, framesCreate }: Tool
     return (
         <div data-frame-slot="Toolbar" className="flex justify-end">
             <Button type="button" size="sm" onClick={onNew} data-frame-action="new">
-                New {resource}
+                New {createNoun(resource, singularLabel)}
             </Button>
         </div>
     );

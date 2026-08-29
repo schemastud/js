@@ -308,6 +308,37 @@ export interface ToolbarSlotProps {
      * Defaults to `true` wherever no manifest is present, so every existing surface is unchanged.
      */
     framesCreate: boolean;
+    /**
+     * What this resource calls ONE record — "scaffold pack", not the key `scaffold-packs`.
+     *
+     * Resolved SERVER-side onto the `ContextManifest` (declared `singularLabel`, else the plural
+     * display label inflected) because the client has neither the label nor an inflector. Absent
+     * a manifest it is `undefined` and frame's own toolbars fall back to the resource key, which
+     * is byte-identical to their previous behaviour.
+     *
+     * ⚠️ It is a WORD, not a gate. Nothing here decides whether a create exists — `canCreate` and
+     * `framesCreate` already answer that, separately and for different reasons.
+     */
+    singularLabel?: string;
+}
+
+/**
+ * Props for the row-actions slot. `record` alone was the whole contract until the declared
+ * fallback needed the other three; every existing host component typed `{ record: Row }` stays
+ * assignable, so this is additive.
+ */
+export interface RowActionsSlotProps {
+    record: Row;
+    /** The resource key, for the delete mutation and the transport's cache invalidation. */
+    resource: string;
+    /**
+     * The verbs the RESOURCE declared (`#[RowActions([...])]`), already filtered to the ones
+     * frame can render. Empty for every resource that declared nothing — which is why frame's
+     * own fallback never appears on a list that did not ask for it.
+     */
+    actions: string[];
+    /** The resolved display singular, for the button label and the confirm sentence. */
+    singularLabel?: string;
 }
 
 export interface CellSlotProps {
@@ -320,7 +351,14 @@ export interface ListSlots {
     Filters: ComponentType<any>;
     Table: ComponentType<any>;
     Cell: ComponentType<CellSlotProps>;
-    RowActions: ComponentType<{ record: Row }>;
+    /**
+     * The row's action controls. Supplying it here (or per page) renders it UNCONDITIONALLY —
+     * unchanged, and deliberately: a host naming this slot is making a statement about every
+     * list it covers. Frame's own `DefaultRowActions` is the LAST fallback and is gated on the
+     * resource's `#[RowActions]` declaration instead, so the estate does not grow a delete
+     * column on 40-odd lists that never asked for one.
+     */
+    RowActions: ComponentType<RowActionsSlotProps>;
     Empty: ComponentType<any>;
     Loading: ComponentType<any>;
     /**
