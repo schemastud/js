@@ -100,8 +100,31 @@ export function EditShell({
     );
 }
 
+/**
+ * The `container="page"` container — a full-surface region, never an overlay.
+ *
+ * ⚠️ **This used to render `primitives.Dialog ?? primitives.SidePanel`, and the fallback was a silent
+ * lie.** `Dialog` is OPTIONAL on `FramePrimitives`, so a host that registers only `SidePanel` — which is
+ * every host in this estate; the flagship's `ui/src/frame/primitives.tsx` registers `SidePanel` and no
+ * `Dialog` — got a DRAWER on a route that asked for a page. It typechecked, it rendered, and nothing
+ * reported it. Anything driving `container: 'page'` from a declaration (see `createMountDispatcher`)
+ * would have shipped a drawer on every full-page edit route.
+ *
+ * The fallback is now a plain block element, which is what "page" means. A host that wants chrome
+ * registers the new optional `Page` primitive; nothing falls back to an overlay, because an overlay is a
+ * different thing rather than a lesser version of the same thing.
+ */
 function PageContainer({ children }: { children: ReactNode }) {
     const { primitives } = useFrameInjection();
-    const Dialog = primitives.Dialog ?? primitives.SidePanel;
-    return <Dialog data-frame-slot="Container">{children}</Dialog>;
+    const Page = primitives.Page;
+
+    if (Page) {
+        return <Page data-frame-slot="Container">{children}</Page>;
+    }
+
+    return (
+        <div data-frame-slot="Container" data-frame-container="page">
+            {children}
+        </div>
+    );
 }

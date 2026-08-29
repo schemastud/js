@@ -110,9 +110,26 @@ export function createShellRegistry(): ShellRegistry {
  * registry (a redirect leaf is a component that navigates), so every entry is
  * checked uniformly.
  */
+export interface AssertRouteContextOptions {
+    /**
+     * What an unbound `routeName` means. `'throw'` (the default, and today's behaviour) keeps the boot
+     * invariant; `'report'` hands it to `onUnbound` instead, which is what a host running a `mounts`
+     * fallback wants — there, an unbound name is not a defect, it is the ordinary case.
+     *
+     * ⚠️ **Only this arm is configurable.** The duplicate-`routeName` and non-string-`path` throws below
+     * stay unconditional at every setting, because a typo must stay visible: a duplicated route identity
+     * and a nested path are author errors no dispatcher can rescue, and relaxing them to make the
+     * fallback usable would trade a loud boot failure for a silently missing page.
+     */
+    unbound?: 'throw' | 'report';
+    /** Called per unbound entry when `unbound: 'report'`. Never called under `'throw'`. */
+    onUnbound?: (entry: RouteContextEntry) => void;
+}
+
 export function assertRouteContext(
     entries: RouteContextEntry[],
     registry: RouteRegistry,
+    options: AssertRouteContextOptions = {},
 ): void {
     const seen = new Set<string>();
 
@@ -135,6 +152,11 @@ export function assertRouteContext(
         }
 
         if (!registry.hasRoute(entry.routeName)) {
+            if (options.unbound === 'report') {
+                options.onUnbound?.(entry);
+                continue;
+            }
+
             throw new Error(
                 `[frame] RouteContext entry "${entry.routeName}" (${entry.path}) has no component bound in the RouteRegistry.`,
             );
@@ -188,6 +210,17 @@ export interface RealmRouteRegistries {
      * skips its leaf rather than crashing the whole realm (the host can dev-warn).
      */
     onUnbound?: (entry: RouteContextEntry) => void;
+    /**
+     * Last resort for a leaf no `registerRoute()` bound: render it from its DECLARED `mounts` verb.
+     * `createMountDispatcher` is the supplied one; any `(entry) => RouteComponent | undefined` works.
+     *
+     * ⚠️ **Consulted only after `resolveRoute()` misses, and that order is the whole contract.** Every
+     * existing `registerRoute()` call keeps winning, so `registerRoute` becomes an OVERRIDE rather than
+     * the only path — a host that binds nothing new behaves exactly as it did. A fallback that returns
+     * `undefined` (a decline) is also byte-identical to today: the leaf is skipped and `onUnbound` fires,
+     * which is what happens with no fallback at all.
+     */
+    fallback?: (entry: RouteContextEntry) => RouteComponent | undefined;
 }
 
 /**
@@ -211,7 +244,11 @@ export function buildRealmRoutes(
     const shellGroups = new Map<string, RealmRouteObject[]>();
 
     const leafElement = (entry: RouteContextEntry): ReactElement | null => {
-        const Component = registries.routes.resolveRoute(entry.routeName);
+        // A bound component wins; the declared `mounts` verb is the fallback. `onUnbound` still fires
+        // when BOTH miss, so a host that passes no fallback sees exactly the behaviour it always saw.
+        const Component =
+            registries.routes.resolveRoute(entry.routeName) ?? registries.fallback?.(entry);
+
         if (!Component) {
             registries.onUnbound?.(entry);
             return null;

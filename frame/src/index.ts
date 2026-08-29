@@ -7,6 +7,11 @@ export { ListShell } from './ListShell';
 export { EditShell } from './EditShell';
 export { WidgetShell, WidgetSurface } from './WidgetShell';
 export {
+    createMountDispatcher,
+    type MountDispatcher,
+    type MountDispatcherOptions,
+} from './mountDispatcher';
+export {
     FrameLayout,
     FrameLayoutShell,
     SingleColumn,
@@ -84,6 +89,7 @@ export {
     type ShellComponent,
     type RealmRouteObject,
     type RealmRouteRegistries,
+    type AssertRouteContextOptions,
 } from './routes';
 export {
     useResourceList,

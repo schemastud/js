@@ -49,6 +49,12 @@ export interface FramePrimitives extends FacetsPrimitives {
     Skeleton: ComponentType<any>;
     SidePanel: ComponentType<any>;
     Dialog?: ComponentType<any>;
+    /**
+     * The full-surface container an `EditShell` with `container="page"` renders into. Optional, and its
+     * absence falls back to a plain `<div>` — NEVER to `SidePanel`, which is what it used to do and is
+     * why a page route could silently render as a drawer.
+     */
+    Page?: ComponentType<any>;
 }
 
 // -----------------------------------------------------------------------------
