@@ -83,6 +83,24 @@ export interface FrameInjection {
      * absent, every object root renders the generic form (zero migration).
      */
     formResolver?: FormResolver;
+    /**
+     * The app-wide DEFAULT design-system slot sets. A host that has picked a design system
+     * (`@schemastud/frame/shadcn`) names it once here instead of every page spreading
+     * `slots={shadcnListSlots}` by hand — which is what 13 surfaces at the flagship were doing,
+     * one import at a time, with a plain-HTML table as the punishment for forgetting.
+     *
+     * Merged PER SLOT, not per object: a page's own `slots.Table` wins for `Table` alone and
+     * still inherits `Cell`, `Empty`, `Pagination` … from here. The resolution order in both
+     * shells is `page slot → injection default → frame's plain-HTML default`, so absent these
+     * keys nothing changes anywhere (zero-migration, exactly like `hooks`/`formResolver`).
+     *
+     * ⚠️ `editSlots.Container` is the one slot the `container` prop outranks: an `EditShell`
+     * asked for `container: 'page'` is making an explicit per-render statement about being a
+     * full page rather than a drawer, and an app-wide default must not silently turn that back
+     * into a panel. See `EditShell`.
+     */
+    listSlots?: Partial<ListSlots>;
+    editSlots?: Partial<EditSlots>;
 }
 
 /**

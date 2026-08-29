@@ -24,7 +24,7 @@ export function EditShell({
     onCancel,
     slots,
 }: EditShellProps) {
-    const { can, hooks } = useFrameInjection();
+    const { can, hooks, editSlots } = useFrameInjection();
     const [form, setForm] = useState<FormMode>(formProp);
     const [formData, setFormData] = useState<Row>({});
 
@@ -39,10 +39,19 @@ export function EditShell({
         if (recordQuery.data) setFormData(recordQuery.data);
     }, [recordQuery.data]);
 
-    const FormBody = slots?.FormBody ?? DefaultFormBody;
-    const Toggle = slots?.Toggle ?? DefaultToggle;
-    const SaveBar = slots?.SaveBar ?? DefaultSaveBar;
-    const Container = slots?.Container ?? (container === 'page' ? PageContainer : DefaultContainer);
+    // Per-slot across three tiers — this page's `slots`, the injection's app-wide `editSlots`,
+    // then frame's default. See FrameInjection.editSlots.
+    const FormBody = slots?.FormBody ?? editSlots?.FormBody ?? DefaultFormBody;
+    const Toggle = slots?.Toggle ?? editSlots?.Toggle ?? DefaultToggle;
+    const SaveBar = slots?.SaveBar ?? editSlots?.SaveBar ?? DefaultSaveBar;
+    // ⚠️ Container is the one slot where the app-wide default sits BELOW the `container` prop.
+    // `container: 'page'` is an explicit per-render statement that this shell is a full page and
+    // not a drawer — the `mounts: 'edit'` dispatcher relies on it — so an injection-level
+    // Container must not be able to silently turn a page back into a panel. A page's OWN
+    // `slots.Container` still wins over both: that is the caller, not a default.
+    const Container =
+        slots?.Container ??
+        (container === 'page' ? PageContainer : (editSlots?.Container ?? DefaultContainer));
 
     // Detail (readOnly) still resolves against `view`; create/update gate on their action.
     const effectiveReadOnly = readOnly || !can(id === null ? 'create' : 'update', resource);

@@ -46,12 +46,17 @@ describe('createMountDispatcher — what it renders', () => {
         expect(dispatch(entry({ routeName: 'x.show', path: 'x/:id', mounts: 'detail' }))).toBeTypeOf('function');
     });
 
-    it('dispatches a list only when the host can say what its columns are', () => {
-        const withColumns = createMountDispatcher({ columnsFor: () => [{ key: 'name', label: 'Name' }] });
+    it('dispatches a list once the host wires EITHER lookup, and declines with neither', () => {
+        const withColumns = createMountDispatcher({ columnsFor: () => [{ field: 'name', header: 'Name' }] });
+        // The manifest alone is enough — its `list-column` participation IS the column set. This
+        // arm used to decline, on the belief that only a host can know a list's columns; see
+        // `manifest-driven-list.test.tsx` for the full contract.
+        const withManifest = createMountDispatcher({ manifestFor: () => undefined });
         const without = createMountDispatcher({});
 
         expect(withColumns(entry({ routeName: 'x.index', path: 'x', mounts: 'list' }))).toBeTypeOf('function');
-        // ListShell requires columns; rendering a table with none is worse than declining.
+        expect(withManifest(entry({ routeName: 'x.index', path: 'x', mounts: 'list' }))).toBeTypeOf('function');
+        // Neither lookup wired = no path to a column set at any future point, so decline once.
         expect(without(entry({ routeName: 'x.index', path: 'x', mounts: 'list' }))).toBeUndefined();
     });
 });

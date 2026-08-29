@@ -6,6 +6,8 @@ import type { RouteComponent } from './routes';
 import type { FrameColumn, RouteContextEntry } from './types';
 import { WidgetShell } from './WidgetShell';
 
+const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
+
 /**
  * The `mounts` fallback dispatcher — the thing that lets a manifest entry render **without a host
  * having hand-bound a component for it**.
@@ -32,7 +34,7 @@ import { WidgetShell } from './WidgetShell';
  * | --- | --- |
  * | `'widget'` | yes — {@link WidgetShell}, which has been its consumer all along |
  * | `'edit'` / `'detail'` | yes, **when `resolveId` is supplied** — see below |
- * | `'list'` | yes, **when `columnsFor` returns columns** — {@link ListShell} requires them |
+ * | `'list'` | yes, **when a `ContextManifest` is reachable for the resource** (or `columnsFor` supplies columns) |
  * | `'redirect'` | **never**, and this is structural — see below |
  *
  * ## ⚠️ `'redirect'` is uncarriable, not unimplemented
@@ -49,13 +51,27 @@ import { WidgetShell } from './WidgetShell';
  * structural claims off it. **Adding the field is a declaration change and belongs on the PHP side
  * first**; until then the honest behaviour is to decline and say why, which is what `onDecline` reports.
  *
- * ## Why the host still has to supply two things
+ * ## Why the host still has to supply the lookups
  *
  * Frame is deliberately **react-router-free** — `buildRealmRoutes` emits a plain `{ path, element }` and
  * the host owns the router call. So this dispatcher cannot call `useParams()` to find the record id, and
- * it cannot invent a list's columns. Both arrive as injected resolvers, and each one's absence disables
- * exactly the cases that need it rather than producing a broken shell. That keeps the dependency visible
- * instead of smuggling a router into the foundation.
+ * it cannot fetch the resource's manifest for itself. Both arrive as injected resolvers, and each one's
+ * absence disables exactly the cases that need it rather than producing a broken shell. That keeps the
+ * dependency visible instead of smuggling a router (or a transport) into the foundation.
+ *
+ * ## ⚠️ `columnsFor` used to be REQUIRED for a list, and that was wrong
+ *
+ * `'list'` originally declined unless `columnsFor` returned a non-empty array, on the belief that a list's
+ * columns are something only a host can know. They are not: `resolveColumns` already returns the **full**
+ * manifest-derived, `sort`-ordered set from `list-column` participation when handed a manifest and ZERO
+ * host columns — host columns are a per-field override map (`header` / `sortField` / `cell`), never the
+ * set. So the requirement demanded from the host precisely the thing the declaration already carried, and
+ * a `list` leaf that had everything it needed declined anyway. `columnsFor` stays, as the optional
+ * override seam it always was.
+ *
+ * Both lookups are read at **render** time, not dispatch time, because at a real host each is backed by a
+ * query hook: at dispatch the manifest is typically still in flight, and reading it there would freeze
+ * `undefined` into the component for the life of the route.
  */
 export interface MountDispatcherOptions {
     /**
@@ -65,10 +81,19 @@ export interface MountDispatcherOptions {
      */
     resolveId?: (entry: RouteContextEntry) => string | null;
 
-    /** The columns a `list` leaf renders. Absent or empty ⇒ `list` declines rather than rendering a table with no columns. */
+    /**
+     * OPTIONAL per-field column overrides for a `list` leaf — `header` / `sortField` / `cell` for fields
+     * the manifest already carries. It is **not** the column set (see the docblock above) and its absence
+     * no longer disables `list`. Called during the dispatched component's render.
+     */
     columnsFor?: (resource: string) => FrameColumn[] | undefined;
 
-    /** The resource's context manifest, folded into `ListShell` when present (it is optional there too). */
+    /**
+     * The resource's context manifest. This is what makes a `list` leaf renderable: its `list-column`
+     * participation IS the column set and order. A hook is the expected wiring
+     * (`(resource) => useManifest(realm).data?.contexts[resource]`), so it is called during the dispatched
+     * component's render, never at dispatch time.
+     */
     manifestFor?: (resource: string) => ContextManifest | undefined;
 
     /**
@@ -137,15 +162,38 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
             }
 
             case 'list': {
-                const columns = options.columnsFor?.(resource);
-
-                if (!columns || columns.length === 0) {
-                    return decline(entry, "mounts: 'list' needs columnsFor to return columns for this resource");
+                // A dispatch-time decision about HOST WIRING, not about data: if neither lookup was
+                // supplied there is no path to a column set at any point in the future, so decline once
+                // and say so. Whether a given resource has a manifest is a runtime fact and is decided
+                // at render, below.
+                if (!options.manifestFor && !options.columnsFor) {
+                    return decline(
+                        entry,
+                        "mounts: 'list' needs manifestFor (whose list-column participation IS the column set) or columnsFor",
+                    );
                 }
 
-                const manifest = options.manifestFor?.(resource);
+                return () => {
+                    const manifest = options.manifestFor?.(resource);
+                    // Zero host columns is the normal case: with a manifest, resolveColumns returns the
+                    // whole participating set. Host columns are per-field overrides on top of it.
+                    const columns = options.columnsFor?.(resource) ?? [];
 
-                return () => createElement(ListShell, { resource, columns, manifest });
+                    if (!manifest && columns.length === 0) {
+                        // Not an error — the host's manifest query is usually just still in flight, and
+                        // this component re-renders when it lands. But a resource that permanently has
+                        // neither would otherwise render a headerless table forever, so say it in dev.
+                        if (isDev()) {
+                            console.warn(
+                                `[frame] mounts: 'list' for "${resource}" has no context manifest and no host columns yet — rendering nothing.`,
+                            );
+                        }
+
+                        return null;
+                    }
+
+                    return createElement(ListShell, { resource, columns, manifest });
+                };
             }
 
             case 'redirect':

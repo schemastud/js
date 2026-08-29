@@ -4,17 +4,25 @@ import type { ContextManifest, NodeParticipation } from './contexts';
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
 /**
- * The columns seam (DECISION A). v1 strategy: host-supplied FrameColumn[] IS the
- * columns — there is nothing to default from until the x-column reflection strategy
- * graduates.
+ * The columns seam (DECISION A). **Two paths, and they behave oppositely — the sentence
+ * that used to open this docblock ("host-supplied FrameColumn[] IS the columns — there is
+ * nothing to default from") described only the first and was read as describing both.**
+ * That reading is why every surface in the estate still hand-writes a full column list it
+ * no longer has to.
  *
- * With a resource `ContextManifest` supplied, the seam folds `list-column`
- * participation into the columns: each participating field contributes its
- * `sort`/`label`, and a host FrameColumn for that field becomes a per-field render
- * override (its `cell` renderer wins — host-closure-wins-by-field). A host `columns`
- * entry naming a field with NO `list-column` participation is a wiring error (throws
- * in dev, passes through in prod). When NO manifest is supplied the seam is a pure
- * passthrough — exactly today's behavior, so existing surfaces migrate for free.
+ * **No manifest ⇒ pure passthrough.** `hostColumns` is returned untouched, so there really
+ * is nothing to default from and the host owns the whole set + its order. This is the
+ * pre-manifest behavior, kept byte-identical so existing surfaces migrate for free.
+ *
+ * **A manifest ⇒ the MANIFEST is the columns.** The column SET and its ORDER come entirely
+ * from `list-column` participation — every participating node, sorted by `sort` — and each
+ * field's `header` defaults to the manifest's `label`. `hostColumns` is no longer the set:
+ * it is a **per-field override map**, consulted only for fields the manifest already
+ * carries, supplying `header` / `sortField` / `cell` (host-closure-wins-by-field). Passing
+ * ZERO host columns is therefore legal and complete — it yields the full manifest-derived,
+ * sort-ordered set. A host column naming a field with NO `list-column` participation is a
+ * wiring error (throws in dev, passes through in prod); it cannot add a column, because
+ * there is no participation entry to add one from.
  *
  * A field may be a DOTTED pointer (`commerce.plan`) when a producer above frame folds a named
  * sub-projection onto the row. Nothing here needs to change for it: `byNode` is keyed by the full

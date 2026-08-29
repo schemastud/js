@@ -33,7 +33,7 @@ export function ListShell({
     onCellCommit,
     paginationPlacement = 'both',
 }: ListShellProps) {
-    const { useUrlState, can, registry } = useFrameInjection();
+    const { useUrlState, can, registry, listSlots } = useFrameInjection();
     const filters = useListFilters(resource);
     const [searchParams, setSearchParams] = useUrlState();
 
@@ -49,18 +49,23 @@ export function ListShell({
     );
     const canCreate = can('create', resource);
 
-    const Toolbar = slots?.Toolbar ?? DefaultToolbar;
-    const Filters = slots?.Filters ?? (() => <ListFilters {...filters} />);
+    // Slot resolution is PER SLOT across three tiers: this page's own `slots`, then the
+    // injection's app-wide `listSlots` default (a host names its design system once at the
+    // provider), then frame's plain-HTML default. A page overriding `Table` therefore still
+    // inherits the host's `Cell`/`Empty`/`Pagination` instead of dropping back to bare HTML
+    // for every key it did not restate.
+    const Toolbar = slots?.Toolbar ?? listSlots?.Toolbar ?? DefaultToolbar;
+    const Filters = slots?.Filters ?? listSlots?.Filters ?? (() => <ListFilters {...filters} />);
     // The Table slot contract is `ComponentType<any>` (ListSlots.Table); type the
     // resolved component as such so the shell can thread sort state to slots that
     // render sortable headers (the plain default simply ignores it).
-    const Table: ComponentType<any> = slots?.Table ?? DefaultTable;
-    const Cell = slots?.Cell ?? DefaultCell;
-    const RowActions = slots?.RowActions;
-    const Empty = slots?.Empty ?? DefaultEmpty;
-    const ErrorState = slots?.ErrorState ?? DefaultErrorState;
-    const Loading = slots?.Loading ?? DefaultLoading;
-    const Pagination = slots?.Pagination ?? DefaultPagination;
+    const Table: ComponentType<any> = slots?.Table ?? listSlots?.Table ?? DefaultTable;
+    const Cell = slots?.Cell ?? listSlots?.Cell ?? DefaultCell;
+    const RowActions = slots?.RowActions ?? listSlots?.RowActions;
+    const Empty = slots?.Empty ?? listSlots?.Empty ?? DefaultEmpty;
+    const ErrorState = slots?.ErrorState ?? listSlots?.ErrorState ?? DefaultErrorState;
+    const Loading = slots?.Loading ?? listSlots?.Loading ?? DefaultLoading;
+    const Pagination = slots?.Pagination ?? listSlots?.Pagination ?? DefaultPagination;
 
     const page = Number(searchParams.get('page') ?? '1');
     const onPageChange = (next: number) =>
