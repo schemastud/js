@@ -191,10 +191,12 @@ export function ShadcnErrorState({ error, retry }: ErrorSlotProps) {
     );
 }
 
-export function ShadcnToolbar({ resource, onNew, canCreate }: ToolbarSlotProps) {
+export function ShadcnToolbar({ resource, onNew, canCreate, framesCreate }: ToolbarSlotProps) {
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
-    if (!canCreate) return null;
+    // See DefaultToolbar — a resource whose create affordance is the host's (or which does not
+    // create at all) gets no frame-emitted button.
+    if (!canCreate || !framesCreate) return null;
     return (
         <div data-frame-slot="Toolbar" className="flex justify-end">
             <Button type="button" size="sm" onClick={onNew} data-frame-action="new">

@@ -19,10 +19,13 @@ import type {
 // single slot via `slots?` only to deviate.
 // -----------------------------------------------------------------------------
 
-export function DefaultToolbar({ resource, onNew, canCreate }: ToolbarSlotProps) {
+export function DefaultToolbar({ resource, onNew, canCreate, framesCreate }: ToolbarSlotProps) {
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
-    if (!canCreate) return null;
+    // `framesCreate === false` is the resource saying the create affordance is not frame's to
+    // emit — it is not creatable at all, or the host's own chrome owns it. Nine surfaces at the
+    // flagship were passing `Toolbar: () => null` to say this by hand.
+    if (!canCreate || !framesCreate) return null;
     return (
         <div data-frame-slot="Toolbar" style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Button type="button" onClick={onNew} data-frame-action="new">

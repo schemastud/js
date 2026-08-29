@@ -47,11 +47,18 @@ export function EditShell({
     // ⚠️ Container is the one slot where the app-wide default sits BELOW the `container` prop.
     // `container: 'page'` is an explicit per-render statement that this shell is a full page and
     // not a drawer — the `mounts: 'edit'` dispatcher relies on it — so an injection-level
-    // Container must not be able to silently turn a page back into a panel. A page's OWN
-    // `slots.Container` still wins over both: that is the caller, not a default.
+    // Container must not be able to silently turn a page back into a panel. `container: 'bare'`
+    // is the same kind of statement in the other direction: the CALLER has already opened its own
+    // Sheet/Dialog and is mounting the shell inside it, so an injected overlay would nest a second
+    // one inside the first. A page's OWN `slots.Container` still wins over all of it: that is the
+    // caller, not a default.
     const Container =
         slots?.Container ??
-        (container === 'page' ? PageContainer : (editSlots?.Container ?? DefaultContainer));
+        (container === 'page'
+            ? PageContainer
+            : container === 'bare'
+              ? BareContainer
+              : (editSlots?.Container ?? DefaultContainer));
 
     // Detail (readOnly) still resolves against `view`; create/update gate on their action.
     const effectiveReadOnly = readOnly || !can(id === null ? 'create' : 'update', resource);
@@ -123,6 +130,27 @@ export function EditShell({
  * registers the new optional `Page` primitive; nothing falls back to an overlay, because an overlay is a
  * different thing rather than a lesser version of the same thing.
  */
+/**
+ * The `container="bare"` container — frame contributes NO chrome at all.
+ *
+ * The census that produced it: five surfaces at the flagship (`AgentsPage`, `ScopesPage`,
+ * `OperatorScaffoldPacksPage`, `OperatorTenantsPage`, `IntegrationsPage`) each wrote the
+ * IDENTICAL `Container: ({ children }) => <>{children}</>` closure, all five for the same reason —
+ * they had already opened a shadcn `<Sheet>` and were mounting the shell inside it, where
+ * `DefaultContainer`'s `SidePanel` is a second overlay nested in the first. Four of the five are
+ * character-for-character the same three lines.
+ *
+ * ⚠️ It is a plain fragment on purpose, NOT a `<div>`. `PageContainer` renders a wrapper element
+ * because "page" is a surface with an identity a host may want to style; "bare" is the absence of
+ * a surface, and adding a div would put a block box between the host's own Sheet padding and the
+ * form — a layout change dressed as a no-op, which is exactly what the five host closures were
+ * written to avoid. There is deliberately no `data-frame-slot` marker either: an element carrying
+ * one would have to exist.
+ */
+function BareContainer({ children }: { children: ReactNode }) {
+    return <>{children}</>;
+}
+
 function PageContainer({ children }: { children: ReactNode }) {
     const { primitives } = useFrameInjection();
     const Page = primitives.Page;

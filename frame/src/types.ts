@@ -167,6 +167,27 @@ export interface AdminResourceDefinition {
     editData: string | null;
     policy: string | null;
     form: FormMode;
+    /**
+     * The four capability gates the PHP `ResourceDefinition` has carried for some time and which
+     * `GET /frame/manifest` has been serving on every entry — and which this projection did not
+     * declare, so nothing on the client could read them without an `as any`. That gap is why the
+     * flagship suppresses frame's create affordance by hand on nine surfaces: the declaration
+     * already said `creatable: false` and the answer could not reach the shell.
+     *
+     * Optional purely so a hand-built fixture that predates them still typechecks; the server
+     * always sends all four.
+     */
+    creatable?: boolean;
+    editable?: boolean;
+    deletable?: boolean;
+    showable?: boolean;
+    /**
+     * Where this resource's create affordance lives — `'frame'` (its list toolbar emits the "New"
+     * button) or `'host'` (the host's own page chrome owns it, so frame emits none). See
+     * `ContextManifest.createAffordance` for the resolved per-resource value the shells read;
+     * this is the raw declared slot.
+     */
+    createAffordance?: 'frame' | 'host';
     nav: {
         label: string;
         group?: string | null;
@@ -260,7 +281,33 @@ export interface AliasEntry {
 export interface ToolbarSlotProps {
     resource: string;
     onNew?: () => void;
+    /**
+     * May THIS ACTOR create — the injected `can('create', resource)`, unchanged.
+     *
+     * ⚠️ It is deliberately NOT ANDed with the resource's declared create affordance below, and
+     * the separation is load-bearing. `canCreate` is an AUTHORIZATION answer; `framesCreate` is a
+     * statement about WHERE the affordance lives. Folding the second into the first would have
+     * silently deleted two host toolbars that read `canCreate` and render their own button —
+     * `tenants` (`readOnly: true`, yet its create is real: it submits `CreateTenantData` to the
+     * REST provisioning endpoint, which is why that declaration carries `editData` alongside
+     * `readOnly`) and `fragments`. Both would have lost a working create behind a green suite.
+     * Same shape as `FrameColumn.cellSource`: a frame-side default must never revoke a host's
+     * own declaration by wearing its name.
+     */
     canCreate: boolean;
+    /**
+     * Does FRAME own the create affordance for this resource — i.e. should a frame-supplied
+     * Toolbar emit its own "New …" button at all?
+     *
+     * Resolved server-side onto the resource's `ContextManifest` from two facts (see
+     * `ContextManifest.createAffordance`): the resource is not creatable at all, or it declares
+     * that its create affordance is the HOST's (a page-title button, a reveal-once dialog).
+     * Frame's own `DefaultToolbar`/`ShadcnToolbar` honour it; a host Toolbar slot receives it and
+     * decides for itself, because a host component is the caller, not a default.
+     *
+     * Defaults to `true` wherever no manifest is present, so every existing surface is unchanged.
+     */
+    framesCreate: boolean;
 }
 
 export interface CellSlotProps {
@@ -375,7 +422,28 @@ export interface EditShellProps {
     resource: string;
     id: string | null;
     readOnly?: boolean;
-    container?: 'panel' | 'page';
+    /**
+     * The surface this shell renders INTO.
+     *
+     *  - `'panel'` (default) — frame supplies the overlay: `editSlots.Container`, else the
+     *    `SidePanel` primitive.
+     *  - `'page'` — a full surface, never an overlay. See {@link EditShell}'s `PageContainer`.
+     *  - `'bare'` — frame supplies NOTHING and the shell renders its children directly. For the
+     *    case the census found four times verbatim at the flagship (plus a fifth on a settings
+     *    surface): the page has ALREADY opened its own `<Sheet>`/`<Dialog>` and is mounting the
+     *    shell inside it, so frame's own `SidePanel` would be a second overlay nested in the
+     *    first. Every one of those five sites paid the identical
+     *    `Container: ({ children }) => <>{children}</>` tax to undo a default it never wanted.
+     *
+     * ⚠️ This is a per-RENDER prop and deliberately not a resource declaration. The same resource
+     * legitimately takes different containers in different places — `context-scopes` renders
+     * `'bare'` inside ScopesPage's Sheet AND `'page'` when the `mounts` dispatcher drives it — so
+     * a resource-level slot would have to pick one and be wrong at the other.
+     *
+     * Precedence is unchanged: a page's own `slots.Container` still outranks all three values,
+     * and `editSlots.Container` still sits BELOW the prop.
+     */
+    container?: 'panel' | 'page' | 'bare';
     form?: FormMode;
     /**
      * Show the splicewire/raw mode toggle — a dev/debug affordance for previewing a

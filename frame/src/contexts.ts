@@ -46,6 +46,25 @@ export interface ContextManifest {
      * Optional so existing manifests (and hand-built fixtures) still typecheck.
      */
     layout?: FrameLayoutVariant | null;
+    /**
+     * Where this resource's create affordance lives — the RESOLVED value the shells read.
+     *
+     *  - `'frame'` — frame's list toolbar emits the "New …" button. Today's behaviour, and the
+     *    default wherever the field is absent (an older server, a hand-built fixture).
+     *  - `'host'` — frame emits none: either the resource is not creatable at all, or its
+     *    declaration says the host's own chrome owns the affordance.
+     *
+     * It rides the per-resource context manifest rather than `AdminResourceDefinition` for the
+     * same reason `layout` does: a shell is handed its `ContextManifest` and not the definition,
+     * and this is a presentation fact about the surface, not a new capability. Resolving the two
+     * inputs SERVER-side (`creatable === false ⇒ 'host'`, else the declared slot) is what keeps
+     * the client from carrying a second spelling of `creatable` that could drift from the first.
+     *
+     * ⚠️ It gates only frame's OWN toolbar. A host Toolbar slot receives it as
+     * `ToolbarSlotProps.framesCreate` and is free to ignore it — see that prop's docblock for the
+     * two live host toolbars that would have been deleted had this been folded into `canCreate`.
+     */
+    createAffordance?: 'frame' | 'host';
 }
 
 /** The full context vocabulary, in wire order. */

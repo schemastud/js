@@ -48,6 +48,12 @@ export function ListShell({
         onCellCommit,
     );
     const canCreate = can('create', resource);
+    // Does FRAME own the create affordance here? Resolved server-side onto the manifest from the
+    // resource's `creatable` gate + its declared `createAffordance` slot. Absent a manifest (the
+    // pure-passthrough path) it stays true, so every pre-manifest surface is byte-identical.
+    //
+    // ⚠️ Kept SEPARATE from `canCreate` rather than ANDed into it. See ToolbarSlotProps.
+    const framesCreate = (manifest?.createAffordance ?? 'frame') === 'frame';
 
     // Slot resolution is PER SLOT across three tiers: this page's own `slots`, then the
     // injection's app-wide `listSlots` default (a host names its design system once at the
@@ -110,6 +116,7 @@ export function ListShell({
                 <Toolbar
                     resource={resource}
                     canCreate={canCreate}
+                    framesCreate={framesCreate}
                     onNew={onOpen ? () => onOpen({ id: null }) : undefined}
                 />
             </div>

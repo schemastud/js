@@ -51,7 +51,7 @@ const rows: Row[] = [
 export const Toolbar: Story = {
     render: () => (
         <MockFrameProvider>
-            <DefaultToolbar resource="members" canCreate onNew={() => {}} />
+            <DefaultToolbar resource="members" canCreate framesCreate onNew={() => {}} />
         </MockFrameProvider>
     ),
 };
@@ -61,8 +61,29 @@ export const ToolbarNoCreate: Story = {
     render: () => (
         <MockFrameProvider>
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                <DefaultToolbar resource="members" canCreate={false} onNew={() => {}} />
+                <DefaultToolbar resource="members" canCreate={false} framesCreate onNew={() => {}} />
                 canCreate=false → Toolbar renders null.
+            </div>
+        </MockFrameProvider>
+    ),
+};
+
+/**
+ * Toolbar, create right but the affordance is the HOST's — `framesCreate=false`, which is what a
+ * resource declaring `createAffordance: 'host'` (or declaring `readOnly`) resolves to. Nine
+ * flagship surfaces spelled this `Toolbar: () => null` by hand.
+ */
+export const ToolbarHostOwnsCreate: Story = {
+    render: () => (
+        <MockFrameProvider>
+            <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+                <DefaultToolbar
+                    resource="members"
+                    canCreate
+                    framesCreate={false}
+                    onNew={() => {}}
+                />
+                framesCreate=false → Toolbar renders null even though canCreate=true.
             </div>
         </MockFrameProvider>
     ),
