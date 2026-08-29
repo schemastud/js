@@ -51,6 +51,17 @@ export {
     type FlushFn,
 } from './EditShellMount';
 export { resolveColumns } from './resolveColumns';
+export {
+    COLUMN_KINDS,
+    DeclaredCell,
+    resolveDeclaredCell,
+    type ColumnKind,
+    type TextCellOptions,
+    type BadgeCellOptions,
+    type BadgesCellOptions,
+    type NumberCellOptions,
+    type DateCellOptions,
+} from './columnKinds';
 export { getPath } from './getPath';
 export { createFormResolver, kindOfSchema } from './FormResolver';
 export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';

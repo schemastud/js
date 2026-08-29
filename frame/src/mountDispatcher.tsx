@@ -3,7 +3,7 @@ import { EditShell } from './EditShell';
 import { ListShell } from './ListShell';
 import type { ContextManifest } from './contexts';
 import type { RouteComponent } from './routes';
-import type { FrameColumn, RouteContextEntry } from './types';
+import type { FormMode, FrameColumn, RouteContextEntry } from './types';
 import { WidgetShell } from './WidgetShell';
 
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
@@ -97,6 +97,22 @@ export interface MountDispatcherOptions {
     manifestFor?: (resource: string) => ContextManifest | undefined;
 
     /**
+     * The resource's DECLARED form mode — `AdminResourceDefinition.form`, which every
+     * `ParticleResource`/`AdminResource` in the estate already states (`form: 'bare'`).
+     *
+     * ⚠️ Its absence used to be invisible. This dispatcher constructed `EditShell` with no
+     * `form` prop at all, so every dispatcher-mounted `edit`/`detail` route took the shell's
+     * own `'bare'` default no matter what the resource declared — the declaration nominated
+     * and nothing authorized. It reads as harmless today only because the one resource in the
+     * estate declaring `#[Widget]` names a `combobox` registered nowhere, so `'enriched'`
+     * currently renders the same pixels as `'bare'`; the moment a host registers that widget
+     * the two diverge and the route ignores the declaration. A hook is the expected wiring
+     * (`(resource) => useManifest(realm).data?.resources[resource]?.form`), so it is called
+     * during the dispatched component's render, never at dispatch time.
+     */
+    formFor?: (resource: string) => FormMode | undefined;
+
+    /**
      * Called with the reason whenever a leaf is declined. Not an error channel — a decline is a normal,
      * expected outcome — but an unexplained one is the estate's recurring *instrument that reports
      * success by not running*, so the reason is always offered rather than swallowed.
@@ -158,6 +174,11 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
                         // Full-page, not a drawer. See EditShell's PageContainer for why this used to be
                         // a silent lie.
                         container: 'page' as const,
+                        // The DECLARED form mode. Read at render, and omitted entirely when the
+                        // host wired no lookup or the resource is unknown — `undefined` lets
+                        // EditShell's own `'bare'` default stand rather than this dispatcher
+                        // restating it, so there is one place the default lives.
+                        form: options.formFor?.(resource),
                     });
             }
 

@@ -1,5 +1,6 @@
 import type { FrameColumn, ResolveColumns } from './types';
 import type { ContextManifest, NodeParticipation } from './contexts';
+import { resolveDeclaredCell } from './columnKinds';
 
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
@@ -23,6 +24,17 @@ const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
  * sort-ordered set. A host column naming a field with NO `list-column` participation is a
  * wiring error (throws in dev, passes through in prod); it cannot add a column, because
  * there is no participation entry to add one from.
+ *
+ * **A manifest also decides how a cell RENDERS.** `list-column` participation carries a
+ * `widget` name — it always has, and until now nothing on the client read it, so a
+ * declaration could say `#[Column('badge')]` and the host still had to hand-write the
+ * closure. That name is now resolved through {@link resolveDeclaredCell} into a `cell`
+ * renderer drawn from frame's derived column-kind vocabulary (`text` / `badge` / `badges`
+ * / `number` / `date`). Precedence is unchanged where it already existed: a host `cell`
+ * still wins by field, and a kind frame does not know resolves to nothing and falls to the
+ * default cell. `cellSource` records which of the two produced the renderer, because one
+ * downstream consumer — the `row-cell` editable-in-place wiring in `ListShell` — keys off
+ * "did a HOST supply a cell", and a synthesized one must not be mistaken for that.
  *
  * A field may be a DOTTED pointer (`commerce.plan`) when a producer above frame folds a named
  * sub-projection onto the row. Nothing here needs to change for it: `byNode` is keyed by the full
@@ -59,13 +71,19 @@ export const resolveColumns: ResolveColumns = (
     return fields.map((field) => {
         const cm = participation.get(field)!;
         const host = hostByField.get(field);
+        // The DECLARED cell — the manifest's `widget` naming a presentation kind
+        // (`badge`/`date`/`number`/…), resolved to a renderer. A host `cell` still wins:
+        // host-closure-wins-by-field is the existing contract and a declaration is a
+        // DEFAULT for it, never a replacement.
+        const declared = host?.cell ? undefined : resolveDeclaredCell(field, cm);
         // Manifest supplies header/sortField defaults; a host FrameColumn overrides —
         // and its `cell` renderer wins (host-closure-wins-by-field).
         const column: FrameColumn = {
             field,
             header: host?.header ?? cm.label ?? field,
             ...(host?.sortField ? { sortField: host.sortField } : {}),
-            ...(host?.cell ? { cell: host.cell } : {}),
+            ...(host?.cell ? { cell: host.cell, cellSource: 'host' as const } : {}),
+            ...(declared ? { cell: declared, cellSource: 'declared' as const } : {}),
         };
         return column;
     });

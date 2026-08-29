@@ -128,6 +128,20 @@ export interface FrameColumn {
     header?: string;
     sortField?: string;
     cell?: (record: Row) => ReactNode;
+    /**
+     * Who produced `cell` — set by `resolveColumns`, never by a host (a host that sets it
+     * is describing its own column, which is always `'host'` anyway).
+     *
+     * It exists for exactly one decision. `ListShell`'s `row-cell` editable-in-place wiring
+     * skips any column that already has a `cell`, on the reading "the host said how this
+     * renders, so do not replace it". A cell synthesized from the manifest's declared
+     * presentation kind is NOT that statement — it is frame's own default — and letting it
+     * suppress inline editing would mean adding `#[Column('badge')]` to a field silently
+     * turned that field read-only. So the editable wiring skips `'host'` and overrides
+     * `'declared'`: an explicit `row-cell` declaration outranks a presentation default,
+     * and a host closure outranks both.
+     */
+    cellSource?: 'host' | 'declared';
 }
 
 // `schema` is the resource's list/filter schema — unused by the v1 host-supplied

@@ -215,3 +215,51 @@ describe('assertRouteContext — a typo must stay visible', () => {
         expect(onUnbound).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('the declared form mode reaches the shell', () => {
+    /**
+     * ⚠️ This dispatcher used to construct `EditShell` with NO `form` prop, so every
+     * dispatcher-mounted edit/detail route took the shell's own `'bare'` default no matter
+     * what the resource declared. `AdminResourceDefinition.form` is a real declared field
+     * that every `ParticleResource` in the estate states — the slot nominated and nothing
+     * authorized.
+     *
+     * It reads as harmless today only by accident: `form`'s entire semantics is one line in
+     * `EditShell` (whether `x-stud-widget` is bridged to `x-widget`), and the one resource
+     * declaring `#[Widget]` names a `combobox` registered nowhere — so `'enriched'` renders
+     * the same pixels as `'bare'` and the defect is invisible. The moment a host registers
+     * that widget the two diverge and the route ignores the declaration.
+     *
+     * Asserted on the constructed ELEMENT rather than through a render, because the visible
+     * difference is currently zero: a rendering assertion would pass against the old code.
+     */
+    const propsOf = (options: Parameters<typeof createMountDispatcher>[0]) => {
+        const Dispatched = createMountDispatcher(options)(
+            entry({ routeName: 'x.edit', path: 'x/:id', mounts: 'edit', resource: 'agents' }),
+        );
+
+        return (Dispatched as () => any)().props as Record<string, unknown>;
+    };
+
+    it('passes the declared mode through', () => {
+        expect(propsOf({ resolveId: () => 'abc', formFor: () => 'enriched' }).form).toBe('enriched');
+    });
+
+    it('leaves the default to EditShell when the host wired no lookup — one place owns the default', () => {
+        expect(propsOf({ resolveId: () => 'abc' }).form).toBeUndefined();
+    });
+
+    it('leaves it to EditShell for an UNKNOWN resource too, rather than restating bare', () => {
+        expect(propsOf({ resolveId: () => 'abc', formFor: () => undefined }).form).toBeUndefined();
+    });
+
+    it('carries it on the detail arm as well, which is the same shell read-only', () => {
+        const Dispatched = createMountDispatcher({ resolveId: () => 'abc', formFor: () => 'enriched' })(
+            entry({ routeName: 'x.show', path: 'x/:id', mounts: 'detail', resource: 'agents' }),
+        );
+
+        const props = (Dispatched as () => any)().props as Record<string, unknown>;
+        expect(props.form).toBe('enriched');
+        expect(props.readOnly).toBe(true);
+    });
+});

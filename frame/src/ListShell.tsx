@@ -153,7 +153,15 @@ export function ListShell({
  * FC-23 wiring: turn a resolved column into an editable-in-place cell ONLY when
  *   (a) a manifest is present (absent ⇒ untouched — not a gate),
  *   (b) the field participates in `row-cell`, AND
- *   (c) the host supplied no `cell` override (host-closure-wins-by-field).
+ *   (c) the HOST supplied no `cell` override (host-closure-wins-by-field).
+ *
+ * ⚠️ (c) is `cellSource !== 'host'`, not `!col.cell`, and the difference is load-bearing.
+ * `resolveColumns` now also synthesizes a `cell` from the manifest's declared presentation
+ * kind (`#[Column('badge')]`), and that is frame's own default rather than a host saying
+ * "leave this alone". Testing for the mere presence of a `cell` would mean declaring a
+ * presentation kind on a `row-cell` field silently turned it read-only — a declaration
+ * revoking a different declaration, invisibly. An explicit `row-cell` participation
+ * outranks a presentation default; a host closure still outranks both.
  * The EditableCell inherits the `edit` binding per FC-03 and renders a read-only
  * projection for suppressed-heavyweight / unbound-non-heavyweight fields. Every
  * other column passes through unchanged.
@@ -170,8 +178,9 @@ function withEditableCells(
     const properties = ((schema as SchemaNode | undefined)?.properties ?? {}) as Record<string, SchemaNode>;
 
     return resolved.map((col) => {
-        // Host override wins for its field — never wrap it.
-        if (col.cell) return col;
+        // Host override wins for its field — never wrap it. A `'declared'` cell is frame's
+        // own presentation default and IS overridable here (see the docblock).
+        if (col.cell && col.cellSource !== 'declared') return col;
 
         // FLAT on purpose: `byNode` is keyed by the full pointer, dots included, so
         // `byNode['commerce.plan']` is the correct lookup and traversing would look for a
