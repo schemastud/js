@@ -3,7 +3,6 @@ import {
     assertRouteContext,
     createGuardRegistry,
     createRouteRegistry,
-    resolveAliasTarget,
 } from '../src/routes';
 import type { RouteContextEntry } from '../src/types';
 
@@ -94,39 +93,5 @@ describe('assertRouteContext', () => {
         const nested = entry({ routeName: 'bad.route', path: undefined as never });
 
         expect(() => assertRouteContext([nested], registry)).toThrow(/RouteContext is flat/);
-    });
-});
-
-describe('resolveAliasTarget', () => {
-    it('resolves a static path→path alias', () => {
-        expect(
-            resolveAliasTarget({ from: '/review-queue', to: '/review', preserveQuery: false }, {}, ''),
-        ).toBe('/review');
-    });
-
-    it('interpolates a :id param present in both from and to', () => {
-        expect(
-            resolveAliasTarget(
-                { from: '/assistants/:id', to: '/threads/assistants/:id', preserveQuery: false },
-                { id: 'abc' },
-                '',
-            ),
-        ).toBe('/threads/assistants/abc');
-    });
-
-    it('preserves the query string when preserveQuery is set', () => {
-        expect(
-            resolveAliasTarget(
-                { from: '/circuit-runs', to: '/system', preserveQuery: true },
-                {},
-                '?filter[status]=failed',
-            ),
-        ).toBe('/system?filter[status]=failed');
-    });
-
-    it('drops the query when preserveQuery is false', () => {
-        expect(
-            resolveAliasTarget({ from: '/circuit-runs', to: '/system', preserveQuery: false }, {}, '?x=1'),
-        ).toBe('/system');
     });
 });

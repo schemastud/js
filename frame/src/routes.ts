@@ -1,5 +1,5 @@
 import { createElement, type ComponentType, type ReactElement } from 'react';
-import type { AliasEntry, RouteContextEntry } from './types';
+import type { RouteContextEntry } from './types';
 
 // =============================================================================
 // RouteRegistry + guard registry — the client name→component binding for the
@@ -100,11 +100,11 @@ export function createShellRegistry(): ShellRegistry {
 }
 
 /**
- * Boot invariant (spec §7): every RouteContextEntry (and every alias `to`) must
- * bind to a `routeName` present in the RouteRegistry, and no `routeName` may be
- * declared twice across the manifest. Throws on a duplicate or an unbound name so
- * a missing binding fails loudly at boot, not silently at navigation — the same
- * discipline the widget registry enforces.
+ * Boot invariant (spec §7): every RouteContextEntry must bind to a `routeName`
+ * present in the RouteRegistry, and no `routeName` may be declared twice across the
+ * manifest. Throws on a duplicate or an unbound name so a missing binding fails
+ * loudly at boot, not silently at navigation — the same discipline the widget
+ * registry enforces.
  *
  * `mounts: 'redirect'` and standalone pages are still bound components in the
  * registry (a redirect leaf is a component that navigates), so every entry is
@@ -293,25 +293,4 @@ export function buildRealmRoutes(
     }
 
     return routes;
-}
-
-/**
- * A convenience the host router uses to walk aliases; kept here so alias handling
- * lives beside the RouteContext it complements. Interpolates a `:id`-style param
- * present in both `from` and `to` — the host passes the matched params.
- */
-export function resolveAliasTarget(
-    alias: AliasEntry,
-    params: Record<string, string | undefined>,
-    search: string,
-): string {
-    let to = alias.to;
-
-    for (const [key, value] of Object.entries(params)) {
-        if (value !== undefined) {
-            to = to.replace(`:${key}`, value);
-        }
-    }
-
-    return alias.preserveQuery && search ? `${to}${search}` : to;
 }

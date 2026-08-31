@@ -265,15 +265,6 @@ export interface RealmDefinition {
     stack?: string[];
 }
 
-// One back-compat redirect, emitted in the manifest so the JS router is a pure
-// renderer (no separate client alias table). A `:id` in both `from` and `to`
-// interpolates client-side; `preserveQuery` carries the query string through. A
-// by-name data lookup is resolved server-side at emit and arrives as a static entry.
-export interface AliasEntry {
-    from: string;
-    to: string;
-    preserveQuery: boolean;
-}
 
 // =============================================================================
 // Slot prop contracts
