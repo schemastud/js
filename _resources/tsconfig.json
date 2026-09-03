@@ -5,7 +5,12 @@
         "moduleResolution": "Bundler",
         "strict": true,
         "noEmit": true,
-        "skipLibCheck": true,
+        // NOT `true`. This project contains nothing but `.d.ts` files, so `skipLibCheck: true`
+        // skips every file it is given and the typecheck becomes structurally incapable of
+        // failing. Measured 2026-09-03: the sibling bundle in `splicewire/_resources` was in this
+        // exact state and hid 23 dangling refs (particle-resource-contract-regen 01, `79411d4`).
+        // Verified green with the check actually running before this was flipped.
+        "skipLibCheck": false,
         "types": []
     },
     "include": ["types/**/*.d.ts"]
