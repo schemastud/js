@@ -20,8 +20,12 @@ export { useChat } from './use-chat';
 export type { ChatViewProps } from './chat-view';
 export { ChatView } from './chat-view';
 
+// The nested-reply view over the same snapshot (forum/board render).
+export type { ThreadViewProps } from './thread-view';
+export { ThreadView } from './thread-view';
+
 // The fixed slot inventory + composer render-prop contract.
-export type { ChatSlots, ComposerApi, RenderSegmentMap, Verdict } from './slots';
+export type { ChatSlots, ComposerApi, RenderSegmentMap, ThreadRowApi, Verdict } from './slots';
 
 // The default render primitives (for presets/hosts that compose on top).
 export { renderMessageBody, renderSegment } from './default-render';

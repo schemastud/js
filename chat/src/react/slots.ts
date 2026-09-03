@@ -78,4 +78,30 @@ export interface ChatSlots {
     loadingState?: () => ReactNode;
     /** Shown when the session has escalated to a human. */
     escalatedState?: (reason: string) => ReactNode;
+    /**
+     * The per-row depth/collapse chrome of a NESTED render (`<ThreadView>`).
+     * Unfilled in linear chat, where every row is depth 0 with no children, and
+     * ignored entirely by `<ChatView>`.
+     *
+     * It receives the row rather than the message so a fill can read `depth` and
+     * `childCount` — the two facts a flat `messageToolbar(message)` cannot see —
+     * and call `toggle()` without owning the collapse set.
+     */
+    threadRowChrome?: (row: ThreadRowApi) => ReactNode;
+}
+
+/**
+ * What `threadRowChrome` receives: the derived node, plus the two pieces of
+ * reader state the view owns.
+ */
+export interface ThreadRowApi {
+    message: ChatMessage;
+    /** 0 for a root. The renderer already applies this as indentation. */
+    depth: number;
+    /** Descendants at any depth — the same number whether or not they are visible. */
+    childCount: number;
+    /** True when this row's subtree is collapsed by the reader. */
+    collapsed: boolean;
+    /** Flip this row's collapse state. Inert when `childCount` is 0. */
+    toggle: () => void;
 }

@@ -1,7 +1,7 @@
 {
     "name": "@schemastud/chat",
     "version": "0.1.0",
-    "description": "The fleet's single chat substrate: a headless-core + slotted-view chat UI package. @schemastud/chat/core is the framework-agnostic state machine (messages, streaming fold, roster, transport binding, session capabilities); @schemastud/chat/react is the view (<ChatView>, slot sockets, presets). A peer contribution at the seam socket (ADR-0078) owning the chat message envelope (ADR-0079) — not built on blockdoc; blockdoc is an optional per-medium widget peer.",
+    "description": "The fleet's single chat substrate: a headless-core + slotted-view chat UI package. @schemastud/chat/core is the framework-agnostic state machine (messages, streaming fold, roster, transport binding, session capabilities); @schemastud/chat/react is the view (<ChatView>, slot sockets, presets). A peer contribution at the seam socket (ADR-0078) owning the chat message envelope (ADR-0079) \u2014 not built on blockdoc; blockdoc is an optional per-medium widget peer.",
     "license": "MIT",
     "type": "module",
     "main": "dist/core.js",
@@ -18,6 +18,10 @@
         "./react": {
             "types": "./dist/react.d.ts",
             "import": "./dist/react.js"
+        },
+        "./thread": {
+            "types": "./dist/thread.d.ts",
+            "import": "./dist/thread.js"
         }
     },
     "files": [

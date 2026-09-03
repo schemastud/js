@@ -68,5 +68,23 @@ export interface ChatMessage {
     citations?: Citation[];
     author?: Participant;
     streaming?: StreamState;
+    /**
+     * The INTENTIONAL reply edge — "this message replies to that one". The one
+     * axis a forum/board render needs and linear chat ignores; absent on every
+     * message in a flat conversation, which is why it is a capability rather
+     * than core.
+     *
+     * It is deliberately NOT the edit/regeneration edge. The server keeps three
+     * self-references on `beam_thread_messages` — `parent_id` and
+     * `selected_child_id` form the edit/regen variant tree, `reply_to_id` is
+     * this one — and only the reply edge is a fact about the CONVERSATION. A
+     * consumer that folds variants is reading a different graph and must not
+     * borrow this field for it.
+     *
+     * The reducer never mints it: it arrives with durable history through
+     * `hydrate(seed)`, so nesting costs `foldEvent` nothing. See
+     * `@schemastud/chat/thread` for the derived tree over it.
+     */
+    replyToId?: string;
     meta?: Record<string, unknown>; // escape hatch — declared capabilities NEVER hide here
 }
