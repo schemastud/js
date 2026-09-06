@@ -80,6 +80,30 @@ export interface ContextManifest {
      * hand-built fixture renders exactly as before.
      */
     singularLabel?: string;
+    /**
+     * What THIS ACTOR may do to this resource — the axis every other field on this block lacks.
+     *
+     * `createAffordance`, `creatable`, `deletable` and `editable` all describe the RESOURCE: may
+     * this be created at all, whose chrome owns the button. None of them describes who is asking,
+     * so a shell driven by them alone renders a "New entry" button and a column of "Delete entry"
+     * buttons to a reader holding nothing but `view`. Measured at `~/Herd/beam` on 2026-09-05:
+     * exactly that, 13 delete buttons for a member.
+     *
+     * Resolved SERVER-side (`ResourceAuthorizer::capabilities()`) by the same object the write
+     * endpoint asks, so an offered button and the 403 behind it cannot disagree. Already ANDed
+     * with the resource flags, so a `deletable: false` resource reports `delete: false` no matter
+     * what the actor holds — the shell reads one field per verb and never recombines two.
+     *
+     * ⚠️ This is **advisory**. It exists to stop offering controls that cannot work; it is not the
+     * gate. The gate is the endpoint, which re-checks with the real record and 403s. A host wires
+     * this into the injected {@link FrameCan} rather than the shells reading it directly, because
+     * `can` is the seam frame already calls and a host may have a richer answer than the manifest's
+     * class-level one.
+     *
+     * Absent (an older server, a hand-built fixture) ⇒ a host's `can` falls back to whatever it did
+     * before, so nothing that exists today changes shape.
+     */
+    can?: { create?: boolean; update?: boolean; delete?: boolean };
 }
 
 /** The full context vocabulary, in wire order. */
