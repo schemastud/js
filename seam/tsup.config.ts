@@ -6,6 +6,8 @@ export default defineConfig({
     dts: true,
     sourcemap: true,
     clean: true,
+    // Inline the static meta-schema so native ESM consumers need no JSON import attributes.
+    noExternal: ['ajv/dist/refs/json-schema-draft-07.json'],
     // Peers stay external; consumers provide the single copy.
     // `vite` is external for the same reason the peers are: the consumer owns the single copy. It is
     // only reachable from `src/vite.ts` (the `./vite` subpath), which is Node-only and never enters a

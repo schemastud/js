@@ -1,5 +1,5 @@
 import { customizeValidator } from '@rjsf/validator-ajv8';
-import Ajv2020 from 'ajv/dist/2020';
+import Ajv2020 from 'ajv/dist/2020.js';
 import draft07MetaSchema from 'ajv/dist/refs/json-schema-draft-07.json';
 
 /**

@@ -34,7 +34,8 @@
         "dev": "tsup --watch",
         "test": "vitest run",
         "typecheck": "tsc --noEmit",
-        "prepublishOnly": "npm run build"
+        "check:node": "node scripts/check-node-import.mjs",
+        "prepack": "npm run build && npm run check:node"
     },
     "peerDependencies": {
         "@rjsf/core": "^6.0.0",
