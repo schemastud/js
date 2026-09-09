@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry } from '@schemastud/seam';
@@ -66,9 +66,12 @@ function makeTransport(): FrameTransport {
             is_default: false,
         })),
         deleteSavedFilter: vi.fn(async () => undefined),
-        list: vi.fn(
-            async (): Promise<Paginated<Row>> => ({ data: ROWS, total: 2, page: 1, perPage: 25 }),
-        ),
+        list: vi.fn(async (): Promise<Paginated<Row>> => ({
+            data: ROWS,
+            total: 2,
+            page: 1,
+            perPage: 25,
+        })),
         get: vi.fn(async (_r, id) => ({ id, title: 'Alpha' })),
         getFormSchema: vi.fn(async () => ({
             type: 'object',
@@ -114,7 +117,9 @@ function makeInjection(over: Partial<FrameInjection> = {}): FrameInjection {
 }
 
 function wrap(injection: FrameInjection) {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+    });
     return ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={client}>
             <FrameProvider value={injection}>{children}</FrameProvider>
@@ -193,7 +198,9 @@ describe("createMountDispatcher — mounts: 'list'", () => {
 
     it('declines only when the host wired NEITHER lookup, and says which', () => {
         const seen: string[] = [];
-        const dispatch = createMountDispatcher({ onDecline: (_, reason) => seen.push(reason) });
+        const dispatch = createMountDispatcher({
+            onDecline: (_, reason) => seen.push(reason),
+        });
 
         expect(dispatch(listEntry)).toBeUndefined();
         expect(seen[0]).toContain('manifestFor');
@@ -206,7 +213,9 @@ describe("createMountDispatcher — mounts: 'list'", () => {
         const dispatch = createMountDispatcher({ manifestFor: () => undefined });
         const Dispatched = dispatch(listEntry)!;
 
-        const { container } = render(<Dispatched />, { wrapper: wrap(makeInjection()) });
+        const { container } = render(<Dispatched />, {
+            wrapper: wrap(makeInjection()),
+        });
 
         expect(dispatch(listEntry)).toBeTypeOf('function');
         expect(container.querySelector('[data-frame-shell="list"]')).toBeNull();
@@ -254,7 +263,12 @@ describe('FrameInjection.listSlots — the host names its design system once', (
 
     it('merges PER SLOT: a page overriding Table still inherits the default Empty', async () => {
         const transport = makeTransport();
-        (transport.list as any).mockResolvedValue({ data: [], total: 0, page: 1, perPage: 25 });
+        (transport.list as any).mockResolvedValue({
+            data: [],
+            total: 0,
+            page: 1,
+            perPage: 25,
+        });
 
         render(
             <ListShell
@@ -287,10 +301,15 @@ function MockFormBody({ onSubmit, formData }: FormBodySlotProps) {
 
 describe('FrameInjection.editSlots — and the one slot the container prop outranks', () => {
     const editInjection = (over: Partial<FrameInjection> = {}) =>
-        makeInjection({ editSlots: { FormBody: MockFormBody, Container: HostContainer }, ...over });
+        makeInjection({
+            editSlots: { FormBody: MockFormBody, Container: HostContainer },
+            ...over,
+        });
 
     it('supplies an EditShell that passes no slots', async () => {
-        render(<EditShell resource="widgets" id="1" />, { wrapper: wrap(editInjection()) });
+        render(<EditShell resource="widgets" id="1" />, {
+            wrapper: wrap(editInjection()),
+        });
 
         await waitFor(() => expect(screen.getByTestId('host-container')).toBeTruthy());
         expect(screen.getByTestId('mock-form')).toBeTruthy();
@@ -314,7 +333,9 @@ describe('FrameInjection.editSlots — and the one slot the container prop outra
                 resource="widgets"
                 id="1"
                 container="page"
-                slots={{ Container: ({ children }: any) => <div data-testid="own">{children}</div> }}
+                slots={{
+                    Container: ({ children }: any) => <div data-testid="own">{children}</div>,
+                }}
             />,
             { wrapper: wrap(editInjection()) },
         );
@@ -326,3 +347,18 @@ describe('FrameInjection.editSlots — and the one slot the container prop outra
 function HostContainer({ children }: { children?: ReactNode }) {
     return <div data-testid="host-container">{children}</div>;
 }
+
+it('forwards create and row opening through the host navigation seam', async () => {
+    const onOpen = vi.fn();
+    const Dispatched = createMountDispatcher({
+        manifestFor: () => MANIFEST,
+        onOpenFor: () => onOpen,
+    })(listEntry);
+    if (!Dispatched) throw new Error('List dispatch declined');
+    render(<Dispatched />, { wrapper: wrap(makeInjection()) });
+    const row = await screen.findByText('Alpha');
+    fireEvent.click(row);
+    expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ id: '1' }));
+    fireEvent.click(screen.getByRole('button', { name: /^New / }));
+    expect(onOpen).toHaveBeenLastCalledWith({ id: null });
+});

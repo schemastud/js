@@ -47,14 +47,12 @@ function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport 
         })),
         deleteSavedFilter: vi.fn(async () => undefined),
         // frame's CRUD
-        list: vi.fn(
-            async (): Promise<Paginated<Row>> => ({
-                data: ROWS,
-                total: 2,
-                page: 1,
-                perPage: 25,
-            }),
-        ),
+        list: vi.fn(async (): Promise<Paginated<Row>> => ({
+            data: ROWS,
+            total: 2,
+            page: 1,
+            perPage: 25,
+        })),
         get: vi.fn(async (_r, id) => ({ id, title: 'Alpha' })),
         getFormSchema: vi.fn(async () => ({
             type: 'object',
@@ -92,10 +90,7 @@ function useMemoryUrlState() {
     return [params, set] as const;
 }
 
-function makeInjection(
-    transport: FrameTransport,
-    can: FrameCan = () => true,
-): FrameInjection {
+function makeInjection(transport: FrameTransport, can: FrameCan = () => true): FrameInjection {
     return {
         transport,
         primitives,
@@ -107,7 +102,9 @@ function makeInjection(
 }
 
 function wrap(injection: FrameInjection) {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+    });
     return ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={client}>
             <FrameProvider value={injection}>{children}</FrameProvider>
@@ -145,10 +142,9 @@ describe('ListShell', () => {
         const transport = makeTransport();
         const Wrapper = wrap(makeInjection(transport));
 
-        render(
-            <ListShell resource="widgets" columns={[{ field: 'title', header: 'Title' }]} />,
-            { wrapper: Wrapper },
-        );
+        render(<ListShell resource="widgets" columns={[{ field: 'title', header: 'Title' }]} />, {
+            wrapper: Wrapper,
+        });
 
         await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
         expect(screen.getByText('Beta')).toBeTruthy();
@@ -220,7 +216,10 @@ describe('ListShell', () => {
             <ListShell
                 resource="widgets"
                 columns={[{ field: 'title' }]}
-                slots={{ Empty: () => <div>custom empty</div>, Toolbar: () => <div>custom toolbar</div> }}
+                slots={{
+                    Empty: () => <div>custom empty</div>,
+                    Toolbar: () => <div>custom toolbar</div>,
+                }}
             />,
             { wrapper: Wrapper },
         );
@@ -236,10 +235,9 @@ describe('ListShell', () => {
         const cannotCreate: FrameCan = (action) => action !== 'create';
         const Wrapper = wrap(makeInjection(transport, cannotCreate));
 
-        render(
-            <ListShell resource="widgets" columns={[{ field: 'title' }]} onOpen={() => {}} />,
-            { wrapper: Wrapper },
-        );
+        render(<ListShell resource="widgets" columns={[{ field: 'title' }]} onOpen={() => {}} />, {
+            wrapper: Wrapper,
+        });
 
         await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
         expect(screen.queryByText('New widgets')).toBeNull();
@@ -253,19 +251,28 @@ describe('EditShell', () => {
         const Wrapper = wrap(makeInjection(transport));
 
         render(
-            <EditShell resource="widgets" id={null} slots={{ FormBody: MockFormBody }} onSaved={onSaved} />,
+            <EditShell
+                resource="widgets"
+                id={null}
+                slots={{ FormBody: MockFormBody }}
+                onSaved={onSaved}
+            />,
             { wrapper: Wrapper },
         );
 
         await waitFor(() => expect(screen.getByLabelText('title')).toBeTruthy());
 
-        fireEvent.change(screen.getByLabelText('title'), { target: { value: 'Gamma' } });
+        fireEvent.change(screen.getByLabelText('title'), {
+            target: { value: 'Gamma' },
+        });
         await act(async () => {
             fireEvent.click(screen.getByText('Save'));
         });
 
         await waitFor(() =>
-            expect(transport.save).toHaveBeenCalledWith('widgets', null, { title: 'Gamma' }),
+            expect(transport.save).toHaveBeenCalledWith('widgets', null, {
+                title: 'Gamma',
+            }),
         );
         expect(onSaved).toHaveBeenCalled();
     });
@@ -302,7 +309,12 @@ describe('EditShell', () => {
         const Wrapper = wrap(makeInjection(transport));
 
         render(
-            <EditShell resource="widgets" id={null} showModeToggle slots={{ FormBody: MockFormBody }} />,
+            <EditShell
+                resource="widgets"
+                id={null}
+                showModeToggle
+                slots={{ FormBody: MockFormBody }}
+            />,
             { wrapper: Wrapper },
         );
 
@@ -335,7 +347,11 @@ describe('ListShell — editable row-cell wiring (FC-23)', () => {
     // A registry carrying a controllable `email-input` so a row-cell-participating
     // field can become editable-in-place.
     const EmailInput = ({ value, onChange }: any) => (
-        <input data-testid="cell-input" value={String(value ?? '')} onChange={(e) => onChange(e.target.value)} />
+        <input
+            data-testid="cell-input"
+            value={String(value ?? '')}
+            onChange={(e) => onChange(e.target.value)}
+        />
     );
 
     function injectionWithWidget(transport: FrameTransport): FrameInjection {
@@ -395,7 +411,12 @@ describe('ListShell — editable row-cell wiring (FC-23)', () => {
         render(
             <ListShell
                 resource="widgets"
-                columns={[{ field: 'title', cell: (r) => <span data-testid="host-cell">{String(r.title)}</span> }]}
+                columns={[
+                    {
+                        field: 'title',
+                        cell: (r) => <span data-testid="host-cell">{String(r.title)}</span>,
+                    },
+                ]}
                 manifest={manifest}
                 onCellCommit={vi.fn()}
             />,
@@ -413,10 +434,9 @@ describe('ListShell — editable row-cell wiring (FC-23)', () => {
         const transport = makeTransport();
         const Wrapper = wrap(injectionWithWidget(transport));
 
-        render(
-            <ListShell resource="widgets" columns={[{ field: 'title', header: 'Title' }]} />,
-            { wrapper: Wrapper },
-        );
+        render(<ListShell resource="widgets" columns={[{ field: 'title', header: 'Title' }]} />, {
+            wrapper: Wrapper,
+        });
 
         await waitFor(() => expect(screen.getAllByText('Alpha')[0]).toBeTruthy());
         // No manifest → the plain DefaultCell path; no editable-cell markup at all.
@@ -431,14 +451,20 @@ describe('ListShell — contributed columns under dotted pointers (ticket 19)', 
     // participation under `as.prop`. Frame knows nothing about the producer — only that a
     // field pointer may have depth.
     const NESTED_ROWS: Row[] = [
-        { id: '1', title: 'Alpha', commerce: { plan: 'Pro', billStatus: 'finalized' } },
+        {
+            id: '1',
+            title: 'Alpha',
+            commerce: { plan: 'Pro', billStatus: 'finalized' },
+        },
         { id: '2', title: 'Beta', commerce: null },
     ];
 
     const manifest = {
         byNode: {
             title: { 'list-column': { participates: true, label: 'Title', sort: 0 } },
-            'commerce.plan': { 'list-column': { participates: true, label: 'Plan', sort: 10 } },
+            'commerce.plan': {
+                'list-column': { participates: true, label: 'Plan', sort: 10 },
+            },
         },
         inherits: { 'row-cell': ['edit'] as const },
         known: ['edit', 'detail', 'list-column', 'list-item', 'row-cell'],
@@ -446,7 +472,12 @@ describe('ListShell — contributed columns under dotted pointers (ticket 19)', 
 
     function nestedTransport(): FrameTransport {
         return makeTransport({
-            list: vi.fn(async () => ({ data: NESTED_ROWS, total: 2, page: 1, perPage: 25 })),
+            list: vi.fn(async () => ({
+                data: NESTED_ROWS,
+                total: 2,
+                page: 1,
+                perPage: 25,
+            })),
         } as Partial<FrameTransport>);
     }
 
@@ -496,11 +527,155 @@ describe('ListShell — contributed columns under dotted pointers (ticket 19)', 
         // ever did, an editor here would commit into a slice with no writer.
         const Wrapper = wrap(makeInjection(nestedTransport()));
 
-        render(<ListShell resource="widgets" columns={[]} manifest={manifest} onCellCommit={vi.fn()} />, {
-            wrapper: Wrapper,
-        });
+        render(
+            <ListShell
+                resource="widgets"
+                columns={[]}
+                manifest={manifest}
+                onCellCommit={vi.fn()}
+            />,
+            {
+                wrapper: Wrapper,
+            },
+        );
 
         await waitFor(() => expect(screen.getAllByText('Pro')[0]).toBeTruthy());
         expect(document.querySelector('[data-frame-cell]')).toBeNull();
+    });
+});
+
+describe('EditShell read failures', () => {
+    it('does not turn a missing existing record into an empty editable form and can retry', async () => {
+        const get = vi
+            .fn<FrameTransport['get']>()
+            .mockRejectedValueOnce(new Error('404'))
+            .mockResolvedValue({ id: 'missing', title: 'Recovered' });
+        const transport = makeTransport({ get });
+        render(
+            <EditShell
+                resource="widgets"
+                id="missing"
+                container="bare"
+                slots={{ FormBody: MockFormBody }}
+            />,
+            { wrapper: wrap(makeInjection(transport)) },
+        );
+        await screen.findByRole('alert');
+        expect(screen.queryByRole('textbox')).toBeNull();
+        expect(screen.queryByText('Save')).toBeNull();
+        expect(transport.save).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByText('Retry'));
+        await screen.findByDisplayValue('Recovered');
+    });
+
+    it('requires a loaded schema even for create mode', async () => {
+        const transport = makeTransport({
+            getFormSchema: vi.fn(async () => {
+                throw new Error('Unavailable');
+            }),
+        });
+        render(<EditShell resource="widgets" id={null} container="bare" />, {
+            wrapper: wrap(makeInjection(transport)),
+        });
+        expect((await screen.findByRole('alert')).textContent).toContain(
+            'Could not load this form.',
+        );
+        expect(screen.queryByText('Save')).toBeNull();
+        expect(transport.get).not.toHaveBeenCalled();
+    });
+
+    it('retains unsaved edits across a failed background fetch and successful retry', async () => {
+        const get = vi
+            .fn<FrameTransport['get']>()
+            .mockResolvedValueOnce({ id: '1', title: 'Original' })
+            .mockRejectedValueOnce(new Error('Offline'))
+            .mockResolvedValue({ id: '1', title: 'Remote update' });
+        const transport = makeTransport({ get });
+        const client = new QueryClient({
+            defaultOptions: { queries: { retry: false } },
+        });
+        render(
+            <QueryClientProvider client={client}>
+                <FrameProvider value={makeInjection(transport)}>
+                    <EditShell
+                        resource="widgets"
+                        id="1"
+                        container="bare"
+                        slots={{ FormBody: MockFormBody }}
+                    />
+                </FrameProvider>
+            </QueryClientProvider>,
+        );
+        fireEvent.change(await screen.findByDisplayValue('Original'), {
+            target: { value: 'Local draft' },
+        });
+        await act(async () => {
+            await client.refetchQueries({
+                queryKey: ['frame', 'widgets', 'record', '1'],
+            });
+        });
+        await screen.findByRole('alert');
+        expect(screen.getByDisplayValue('Local draft')).toBeTruthy();
+        expect(screen.queryByText('Save')).toBeNull();
+        fireEvent.click(screen.getByText('Retry'));
+        await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+        fireEvent.click(screen.getByText('Save'));
+        await waitFor(() =>
+            expect(transport.save).toHaveBeenCalledWith('widgets', '1', {
+                id: '1',
+                title: 'Local draft',
+            }),
+        );
+    });
+
+    it('resets an edited record draft when switching to create mode', async () => {
+        const transport = makeTransport();
+        const view = render(
+            <EditShell
+                resource="widgets"
+                id="1"
+                container="bare"
+                slots={{ FormBody: MockFormBody }}
+            />,
+            { wrapper: wrap(makeInjection(transport)) },
+        );
+        fireEvent.change(await screen.findByDisplayValue('Alpha'), {
+            target: { value: 'Previous draft' },
+        });
+        view.rerender(
+            <EditShell
+                resource="widgets"
+                id={null}
+                container="bare"
+                slots={{ FormBody: MockFormBody }}
+            />,
+        );
+        await screen.findByRole('textbox');
+        fireEvent.click(screen.getByText('Save'));
+        await waitFor(() => expect(transport.save).toHaveBeenCalledWith('widgets', null, {}));
+    });
+});
+
+describe('EditShell default form stability', () => {
+    it('keeps the focused input mounted while editing with asynchronous schema resolution', async () => {
+        const transport = makeTransport();
+        render(<EditShell resource="widgets" id="1" container="bare" />, {
+            wrapper: wrap(makeInjection(transport)),
+        });
+        const input = await screen.findByDisplayValue('Alpha');
+        input.focus();
+        await act(async () => {
+            fireEvent.change(input, { target: { value: 'Local draft' } });
+        });
+        await waitFor(() => expect(screen.getByDisplayValue('Local draft')).toBe(input));
+        expect(input.isConnected).toBe(true);
+        expect(document.activeElement).toBe(input);
+        fireEvent.click(screen.getByText('Save'));
+        await waitFor(() =>
+            expect(transport.save).toHaveBeenCalledWith('widgets', '1', {
+                id: '1',
+                title: 'Local draft',
+            }),
+        );
     });
 });

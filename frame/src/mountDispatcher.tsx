@@ -3,7 +3,7 @@ import { EditShell } from './EditShell';
 import { ListShell } from './ListShell';
 import type { ContextManifest } from './contexts';
 import type { RouteComponent } from './routes';
-import type { FormMode, FrameColumn, RouteContextEntry } from './types';
+import type { FormMode, FrameColumn, ListShellProps, RouteContextEntry } from './types';
 import { WidgetShell } from './WidgetShell';
 
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
@@ -74,6 +74,9 @@ const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
  * `undefined` into the component for the life of the route.
  */
 export interface MountDispatcherOptions {
+    /** Resolve list navigation at render time; hosts may use their router hooks here. */
+    onOpenFor?: (entry: RouteContextEntry) => ListShellProps['onOpen'];
+
     /**
      * Reads the record id for an `edit`/`detail` leaf from wherever the host's router keeps it — a hook
      * called during render, so `() => useParams().id ?? null` is the expected wiring. Absent, `edit` and
@@ -139,7 +142,10 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
         // legitimate entry (the DTO's own `resource` is nullable and documents exactly that), and it is
         // simply not something a resource shell can render.
         if (entry.mounts !== 'redirect' && !entry.resource) {
-            return decline(entry, `mounts: '${entry.mounts}' needs a resource, and this entry declares none`);
+            return decline(
+                entry,
+                `mounts: '${entry.mounts}' needs a resource, and this entry declares none`,
+            );
         }
 
         const resource = entry.resource as string;
@@ -161,7 +167,10 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
             case 'edit':
             case 'detail': {
                 if (!options.resolveId) {
-                    return decline(entry, `mounts: '${entry.mounts}' needs resolveId — without it an edit route renders a create form`);
+                    return decline(
+                        entry,
+                        `mounts: '${entry.mounts}' needs resolveId — without it an edit route renders a create form`,
+                    );
                 }
 
                 const readOnly = entry.mounts === 'detail';
@@ -195,6 +204,7 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
                 }
 
                 return () => {
+                    const onOpen = options.onOpenFor?.(entry);
                     const manifest = options.manifestFor?.(resource);
                     // Zero host columns is the normal case: with a manifest, resolveColumns returns the
                     // whole participating set. Host columns are per-field overrides on top of it.
@@ -213,18 +223,29 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
                         return null;
                     }
 
-                    return createElement(ListShell, { resource, columns, manifest });
+                    return createElement(ListShell, {
+                        resource,
+                        columns,
+                        manifest,
+                        onOpen,
+                    });
                 };
             }
 
             case 'redirect':
-                return decline(entry, "mounts: 'redirect' carries no destination — no DTO field exists for one, on either side of the seam");
+                return decline(
+                    entry,
+                    "mounts: 'redirect' carries no destination — no DTO field exists for one, on either side of the seam",
+                );
 
             default:
                 // `mounts` is typed as a closed union in TypeScript and as an UNCONSTRAINED `string` in
                 // the PHP declaration, so a value outside the union is reachable at runtime even though it
                 // is unreachable in the type system. Declining names it rather than crashing the realm.
-                return decline(entry, `mounts: '${String(entry.mounts)}' is not a verb this dispatcher renders`);
+                return decline(
+                    entry,
+                    `mounts: '${String(entry.mounts)}' is not a verb this dispatcher renders`,
+                );
         }
     };
 }

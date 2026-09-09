@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { within } from 'storybook/test';
+import { expect, waitFor, within } from 'storybook/test';
 import { ListFilters } from './ListFilters';
 import { useListFilters } from './useListFilters';
 import { MockFacetsProvider, type TransportFixtures } from './story-harness';
@@ -34,13 +34,7 @@ function ListFiltersHost({ resource = 'fragments' }: { resource?: string }) {
     return <ListFilters {...state} />;
 }
 
-function Harness({
-    fixtures,
-    resource,
-}: {
-    fixtures?: TransportFixtures;
-    resource?: string;
-}) {
+function Harness({ fixtures, resource }: { fixtures?: TransportFixtures; resource?: string }) {
     return (
         <MockFacetsProvider fixtures={fixtures}>
             <ListFiltersHost resource={resource} />
@@ -72,5 +66,34 @@ export const Mobile: Story = {
     render: () => <Harness />,
     play: async ({ canvasElement }) => {
         await within(canvasElement).findByText('Recent drafts');
+    },
+};
+
+function NoQueryVocabulary() {
+    const state = useListFilters('entries');
+    return (
+        <div data-testid="resolved-filters" data-schema={state.schema ? 'resolved' : 'pending'}>
+            <ListFilters {...state} />
+        </div>
+    );
+}
+
+/** Resolved data fields alone must not produce an empty bar or nonfunctional saved views. */
+export const NoQueryDescriptors: Story = {
+    render: () => (
+        <MockFacetsProvider
+            fixtures={{
+                schema: {
+                    properties: { title: { title: 'Title' } },
+                },
+            }}
+        >
+            <NoQueryVocabulary />
+        </MockFacetsProvider>
+    ),
+    play: async ({ canvasElement }) => {
+        const host = within(canvasElement).getByTestId('resolved-filters');
+        await waitFor(() => expect(host).toHaveAttribute('data-schema', 'resolved'));
+        await expect(host).toBeEmptyDOMElement();
     },
 };

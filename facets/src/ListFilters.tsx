@@ -23,7 +23,14 @@ export function ListFilters(state: ListFiltersState) {
     const { resource, schema, filterValues, sort, onFilterChange, onSortChange, applyView } = state;
 
     if (!schema) return null;
-    if (Object.keys(schema.properties ?? {}).length === 0) return null;
+    // A served resource schema may include ordinary fields without any filter or sort
+    // descriptors. Those fields offer no query vocabulary (including saved views).
+    if (
+        !Object.values(schema.properties ?? {}).some(
+            (property) => property['x-filter'] || property['x-sort'],
+        )
+    )
+        return null;
 
     return (
         <div className="space-y-3">

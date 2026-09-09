@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { type ReactNode, useEffect, useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FacetsProvider } from '../src/context';
 import { ListFilters } from '../src/ListFilters';
 import { useListFilters } from '../src/useListFilters';
@@ -125,21 +125,30 @@ function mount(schema: FilterSchema) {
     return transport;
 }
 
+afterEach(cleanup);
+
 describe('an empty filter vocabulary', () => {
-    it('renders nothing, and never reaches the saved-filters read', async () => {
-        const transport = mount(EMPTY);
+    it.each([
+        { label: 'no properties', schema: EMPTY },
+        {
+            label: 'ordinary data properties without query descriptors',
+            schema: { properties: { title: { title: 'Title' } } },
+        },
+    ])(
+        'renders nothing for $label and never reaches the saved-filters read',
+        async ({ schema }) => {
+            const transport = mount(schema);
 
-        await waitFor(() =>
-            expect(screen.getByTestId('host').dataset.schema).toBe('resolved'),
-        );
-        expect(transport.getFilterSchema).toHaveBeenCalledWith('thing');
+            await waitFor(() => expect(screen.getByTestId('host').dataset.schema).toBe('resolved'));
+            expect(transport.getFilterSchema).toHaveBeenCalledWith('thing');
 
-        // The bar is what a populated vocabulary renders; the empty one must render none of it.
-        expect(screen.queryByLabelText('Sort by')).toBeNull();
-        expect(screen.getByTestId('host').childElementCount).toBe(0);
-        // The assertion that makes this a fix rather than a relocation of the 404.
-        expect(transport.getSavedFilters).not.toHaveBeenCalled();
-    });
+            // The bar is what a populated vocabulary renders; the empty one must render none of it.
+            expect(screen.queryByLabelText('Sort by')).toBeNull();
+            expect(screen.getByTestId('host').childElementCount).toBe(0);
+            // The assertion that makes this a fix rather than a relocation of the 404.
+            expect(transport.getSavedFilters).not.toHaveBeenCalled();
+        },
+    );
 
     it('still renders the bar when the resource DOES declare a vocabulary', async () => {
         // The negative case. Without it, `return null` unconditionally would pass the test above.

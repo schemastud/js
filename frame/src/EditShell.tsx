@@ -1,5 +1,5 @@
 import { createFormIntentBus } from '@schemastud/seam';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useFrameInjection } from './context';
 import { DefaultContainer, DefaultFormBody, DefaultSaveBar, DefaultToggle } from './slots/defaults';
 import { useFormSchema, useResourceRecord, useSaveResource } from './data';
@@ -13,7 +13,12 @@ import type { EditShellProps, FormMode, Row } from './types';
  * persist strategy sits BELOW the transport; the shell is blind to which strategy
  * runs. Every slot has a frame default the host may override.
  */
-export function EditShell({
+export function EditShell(props: EditShellProps) {
+    // A different record (including create mode) must never inherit another record's draft.
+    return <EditShellRecord key={JSON.stringify([props.resource, props.id])} {...props} />;
+}
+
+function EditShellRecord({
     resource,
     id,
     readOnly = false,
@@ -24,19 +29,26 @@ export function EditShell({
     onCancel,
     slots,
 }: EditShellProps) {
-    const { can, hooks, editSlots } = useFrameInjection();
+    const { can, hooks, editSlots, primitives } = useFrameInjection();
     const [form, setForm] = useState<FormMode>(formProp);
     const [formData, setFormData] = useState<Row>({});
 
+    const dirty = useRef(false);
     const intentBus = useMemo(() => createFormIntentBus(), []);
 
     const schemaQuery = useFormSchema(resource, form);
     const recordQuery = useResourceRecord(resource, id);
     const saveMutation = useSaveResource(resource);
+    // A stable schema keeps SchemaForm's asynchronous ref resolution from remounting
+    // its controls on each keystroke or read-status change.
+    const schema = useMemo(() => {
+        const served = schemaQuery.data ?? { type: 'object', properties: {} };
+        return form === 'bare' ? stripHostWidgets(served) : bridgeHostWidgets(served);
+    }, [schemaQuery.data, form]);
 
     // Seed the form once the record arrives (create starts empty).
     useEffect(() => {
-        if (recordQuery.data) setFormData(recordQuery.data);
+        if (recordQuery.data && !dirty.current) setFormData(recordQuery.data);
     }, [recordQuery.data]);
 
     // Per-slot across three tiers — this page's `slots`, the injection's app-wide `editSlots`,
@@ -63,12 +75,16 @@ export function EditShell({
     // Detail (readOnly) still resolves against `view`; create/update gate on their action.
     const effectiveReadOnly = readOnly || !can(id === null ? 'create' : 'update', resource);
 
+    const readFailed = schemaQuery.isError || (id !== null && recordQuery.isError);
+    const ready = schemaQuery.data !== undefined && (id === null || recordQuery.data !== undefined);
     const submit = (data: Row) => {
-        if (effectiveReadOnly) return;
+        if (effectiveReadOnly || readFailed || !ready) return;
         saveMutation.mutate(
             { id, data },
             {
                 onSuccess: (saved) => {
+                    dirty.current = false;
+                    setFormData(saved);
                     // Fire the host-side onSubmitted hook (opt-in) with the saved/returned
                     // record BEFORE the onSaved prop; both run, neither replaces the other.
                     hooks?.fireSubmitted(resource, saved, {
@@ -85,14 +101,29 @@ export function EditShell({
         return <div data-frame-shell="edit-loading">Loading…</div>;
     }
 
-    const served = schemaQuery.data ?? { type: 'object', properties: {} };
-    // The mode contract: `enriched` resolves host widgets (enrich, etc.); `bare`
-    // strips them so the field falls to its inferred control (same served schema).
-    const schema = form === 'bare' ? stripHostWidgets(served) : bridgeHostWidgets(served);
+    const RetryButton = primitives.Button;
+    const loadError = readFailed ? (
+        <div role="alert" data-frame-shell="edit-error">
+            <p>
+                {schemaQuery.isError ? 'Could not load this form.' : 'Could not load this record.'}
+            </p>
+            <RetryButton
+                type="button"
+                onClick={() => {
+                    if (schemaQuery.isError) void schemaQuery.refetch();
+                    if (id !== null && recordQuery.isError) void recordQuery.refetch();
+                }}
+            >
+                Retry
+            </RetryButton>
+        </div>
+    ) : null;
+    if (!ready) return <Container>{loadError}</Container>;
 
     return (
         <Container>
             <div data-frame-shell="edit">
+                {loadError}
                 {showModeToggle && !effectiveReadOnly ? (
                     <Toggle value={form} onChange={setForm} />
                 ) : null}
@@ -100,14 +131,17 @@ export function EditShell({
                     schema={schema}
                     formData={formData}
                     intentBus={intentBus}
-                    readOnly={effectiveReadOnly}
+                    readOnly={effectiveReadOnly || readFailed}
                     form={form}
-                    onChange={setFormData}
+                    onChange={(data) => {
+                        dirty.current = true;
+                        setFormData(data);
+                    }}
                     onSubmit={submit}
                 />
                 <SaveBar
                     saving={saveMutation.isPending}
-                    readOnly={effectiveReadOnly}
+                    readOnly={effectiveReadOnly || readFailed}
                     onSave={() => submit(formData)}
                     onCancel={onCancel}
                 />
