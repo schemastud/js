@@ -4,8 +4,8 @@ import { getStoryContext } from '@storybook/test-runner';
 /**
  * Visual-regression SEAM (component-seams tickets 04/08, BASELINED in ticket 14; structural
  * matrix added in ticket 37): self-hosted Storybook test-runner + Playwright, snapshots →
- * `.tests/vr` (no external SaaS; Chromatic rejected). Byte-identical across all three package
- * repos (schemastud / beam / splice), like `scripts/lint-tokens.mjs`.
+ * `.tests/vr` (no external SaaS; Chromatic rejected). Shared ambient and structural pattern across
+ * schemastud / beam / splice; beam and splice also apply their stories' named viewport globals.
  *
  * TWO AXIS KINDS (treatment-axes ticket 13):
  *
