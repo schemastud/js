@@ -30,7 +30,7 @@ export interface ChatSnapshot {
     roster: Participant[];
     sessionId: string | null;
     escalation: EscalationState | null;
-    /** True while any message is still streaming (`streaming.partial`). */
+    /** True while a core send is in flight or any message is still streaming (`streaming.partial`). */
     streaming: boolean;
 }
 

@@ -185,7 +185,7 @@ describe('createChatCore — custom transport adapter (bespoke wire)', () => {
 });
 
 describe('createChatCore — guards', () => {
-    it('ignores an empty send and a re-entrant send while streaming', async () => {
+    it('ignores an empty send', async () => {
         const core = createChatCore({
             transport: fakeTransport(() => sseResponse('event: token\ndata: {"delta":"ok"}\n\n')),
             generateId: seqIds(),
@@ -193,5 +193,162 @@ describe('createChatCore — guards', () => {
 
         await core.send('');
         expect(core.getSnapshot().messages).toHaveLength(0);
+    });
+});
+
+describe('createChatCore — admitted send lifecycle', () => {
+    it('admits one turn before the response arrives, including subscriber re-entry', async () => {
+        let respond!: (response: Response) => void;
+        const transport: ChatTransport = {
+            kind: 'delayed',
+            send: vi.fn(() => new Promise<Response>((resolve) => { respond = resolve; })),
+        };
+        const core = createChatCore({ transport, generateId: seqIds() });
+        let triedReentry = false;
+        core.subscribe((snapshot) => {
+            if (snapshot.messages.length > 0 && !triedReentry) {
+                triedReentry = true;
+                void core.send('subscriber duplicate');
+            }
+        });
+
+        const first = core.send('first');
+        expect(core.getSnapshot().streaming).toBe(true);
+        await core.send('second');
+        expect(transport.send).toHaveBeenCalledTimes(1);
+        expect(core.getSnapshot().messages.map((message) => message.content)).toEqual(['first']);
+
+        respond(sseResponse('event: token\ndata: {"delta":"reply"}\n\n'));
+        await first;
+        expect(core.getSnapshot().streaming).toBe(false);
+        expect(core.getSnapshot().messages.map((message) => message.content)).toEqual(['first', 'reply']);
+    });
+
+    it.each([
+        ['error', new Error('connection lost')],
+        ['abort', new DOMException('aborted', 'AbortError')],
+    ])('settles an iterator %s, retains every partial message and admits a retry', async (_label, failure) => {
+        let attempt = 0;
+        const transport: ChatTransport = {
+            kind: 'bespoke',
+            send: vi.fn(async () => new Response(null)),
+            async *adapt() {
+                if (attempt++ === 0) {
+                    yield { type: 'token', messageId: 'first-partial', delta: 'Keep this' };
+                    yield { type: 'token', messageId: 'second-partial', delta: ' and this' };
+                    throw failure;
+                }
+                yield { type: 'token', messageId: 'retry', delta: 'Recovered' };
+                yield { type: 'done', messageId: 'retry' };
+            },
+        };
+        const core = createChatCore({ transport, generateId: seqIds() });
+
+        await expect(core.send('first')).resolves.toBeUndefined();
+        expect(core.getSnapshot().streaming).toBe(false);
+        expect(core.getSnapshot().messages.slice(1)).toMatchObject([
+            { id: 'first-partial', content: 'Keep this', streaming: { partial: false, error: 'transport_error' } },
+            { id: 'second-partial', content: ' and this', streaming: { partial: false, error: 'transport_error' } },
+        ]);
+        expect(core.getSnapshot().escalation?.reason).toBe('transport_error');
+
+        await core.send('retry');
+        expect(transport.send).toHaveBeenCalledTimes(2);
+        expect(core.getSnapshot().messages.map((message) => message.content)).toEqual([
+            'first', 'Keep this', ' and this', 'retry', 'Recovered',
+        ]);
+        expect(core.getSnapshot().streaming).toBe(false);
+        expect(core.getSnapshot().escalation).toBeNull();
+    });
+
+    it('stays busy after a done frame until the adapter settles, then finalizes its remaining messages', async () => {
+        let release!: () => void;
+        const tail = new Promise<void>((resolve) => { release = resolve; });
+        let atDone!: () => void;
+        const done = new Promise<void>((resolve) => { atDone = resolve; });
+        const transport: ChatTransport = {
+            kind: 'bespoke',
+            send: vi.fn(async () => new Response(null)),
+            async *adapt() {
+                yield { type: 'token', messageId: 'complete', delta: 'First reply' };
+                yield { type: 'done', messageId: 'complete' };
+                atDone();
+                await tail;
+                yield { type: 'token', messageId: 'tail', delta: 'Last reply' };
+            },
+        };
+        const core = createChatCore({ transport, generateId: seqIds() });
+        const first = core.send('first');
+        await done;
+        expect(core.getSnapshot().streaming).toBe(true);
+        await core.send('too early');
+        expect(transport.send).toHaveBeenCalledTimes(1);
+        release();
+        await first;
+        expect(core.getSnapshot().streaming).toBe(false);
+        expect(core.getSnapshot().messages.slice(1)).toMatchObject([
+            { content: 'First reply', streaming: { partial: false } },
+            { content: 'Last reply', streaming: { partial: false } },
+        ]);
+    });
+
+    it.each([
+        ['error', new Error('offline')],
+        ['abort', new DOMException('aborted', 'AbortError')],
+    ])('settles a transport %s before the first token and admits a retry', async (_label, failure) => {
+        const send = vi.fn<ChatTransport['send']>()
+            .mockRejectedValueOnce(failure)
+            .mockResolvedValueOnce(sseResponse('event: token\ndata: {"delta":"Recovered"}\n\n'));
+        const core = createChatCore({ transport: { kind: 'fake', send }, generateId: seqIds() });
+
+        await expect(core.send('first')).resolves.toBeUndefined();
+        expect(core.getSnapshot().streaming).toBe(false);
+        expect(core.getSnapshot().messages[1]).toMatchObject({
+            role: 'assistant', streaming: { partial: false, error: 'transport_error' },
+        });
+        await core.send('retry');
+        expect(send).toHaveBeenCalledTimes(2);
+        expect(core.getSnapshot().messages.at(-1)?.content).toBe('Recovered');
+        expect(core.getSnapshot().streaming).toBe(false);
+    });
+
+    it('keeps admission through hydration and does not attach a pre-token failure to unrelated history', async () => {
+        let reject!: (error: Error) => void;
+        const transport: ChatTransport = {
+            kind: 'delayed',
+            send: vi.fn(() => new Promise<Response>((_resolve, fail) => { reject = fail; })),
+        };
+        const core = createChatCore({ transport, generateId: seqIds() });
+        const first = core.send('first');
+        core.hydrate([{ id: 'history', role: 'assistant', content: 'Another turn', streaming: { partial: true } }]);
+        await core.send('duplicate');
+        expect(transport.send).toHaveBeenCalledTimes(1);
+        reject(new Error('offline'));
+        await first;
+        expect(core.getSnapshot().messages[0]).toEqual({
+            id: 'history', role: 'assistant', content: 'Another turn', streaming: { partial: true },
+        });
+        expect(core.getSnapshot().messages[1]).toMatchObject({
+            id: 'id1', role: 'assistant', streaming: { partial: false, error: 'transport_error' },
+        });
+    });
+
+    it('keeps one assistant identity when the stream throws after done', async () => {
+        const transport: ChatTransport = {
+            kind: 'bespoke',
+            send: async () => new Response(null),
+            async *adapt() {
+                yield { type: 'token', messageId: 'id1', delta: 'Already answered' };
+                yield { type: 'done', messageId: 'id1' };
+                throw new Error('trailer failed');
+            },
+        };
+        const core = createChatCore({ transport, generateId: seqIds() });
+        await core.send('question');
+        expect(core.getSnapshot().messages).toHaveLength(2);
+        expect(core.getSnapshot().messages[1]).toMatchObject({
+            id: 'id1', content: 'Already answered', streaming: { partial: false, error: 'transport_error' },
+        });
+        expect(core.getSnapshot().streaming).toBe(false);
     });
 });

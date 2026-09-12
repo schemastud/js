@@ -48,10 +48,14 @@ export function createChatCore(options: ChatCoreOptions): ChatCore {
     const { transport, generateId = defaultGenerateId } = options;
 
     let snapshot: ChatSnapshot = options.initialMessages ? hydrate(options.initialMessages) : emptySnapshot();
+    let sending = false;
     const listeners = new Set<(snapshot: ChatSnapshot) => void>();
 
     const commit = (next: ChatSnapshot) => {
-        snapshot = next;
+        snapshot = {
+            ...next,
+            streaming: sending || next.messages.some((message) => message.streaming?.partial === true),
+        };
         for (const fn of listeners) {
             fn(snapshot);
         }
@@ -103,6 +107,7 @@ export function createChatCore(options: ChatCoreOptions): ChatCore {
             return;
         }
 
+        sending = true;
         const userMessage: ChatMessage = { id: generateId(), role: sendOptions.role ?? 'user', content };
         pushMessage(userMessage);
         // Clear a prior escalation on a fresh turn.
@@ -112,18 +117,43 @@ export function createChatCore(options: ChatCoreOptions): ChatCore {
 
         const assistantId = generateId();
 
-        let response: Response;
+        const ownedMessages = new Set<string>();
         try {
-            response = await transport.send({ content, session_id: snapshot.sessionId }, sendOptions.headers);
+            const response = await transport.send({ content, session_id: snapshot.sessionId }, sendOptions.headers);
+            const events = transport.adapt ? transport.adapt(response) : defaultAdapt(response, assistantId);
+            for await (const event of events) {
+                if ('messageId' in event && event.messageId) {
+                    ownedMessages.add(event.messageId);
+                }
+                fold(event);
+            }
         } catch {
-            fold({ type: 'error', messageId: assistantId, error: 'transport_error', partial: false });
+            const messages = snapshot.messages.filter((message) => ownedMessages.has(message.id));
+            const partials = messages.filter((message) => message.streaming?.partial);
+            const failedMessages = partials.length ? partials : messages.slice(-1);
+            if (failedMessages.length) {
+                for (const message of failedMessages) {
+                    fold({ type: 'error', messageId: message.id, error: 'transport_error', partial: false });
+                }
+            } else {
+                // A pre-token failure belongs to this send, never a hydrated turn.
+                pushMessage({
+                    id: assistantId,
+                    role: 'assistant',
+                    content: '',
+                    streaming: { partial: false, error: 'transport_error' },
+                });
+            }
             fold({ type: 'escalation', reason: 'transport_error' });
-            return;
-        }
-
-        const events = transport.adapt ? transport.adapt(response) : defaultAdapt(response, assistantId);
-        for await (const event of events) {
-            fold(event);
+        } finally {
+            // Adapters may end without a done event, or use their own message ids.
+            for (const message of snapshot.messages) {
+                if (ownedMessages.has(message.id) && message.streaming?.partial) {
+                    fold({ type: 'done', messageId: message.id });
+                }
+            }
+            sending = false;
+            commit(snapshot);
         }
     }
 

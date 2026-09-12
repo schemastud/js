@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { type ChatMessage, type ChatSnapshot, type ChatTransport, createChatCore, emptySnapshot } from '../src/core/index';
 import { ChatView, Composer, type ChatSlots, popover, presets, siteAsk, support, useChat, viewport } from '../src/react/index';
@@ -171,6 +171,54 @@ describe('standard <Composer> — the preset fill', () => {
         expect(rows[1].textContent).toContain('ok');
         // Input cleared after send.
         expect((document.querySelector('[data-chat-composer-input]') as HTMLTextAreaElement).value).toBe('');
+    });
+
+    it.each([
+        ['error', new Error('stream disconnected')],
+        ['abort', new DOMException('aborted', 'AbortError')],
+    ])('disables before response, retains partial output on SSE %s, and allows a later send', async (_label, failure) => {
+        let respond!: (response: Response) => void;
+        const response = new Promise<Response>((resolve) => { respond = resolve; });
+        const send = vi.fn<ChatTransport['send']>()
+            .mockReturnValueOnce(response)
+            .mockResolvedValueOnce(sseResponse('event: token\ndata: {"delta":"Recovered reply"}\n\n'));
+        const core = createChatCore({ transport: { kind: 'delayed-sse', send } });
+        function Host() {
+            const chat = useChat({ core });
+            return <ChatView chat={chat} {...presets.siteAsk} />;
+        }
+        render(<Host />);
+        const input = screen.getByRole('textbox', { name: 'Message' }) as HTMLTextAreaElement;
+        const button = screen.getByRole('button', { name: 'Ask' }) as HTMLButtonElement;
+        fireEvent.change(input, { target: { value: 'First question' } });
+        fireEvent.click(button);
+        expect(input.disabled).toBe(true);
+        expect(button.disabled).toBe(true);
+        expect(send).toHaveBeenCalledTimes(1);
+
+        let fail!: () => void;
+        const body = new ReadableStream<Uint8Array>({
+            start(controller) {
+                controller.enqueue(new TextEncoder().encode('event: token\ndata: {"delta":"Partial answer"}\n\n'));
+                fail = () => controller.error(failure);
+            },
+        });
+        await act(async () => {
+            respond(new Response(body, { headers: { 'content-type': 'text/event-stream' } }));
+        });
+        await waitFor(() => expect(screen.queryByText('Partial answer')).not.toBeNull());
+        expect(input.disabled).toBe(true);
+
+        await act(async () => { fail(); });
+        await waitFor(() => expect(input.disabled).toBe(false));
+        expect(screen.queryByText('Partial answer')).not.toBeNull();
+        fireEvent.change(input, { target: { value: 'Try again' } });
+        expect(button.disabled).toBe(false);
+        await act(async () => { fireEvent.click(button); });
+        await waitFor(() => expect(screen.queryByText('Recovered reply')).not.toBeNull());
+        expect(screen.queryByText('Partial answer')).not.toBeNull();
+        expect(send).toHaveBeenCalledTimes(2);
+        expect(input.disabled).toBe(false);
     });
 
     it('reflects streaming: disables input + send while a turn is in flight', () => {
