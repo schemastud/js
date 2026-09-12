@@ -351,4 +351,43 @@ describe('createChatCore — admitted send lifecycle', () => {
         });
         expect(core.getSnapshot().streaming).toBe(false);
     });
+
+    it.each([
+        { ending: 'end', partialText: '' },
+        { ending: 'throw', partialText: '' },
+        { ending: 'end', partialText: 'Keep this answer' },
+        { ending: 'throw', partialText: 'Keep this answer' },
+    ])('settles an untargeted error on $ending with partial text "$partialText" and admits retry', async ({ ending, partialText }) => {
+        let attempt = 0;
+        const transport: ChatTransport = {
+            kind: 'bespoke',
+            send: vi.fn(async () => new Response(null)),
+            async *adapt() {
+                if (attempt++ === 0) {
+                    if (partialText) {
+                        yield { type: 'token', messageId: 'provider-message', delta: partialText };
+                    }
+                    yield { type: 'error', error: 'provider_error', partial: true };
+                    if (ending === 'throw') throw new Error('reader failed');
+                    return;
+                }
+                yield { type: 'token', messageId: 'retry-message', delta: 'Recovered' };
+                yield { type: 'done', messageId: 'retry-message' };
+            },
+        };
+        const core = createChatCore({ transport, generateId: seqIds() });
+
+        await core.send('first');
+        expect(core.getSnapshot().streaming).toBe(false);
+        expect(core.getSnapshot().messages).toHaveLength(2);
+        expect(core.getSnapshot().messages[1]).toMatchObject({
+            role: 'assistant', content: partialText, streaming: { partial: false, error: 'provider_error' },
+        });
+        await core.send('retry');
+        expect(transport.send).toHaveBeenCalledTimes(2);
+        expect(core.getSnapshot().messages.map((message) => message.content)).toEqual([
+            'first', partialText, 'retry', 'Recovered',
+        ]);
+        expect(core.getSnapshot().streaming).toBe(false);
+    });
 });

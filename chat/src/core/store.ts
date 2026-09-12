@@ -122,10 +122,14 @@ export function createChatCore(options: ChatCoreOptions): ChatCore {
             const response = await transport.send({ content, session_id: snapshot.sessionId }, sendOptions.headers);
             const events = transport.adapt ? transport.adapt(response) : defaultAdapt(response, assistantId);
             for await (const event of events) {
-                if ('messageId' in event && event.messageId) {
-                    ownedMessages.add(event.messageId);
+                const previousMessages = new Set(snapshot.messages);
+                const next = foldEvent(snapshot, event);
+                // Error frames may omit an id or fall back to a different message.
+                // Own the reducer's actual updates, including synthesized errors.
+                for (const message of next.messages) {
+                    if (!previousMessages.has(message)) ownedMessages.add(message.id);
                 }
-                fold(event);
+                commit(next);
             }
         } catch {
             const messages = snapshot.messages.filter((message) => ownedMessages.has(message.id));
@@ -133,7 +137,12 @@ export function createChatCore(options: ChatCoreOptions): ChatCore {
             const failedMessages = partials.length ? partials : messages.slice(-1);
             if (failedMessages.length) {
                 for (const message of failedMessages) {
-                    fold({ type: 'error', messageId: message.id, error: 'transport_error', partial: false });
+                    fold({
+                        type: 'error',
+                        messageId: message.id,
+                        error: message.streaming?.error ?? 'transport_error',
+                        partial: false,
+                    });
                 }
             } else {
                 // A pre-token failure belongs to this send, never a hydrated turn.
