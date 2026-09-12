@@ -158,10 +158,19 @@ export type ResolveColumns = (
 ) => FrameColumn[];
 
 // The manifest entry shape frame's shells consume — the frontend projection of the
-// backend AdminResourceDefinition, plus the one frontend overlay (`columns`).
+// backend `ResourceDefinition`, plus the one frontend overlay (`columns`).
+//
+// There is deliberately no `model` here (schemastud/laravel-frame ADR-0002): a resource is
+// backed, not modelled, and the manifest never names an Eloquent class. The PHP definition still
+// carries one server-side for the write gate; it is hidden from the wire and from this type.
 export interface AdminResourceDefinition {
     key: string;
-    model: string;
+    /**
+     * The GENERATED type of a list row, in dot form — `Vendor.Package.Data.RowData`, the exact
+     * name `typescript:transform` emits — never a PHP class-string. Informational on the client:
+     * a type name is not something to `import()`, it is the label that says which generated
+     * interface these rows are.
+     */
     data: string;
     query: string | null;
     editData: string | null;
