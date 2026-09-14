@@ -64,7 +64,7 @@ export {
 } from './columnKinds';
 export { getPath } from './getPath';
 export { createFormResolver, kindOfSchema } from './FormResolver';
-export { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
+export { resolveWidgetFor, FRAME_CONTEXT_KEYWORD, type ResolvedForContext } from './resolveWidgetFor';
 export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
 export { EditableCell, type EditableCellProps } from './EditableCell';

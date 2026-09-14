@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
-import { resolveWidgetFor } from '../src/resolveWidgetFor';
-import type { NodeParticipation } from '../src/contexts';
+import { FRAME_CONTEXT_KEYWORD, resolveWidgetFor } from '../src/resolveWidgetFor';
+import { KNOWN_CONTEXTS, type NodeParticipation } from '../src/contexts';
 
 /**
  * The context-aware resolver, proven against a REAL seam registry — the same
@@ -96,5 +96,108 @@ describe('resolveWidgetFor', () => {
         expect(res.participates).toBe(true);
         expect(res.widget).toBeUndefined();
         expect(res.unbound).toBe(true);
+    });
+
+    // --- The collection grain: overview ← summary (realm-dashboards ticket 01) ---
+
+    const StatRow = () => null;
+    const FigureCard = () => null;
+
+    function makeCardRegistry(): WidgetRegistry {
+        const r = createWidgetRegistry();
+        r.registerWidget('stat-row', StatRow);
+        r.registerWidget('figure-card', FigureCard);
+        return r;
+    }
+
+    it('overview unbound, inheritsBinding default → inherits the summary widget name', () => {
+        const r = makeCardRegistry();
+        const summary = part({ widget: 'stat-row' });
+        const res = resolveWidgetFor(node, 'overview', part({}), summary, r);
+        expect(res.participates).toBe(true);
+        expect(res.widget).toBe(StatRow);
+        expect(res.unbound).toBe(false);
+    });
+
+    it('overview deep-folds its own options over the summary options', () => {
+        const r = makeCardRegistry();
+        let seen: SchemaNode | undefined;
+        r.registerWidget((s) => {
+            seen = s;
+            return s['x-widget'] === 'stat-row';
+        }, StatRow);
+        const summary = part({ widget: 'stat-row', options: { figures: { count: true }, tone: 'muted' } });
+        resolveWidgetFor(node, 'overview', part({ options: { figures: { period: 'month' } } }), summary, r);
+        expect(seen?.['x-widget-options']).toEqual({ figures: { count: true, period: 'month' }, tone: 'muted' });
+    });
+
+    it('overview with its own widget name keeps it and still folds the summary options under its own', () => {
+        const r = makeCardRegistry();
+        let seen: SchemaNode | undefined;
+        r.registerWidget((s) => {
+            seen = s;
+            return false;
+        }, StatRow);
+        const summary = part({ widget: 'stat-row', options: { tone: 'muted', figures: 3 } });
+        const res = resolveWidgetFor(node, 'overview', part({ widget: 'figure-card', options: { tone: 'accent' } }), summary, r);
+        expect(res.widget).toBe(FigureCard);
+        expect(seen?.['x-widget']).toBe('figure-card');
+        // Folded: the summary's `figures` survives, the overview's own `tone` wins.
+        expect(seen?.['x-widget-options']).toEqual({ tone: 'accent', figures: 3 });
+    });
+
+    it('overview inheritsBinding:false → does NOT inherit the summary binding', () => {
+        const r = makeCardRegistry();
+        let seen: SchemaNode | undefined;
+        r.registerWidget((s) => {
+            seen = s;
+            return false;
+        }, StatRow);
+        const summary = part({ widget: 'stat-row', options: { tone: 'muted' } });
+        const res = resolveWidgetFor(node, 'overview', part({ inheritsBinding: false, options: { period: 'month' } }), summary, r);
+        expect(res.participates).toBe(true);
+        expect(res.widget).toBeUndefined();
+        expect(res.unbound).toBe(false);
+        expect(seen?.['x-widget']).toBeUndefined();
+        expect(seen?.['x-widget-options']).toEqual({ period: 'month' });
+    });
+
+    it('summary never cascades: it has no parent edge, even when a parent entry is handed in', () => {
+        const r = makeCardRegistry();
+        const stray = part({ widget: 'figure-card' });
+        const res = resolveWidgetFor(node, 'summary', part({}), stray, r);
+        expect(res.participates).toBe(true);
+        expect(res.widget).toBeUndefined();
+    });
+
+    it('stamps x-frame-context onto the schema the registry receives, for every context', () => {
+        const r = makeRegistry();
+        const resolveEntry = vi.spyOn(r, 'resolveEntry');
+        for (const ctx of KNOWN_CONTEXTS) {
+            resolveWidgetFor(node, ctx, part({}), undefined, r);
+            const schema = resolveEntry.mock.calls.at(-1)?.[0];
+            expect(schema?.[FRAME_CONTEXT_KEYWORD]).toBe(ctx);
+        }
+        expect(resolveEntry).toHaveBeenCalledTimes(KNOWN_CONTEXTS.length);
+    });
+
+    it('the stamp lets a context-default widget fire on a predicate for an unbound node', () => {
+        const r = makeCardRegistry();
+        r.registerWidget((s) => s[FRAME_CONTEXT_KEYWORD] === 'summary' && s['x-widget'] === undefined, StatRow);
+        const res = resolveWidgetFor(node, 'summary', part({}), undefined, r);
+        expect(res.widget).toBe(StatRow);
+        expect(res.unbound).toBe(false);
+        // A declared name still wins over the context default.
+        const named = resolveWidgetFor(node, 'summary', part({ widget: 'figure-card' }), undefined, r);
+        expect(named.widget).toBe(FigureCard);
+    });
+
+    it('the stamp rides the schema only — the resolved shape is byte-identical to before', () => {
+        const r = makeRegistry();
+        expect(resolveWidgetFor(node, 'summary', part({}), undefined, r)).toEqual({
+            widget: undefined,
+            participates: true,
+            unbound: false,
+        });
     });
 });

@@ -3,16 +3,32 @@ import type { FrameLayoutVariant } from './FrameLayout';
 // =============================================================================
 // frame runtime contexts — the WidgetContextRegistry wire contract (JS half).
 //
-// Five render contexts a resource participates in, and the per-node participation
+// Seven render contexts a resource participates in, and the per-node participation
 // entries emitted by the PHP side. These types MUST match the PHP wire contract
 // exactly; the client folds un-merged options at resolve time. See resolveWidgetFor.
 // =============================================================================
 
 /**
- * The five render contexts. `list-item` lives at pointer "" (whole-record card
- * body); the other four are per-property.
+ * The seven render contexts, in three subject grains:
+ *
+ *  - property   `edit`, `detail`, `list-column`, `row-cell` — one field of one record;
+ *               live under a property pointer.
+ *  - record     `list-item` — one whole record (a card body, a row); lives at pointer "".
+ *  - collection `summary`, `overview` — the whole collection, compressed to figures
+ *               (`summary`) or expanded to a card with a body (`overview`); also at "".
+ *
+ * "A summary of THIS record" is `list-item`, not a new context. The PHP projector
+ * refuses a record or collection context on a property, so the client never sees one
+ * under a property pointer.
  */
-export type FrameContext = 'edit' | 'detail' | 'list-column' | 'list-item' | 'row-cell';
+export type FrameContext =
+    | 'edit'
+    | 'detail'
+    | 'list-column'
+    | 'list-item'
+    | 'row-cell'
+    | 'summary'
+    | 'overview';
 
 /**
  * Per-node participation entry. `widget` is a NAME only (never a component) —
@@ -29,9 +45,10 @@ export interface NodeParticipation {
 }
 
 /**
- * The per-resource contexts manifest. `byNode` keys: "" = resource root (only
- * `list-item` lives there); any other key = a property key. `inherits` is the
- * cascade graph on the wire; `known` echoes the enabled contexts.
+ * The per-resource contexts manifest. `byNode` keys: "" = resource root, carrying
+ * every class-level declaration (`list-item`, `summary`, `overview`, and the
+ * `#[RowActions]` `list-column` entry); any other key = a property key. `inherits`
+ * is the cascade graph on the wire; `known` echoes the enabled contexts.
  */
 export interface ContextManifest {
     byNode: Record<string, Partial<Record<FrameContext, NodeParticipation>>>;
@@ -107,12 +124,28 @@ export interface ContextManifest {
 }
 
 /** The full context vocabulary, in wire order. */
-export const KNOWN_CONTEXTS: FrameContext[] = ['edit', 'detail', 'list-column', 'list-item', 'row-cell'];
+export const KNOWN_CONTEXTS: FrameContext[] = [
+    'edit',
+    'detail',
+    'list-column',
+    'list-item',
+    'row-cell',
+    'summary',
+    'overview',
+];
 
 /**
- * The single cascade edge, in the single-parent form the resolver consumes:
- * `row-cell` inherits `edit`'s binding unless the node opts out (inheritsBinding:false)
- * or the parent binding is heavyweight (suppressed). The wire `inherits` block carries
- * the same edge as an array; this is the resolver-facing projection.
+ * The cascade edges, in the single-parent form the resolver consumes:
+ *
+ *  - `row-cell` inherits `edit`'s binding unless the node opts out
+ *    (inheritsBinding:false) or the parent binding is heavyweight (suppressed).
+ *  - `overview` inherits `summary`'s binding unless the node opts out, so a resource
+ *    that declares only a summary still renders an honest overview card.
+ *
+ * The wire `inherits` block carries the same edges as arrays; this is the
+ * resolver-facing projection.
  */
-export const INHERITS: Partial<Record<FrameContext, FrameContext>> = { 'row-cell': 'edit' };
+export const INHERITS: Partial<Record<FrameContext, FrameContext>> = {
+    'row-cell': 'edit',
+    overview: 'summary',
+};
