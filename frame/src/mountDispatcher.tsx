@@ -1,9 +1,8 @@
 import { createElement } from 'react';
 import { EditShell } from './EditShell';
 import { ListShell } from './ListShell';
-import type { ContextManifest } from './contexts';
 import type { RouteComponent } from './routes';
-import type { FormMode, FrameColumn, ListShellProps, RouteContextEntry } from './types';
+import type { FormMode, FrameColumn, ListShellProps, ManifestLookup, RouteContextEntry } from './types';
 import { WidgetShell } from './WidgetShell';
 
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
@@ -95,9 +94,10 @@ export interface MountDispatcherOptions {
      * The resource's context manifest. This is what makes a `list` leaf renderable: its `list-column`
      * participation IS the column set and order. A hook is the expected wiring
      * (`(resource) => useManifest(realm).data?.contexts[resource]`), so it is called during the dispatched
-     * component's render, never at dispatch time.
+     * component's render, never at dispatch time. The SAME `ManifestLookup` the injection's
+     * `manifestFor` carries (realm-dashboards ticket 03): a host wires one function for both.
      */
-    manifestFor?: (resource: string) => ContextManifest | undefined;
+    manifestFor?: ManifestLookup;
 
     /**
      * The resource's DECLARED form mode — `AdminResourceDefinition.form`, which every

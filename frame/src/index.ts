@@ -3,7 +3,7 @@
 // =============================================================================
 
 export { FrameProvider, useFrameInjection } from './context';
-export { ListShell } from './ListShell';
+export { ListShell, listItemRendersCards } from './ListShell';
 export { EditShell } from './EditShell';
 export { WidgetShell, WidgetSurface } from './WidgetShell';
 export {
@@ -67,6 +67,26 @@ export { createFormResolver, kindOfSchema } from './FormResolver';
 export { resolveWidgetFor, FRAME_CONTEXT_KEYWORD, type ResolvedForContext } from './resolveWidgetFor';
 export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
+export {
+    registerCardWidgets,
+    resolveDashboardCard,
+    CARD_WIDGETS,
+    StatRow,
+    FigureCard,
+    RecentList,
+    NavTile,
+    DashboardCard,
+    CardHeading,
+    type RegisterCardWidgetsOptions,
+    type SummaryFigure,
+    type SummaryPayload,
+    type OverviewPayload,
+    type DashboardRow,
+    type NavTilePayload,
+    type IconResolver,
+    type CardWidgetOptions,
+    type CardWidgetProps,
+} from './cards';
 export { EditableCell, type EditableCellProps } from './EditableCell';
 export { KNOWN_CONTEXTS, INHERITS } from './contexts';
 export type { FrameContext, NodeParticipation, ContextManifest } from './contexts';
@@ -113,6 +133,7 @@ export {
     DefaultToolbar,
     DefaultRowActions,
     createNoun,
+    DefaultCards,
     DefaultCell,
     DefaultEmpty,
     DefaultErrorState,
@@ -134,6 +155,7 @@ export type {
     FrameTransport,
     FramePrimitives,
     FrameInjection,
+    ManifestLookup,
     FormResolver,
     FrameColumn,
     ResolveColumns,
@@ -146,6 +168,7 @@ export type {
     ListSlots,
     ToolbarSlotProps,
     RowActionsSlotProps,
+    CardsSlotProps,
     CellSlotProps,
     ErrorSlotProps,
     PaginationSlotProps,

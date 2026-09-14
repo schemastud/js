@@ -5,6 +5,7 @@ import { useFrameInjection } from '../context';
 import { useRemoveResource } from '../data';
 import { getPath } from '../getPath';
 import type {
+    CardsSlotProps,
     CellSlotProps,
     ErrorSlotProps,
     FormBodySlotProps,
@@ -275,6 +276,38 @@ export function DefaultTable(props: {
                 ))}
             </tbody>
         </table>
+    );
+}
+
+/**
+ * Frame's cards-path default (realm-dashboards ticket 03): an auto-fill grid of the resolved
+ * per-row `Card`. Inline styles like every other default here — a host's Tailwind does not
+ * scan `node_modules` — and the gap rides the `--density-gap` token so `[data-density]` at
+ * the deployment root re-treats the grid with zero JS, exactly as the table's row rhythm does.
+ * The cell, not the card, carries `onOpen`: a card body is the resource's own `list-item`
+ * rendering and knows nothing about being clickable.
+ */
+export function DefaultCards({ rows, onOpen, Card }: CardsSlotProps) {
+    return (
+        <div
+            data-frame-slot="Cards"
+            style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(18rem, 1fr))',
+                gap: 'var(--density-gap, 1rem)',
+            }}
+        >
+            {rows.map((row, i) => (
+                <div
+                    key={(row.id as string) ?? i}
+                    data-frame-card-cell
+                    onClick={onOpen ? () => onOpen(row) : undefined}
+                    style={{ minWidth: 0, cursor: onOpen ? 'pointer' : undefined }}
+                >
+                    <Card record={row} />
+                </div>
+            ))}
+        </div>
     );
 }
 

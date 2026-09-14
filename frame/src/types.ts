@@ -57,6 +57,16 @@ export interface FramePrimitives extends FacetsPrimitives {
     Page?: ComponentType<any>;
 }
 
+/**
+ * Another resource's context manifest, by key. THE ONE shape for this lookup: the mount
+ * dispatcher's `manifestFor` option and the injection's `manifestFor` below are both this
+ * type, so a host wires one function (`(resource) => manifest.contexts[resource]`) and hands
+ * it to both — the two cannot drift. A hook is the expected wiring, so it is called during
+ * render, never at dispatch time; `undefined` is the normal answer while the manifest query
+ * is in flight and for a resource this host does not mount.
+ */
+export type ManifestLookup = (resource: string) => import('./contexts').ContextManifest | undefined;
+
 // -----------------------------------------------------------------------------
 // The one injection bundle carried by <FrameProvider>. Generalizes seam's
 // (schemaFetcher + registry + intent bus) and facets' three seams into one, and
@@ -69,6 +79,15 @@ export interface FrameInjection {
     registry: WidgetRegistry;
     schemaFetcher: SchemaFetcher;
     can: FrameCan;
+    /**
+     * Look up ANOTHER resource's context manifest (realm-dashboards ticket 03). A shell is
+     * handed its own manifest as a prop; a card on a dashboard renders a row that names a
+     * different resource (`{ resource: 'tenants', context: 'summary', … }`) and must resolve
+     * that resource's root `summary`/`overview` entry, so the lookup rides the injection.
+     * Optional so every existing consumer still compiles — absent, `dashboard-card` and
+     * `recent-list` render nothing for a row that needs it (a drop, never a throw).
+     */
+    manifestFor?: ManifestLookup;
     /**
      * Optional host-side hook bus. When present, frame fires `onSubmitted` after a
      * successful save (see EditShell). Optional so existing consumers still compile;
@@ -346,10 +365,40 @@ export interface CellSlotProps {
     record: Row;
 }
 
+/**
+ * Props for the cards slot — the list shell's SECOND row surface (realm-dashboards ticket 03),
+ * taken instead of `Table` when the resource's root `list-item` entry resolves a card renderer.
+ */
+export interface CardsSlotProps {
+    resource: string;
+    rows: Row[];
+    manifest: import('./contexts').ContextManifest;
+    /** The root node the `list-item` entry resolved against (the resource's list/filter schema). */
+    schema: SchemaNode;
+    onOpen?: (record: Row) => void;
+    /**
+     * Frame's per-row card body: `SchemaView` at context `list-item`, bound to this resource's
+     * manifest and registry. A host `Cards` slot lays these out however it likes (a masonry, a
+     * carousel) and keeps the resolved rendering; one that wants its own row rendering ignores it.
+     */
+    Card: ComponentType<{ record: Row }>;
+}
+
 export interface ListSlots {
     Toolbar: ComponentType<ToolbarSlotProps>;
     Filters: ComponentType<any>;
     Table: ComponentType<any>;
+    /**
+     * The grid the cards path lays rows out in. Optional like `ErrorState`, and for the same
+     * reason: a host that builds a whole `ListSlots` object must keep compiling. Frame's own
+     * `DefaultCards` is an auto-fill grid riding the `--density-gap` token.
+     *
+     * ⚠️ This slot does not DECIDE the path — the manifest does (root `list-item` resolves a
+     * component). Naming it only says how cards are laid out once that decision is made, so a
+     * host cannot turn a table into cards by supplying it, and a table consumer that never
+     * declares `list-item` never sees it.
+     */
+    Cards?: ComponentType<CardsSlotProps>;
     Cell: ComponentType<CellSlotProps>;
     /**
      * The row's action controls. Supplying it here (or per page) renders it UNCONDITIONALLY —

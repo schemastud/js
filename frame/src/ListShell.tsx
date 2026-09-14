@@ -5,7 +5,10 @@ import { useFrameInjection } from './context';
 import { getPath } from './getPath';
 import { resolveColumns } from './resolveColumns';
 import { EditableCell } from './EditableCell';
+import { SchemaView } from './SchemaView';
+import { resolveWidgetFor } from './resolveWidgetFor';
 import {
+    DefaultCards,
     DefaultCell,
     DefaultEmpty,
     DefaultErrorState,
@@ -68,7 +71,33 @@ export function ListShell({
     // resolved component as such so the shell can thread sort state to slots that
     // render sortable headers (the plain default simply ignores it).
     const Table: ComponentType<any> = slots?.Table ?? listSlots?.Table ?? DefaultTable;
+    const Cards = slots?.Cards ?? listSlots?.Cards ?? DefaultCards;
     const Cell = slots?.Cell ?? listSlots?.Cell ?? DefaultCell;
+    // The cards path (realm-dashboards ticket 03). The root node a `list-item` entry resolves
+    // against is the resource's list/filter schema — the same node `withEditableCells` reads its
+    // properties from — with a bare object standing in until it arrives.
+    const rootSchema = useMemo<SchemaNode>(
+        () => (filters.schema as SchemaNode | undefined) ?? { type: 'object' },
+        [filters.schema],
+    );
+    const cardsPath = manifest ? listItemRendersCards(manifest, rootSchema, registry) : false;
+    // Memoized for the same reason `BoundRowActions` is: the Cards slot receives a COMPONENT
+    // TYPE, and a fresh closure per render would remount every card on every render.
+    const BoundCard = useMemo(
+        () =>
+            manifest
+                ? ({ record }: { record: Row }) => (
+                      <SchemaView
+                          schema={rootSchema}
+                          record={record}
+                          manifest={manifest}
+                          context="list-item"
+                          registry={registry}
+                      />
+                  )
+                : () => null,
+        [manifest, rootSchema, registry],
+    );
     // The verbs the RESOURCE declared. Frame's own row-actions column appears only when this is
     // non-empty — the gate is the DECLARATION, never the availability of a component. Gating it
     // on the design-system preset instead would have grown a delete column on every list at the
@@ -165,26 +194,63 @@ export function ListShell({
                 <>
                     {/* Top bar gets breathing room below it before the table header. */}
                     {showTopPagination && <div className="mb-3">{paginationBar}</div>}
-                    <Table
-                        columns={resolvedColumns}
-                        rows={rows}
-                        onOpen={onOpen}
-                        Cell={Cell}
-                        RowActions={BoundRowActions}
-                        sort={{
-                            // Column headers and the facets-bar Sort control share ONE
-                            // `sort` param — the shadcn Table slot renders click-to-sort
-                            // headers for any column whose `sortField` the resource lists.
-                            sort: filters.sort,
-                            onSortChange: filters.onSortChange,
-                            sortableFields: filters.sortableFields,
-                        }}
-                    />
+                    {cardsPath && manifest ? (
+                        <Cards
+                            resource={resource}
+                            rows={rows}
+                            manifest={manifest}
+                            schema={rootSchema}
+                            onOpen={onOpen}
+                            Card={BoundCard}
+                        />
+                    ) : (
+                        <Table
+                            columns={resolvedColumns}
+                            rows={rows}
+                            onOpen={onOpen}
+                            Cell={Cell}
+                            RowActions={BoundRowActions}
+                            sort={{
+                                // Column headers and the facets-bar Sort control share ONE
+                                // `sort` param — the shadcn Table slot renders click-to-sort
+                                // headers for any column whose `sortField` the resource lists.
+                                sort: filters.sort,
+                                onSortChange: filters.onSortChange,
+                                sortableFields: filters.sortableFields,
+                            }}
+                        />
+                    )}
                     {showBottomPagination && paginationBar}
                 </>
             )}
         </div>
     );
+}
+
+/**
+ * Does this resource's list render as CARDS (realm-dashboards ticket 03)? True when the root
+ * `list-item` entry participates AND resolves a COMPONENT through the registry — a declared
+ * widget name the registry knows, or a host-registered `list-item` context default.
+ *
+ * ⚠️ Participation alone is deliberately NOT the gate, and the reason is measured, not
+ * cautious: `splicewire/tower`'s `ThreadData` and `CompositionData` both declare a class-level
+ * `#[WidgetIn('list-item')]` with no widget name AND `#[Column]` columns, and both mount as
+ * `mounts: 'list'` leaves through the manifest router today. Under a participation gate each
+ * would flip from its working table to a grid of `JSON.stringify(record)` — `SchemaView`'s
+ * unbound scalar default is the only thing an unbound root can render (`SchemaView.tsx`'s
+ * `scalar()`), and a dashboard must never show it for a real record. "Participates but nothing
+ * can draw it" therefore keeps the table, byte-identically; the moment a renderer resolves,
+ * cards win. The gate asks the same question the card will: can frame draw this row?
+ */
+export function listItemRendersCards(
+    manifest: ContextManifest,
+    schema: SchemaNode,
+    registry: ReturnType<typeof useFrameInjection>['registry'],
+): boolean {
+    const cm = manifest.byNode['']?.['list-item'];
+    if (!cm?.participates) return false;
+    const { widget } = resolveWidgetFor(schema, 'list-item', cm, undefined, registry);
+    return widget !== undefined && typeof widget !== 'string';
 }
 
 /**
