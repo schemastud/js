@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createWidgetRegistry, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { FRAME_CONTEXT_KEYWORD, resolveWidgetFor } from '../src/resolveWidgetFor';
 import { KNOWN_CONTEXTS, type NodeParticipation } from '../src/contexts';
@@ -162,6 +162,23 @@ describe('resolveWidgetFor', () => {
         expect(seen?.['x-widget-options']).toEqual({ period: 'month' });
     });
 
+    it('an opted-out summary lends NO binding: neither its widget name nor its options reach overview', () => {
+        const r = makeCardRegistry();
+        let seen: SchemaNode | undefined;
+        r.registerWidget((s) => {
+            seen = s;
+            return false;
+        }, StatRow);
+        // `participates: false` is a refusal to render, not a binding to inherit.
+        const summary = part({ participates: false, widget: 'stat-row', options: { a: 1 } });
+        const res = resolveWidgetFor(node, 'overview', part({ options: { b: 2 } }), summary, r);
+        expect(res.participates).toBe(true);
+        expect(res.widget).toBeUndefined();
+        expect(res.unbound).toBe(false);
+        expect(seen?.['x-widget']).toBeUndefined();
+        expect(seen?.['x-widget-options']).toStrictEqual({ b: 2 });
+    });
+
     it('summary never cascades: it has no parent edge, even when a parent entry is handed in', () => {
         const r = makeCardRegistry();
         const stray = part({ widget: 'figure-card' });
@@ -170,15 +187,17 @@ describe('resolveWidgetFor', () => {
         expect(res.widget).toBeUndefined();
     });
 
-    it('stamps x-frame-context onto the schema the registry receives, for every context', () => {
-        const r = makeRegistry();
-        const resolveEntry = vi.spyOn(r, 'resolveEntry');
+    it('the stamp is readable by a predicate in every one of the seven contexts', () => {
+        // Asserted through BEHAVIOUR — a per-context predicate widget that can only fire if
+        // the stamp reached the registry — rather than by observing the resolveEntry call.
         for (const ctx of KNOWN_CONTEXTS) {
-            resolveWidgetFor(node, ctx, part({}), undefined, r);
-            const schema = resolveEntry.mock.calls.at(-1)?.[0];
-            expect(schema?.[FRAME_CONTEXT_KEYWORD]).toBe(ctx);
+            const r = makeRegistry();
+            const ContextWidget = () => null;
+            r.registerWidget((s) => s[FRAME_CONTEXT_KEYWORD] === ctx, ContextWidget);
+            const res = resolveWidgetFor(node, ctx, part({}), undefined, r);
+            expect(res.participates).toBe(true);
+            expect(res.widget).toBe(ContextWidget);
         }
-        expect(resolveEntry).toHaveBeenCalledTimes(KNOWN_CONTEXTS.length);
     });
 
     it('the stamp lets a context-default widget fire on a predicate for an unbound node', () => {
@@ -194,7 +213,7 @@ describe('resolveWidgetFor', () => {
 
     it('the stamp rides the schema only — the resolved shape is byte-identical to before', () => {
         const r = makeRegistry();
-        expect(resolveWidgetFor(node, 'summary', part({}), undefined, r)).toEqual({
+        expect(resolveWidgetFor(node, 'summary', part({}), undefined, r)).toStrictEqual({
             widget: undefined,
             participates: true,
             unbound: false,

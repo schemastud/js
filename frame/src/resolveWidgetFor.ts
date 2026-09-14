@@ -44,10 +44,15 @@ export function resolveWidgetFor(
     registry: WidgetRegistry,
 ): ResolvedForContext {
     if (!cm?.participates) return { widget: undefined, participates: false };
+    // An OPTED-OUT parent lends nothing. A `participates: false` entry is a declaration that
+    // the node does not render in that context at all, so neither its widget name nor its
+    // options may travel down the cascade edge — an absent parent and a refusing one are the
+    // same thing to the child.
+    const lender = parent?.participates ? parent : undefined;
     const cascades = ctx !== 'edit' && cm.inheritsBinding !== false && Boolean(INHERITS[ctx]);
-    const suppressed = ctx === 'row-cell' && cascades && parent?.heavyweight === true; // heavyweight-in-a-cell
-    const name = cm.widget ?? (cascades && !suppressed ? parent?.widget : undefined);
-    const folded = cascades && !suppressed ? mergeOptions(parent?.options, cm.options) : cm.options;
+    const suppressed = ctx === 'row-cell' && cascades && lender?.heavyweight === true; // heavyweight-in-a-cell
+    const name = cm.widget ?? (cascades && !suppressed ? lender?.widget : undefined);
+    const folded = cascades && !suppressed ? mergeOptions(lender?.options, cm.options) : cm.options;
     const schema: SchemaNode = {
         ...node,
         ...(name ? { 'x-widget': name } : {}),
