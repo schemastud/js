@@ -6,7 +6,7 @@ import { getPath } from './getPath';
 import { resolveColumns } from './resolveColumns';
 import { EditableCell } from './EditableCell';
 import { SchemaView } from './SchemaView';
-import { resolveWidgetFor } from './resolveWidgetFor';
+import { listItemRendersCards } from './listItemRendersCards';
 import {
     DefaultCards,
     DefaultCell,
@@ -227,31 +227,9 @@ export function ListShell({
     );
 }
 
-/**
- * Does this resource's list render as CARDS (realm-dashboards ticket 03)? True when the root
- * `list-item` entry participates AND resolves a COMPONENT through the registry — a declared
- * widget name the registry knows, or a host-registered `list-item` context default.
- *
- * ⚠️ Participation alone is deliberately NOT the gate, and the reason is measured, not
- * cautious: `splicewire/tower`'s `ThreadData` and `CompositionData` both declare a class-level
- * `#[WidgetIn('list-item')]` with no widget name AND `#[Column]` columns, and both mount as
- * `mounts: 'list'` leaves through the manifest router today. Under a participation gate each
- * would flip from its working table to a grid of `JSON.stringify(record)` — `SchemaView`'s
- * unbound scalar default is the only thing an unbound root can render (`SchemaView.tsx`'s
- * `scalar()`), and a dashboard must never show it for a real record. "Participates but nothing
- * can draw it" therefore keeps the table, byte-identically; the moment a renderer resolves,
- * cards win. The gate asks the same question the card will: can frame draw this row?
- */
-export function listItemRendersCards(
-    manifest: ContextManifest,
-    schema: SchemaNode,
-    registry: ReturnType<typeof useFrameInjection>['registry'],
-): boolean {
-    const cm = manifest.byNode['']?.['list-item'];
-    if (!cm?.participates) return false;
-    const { widget } = resolveWidgetFor(schema, 'list-item', cm, undefined, registry);
-    return widget !== undefined && typeof widget !== 'string';
-}
+// The cards gate lives in its own module (a card asks it too, of another resource); the
+// shell re-exports it so the public import path is unchanged.
+export { listItemRendersCards };
 
 /**
  * FC-23 wiring: turn a resolved column into an editable-in-place cell ONLY when

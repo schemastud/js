@@ -1,8 +1,15 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { STAT_TONES, StatTile } from '../src/index';
+import { StatTile, type StatTone } from '../src/index';
 
 afterEach(cleanup);
+
+/**
+ * Spelled out here rather than imported: the tone list is the component's INTERNAL business,
+ * and a test that iterates whatever the component exports would pass for any list it ships,
+ * including one that lost a tone. The literal is the second instrument.
+ */
+const TONES: StatTone[] = ['default', 'active', 'busy', 'warn', 'danger'];
 
 const Glyph = ({ className }: { className?: string }) => <svg data-testid="glyph" className={className} />;
 
@@ -21,13 +28,13 @@ describe('StatTile', () => {
     });
 
     it('omits the glyph well entirely when no icon is given', () => {
-        const { container } = render(<StatTile label="Open bills" value="$1,240" />);
+        render(<StatTile label="Open bills" value="$1,240" />);
 
         expect(screen.getByText('$1,240')).toBeTruthy();
-        expect(container.querySelector('.bg-muted\\/60')).toBeNull();
+        expect(screen.queryByTestId('glyph')).toBeNull();
     });
 
-    it.each(STAT_TONES)('tone "%s" maps to a semantic token class, not a literal colour', (tone) => {
+    it.each(TONES)('tone "%s" maps to a semantic token class, not a literal colour', (tone) => {
         const { container } = render(<StatTile label="x" value={1} icon={Glyph} tone={tone} />);
         const well = screen.getByTestId('glyph').parentElement!;
 

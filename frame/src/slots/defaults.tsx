@@ -2,6 +2,7 @@ import { SchemaForm } from '@schemastud/seam';
 import type { ComponentType, ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useFrameInjection } from '../context';
+import { dashboardRowRenders } from '../cards';
 import { useRemoveResource } from '../data';
 import { getPath } from '../getPath';
 import type {
@@ -286,8 +287,17 @@ export function DefaultTable(props: {
  * the deployment root re-treats the grid with zero JS, exactly as the table's row rhythm does.
  * The cell, not the card, carries `onOpen`: a card body is the resource's own `list-item`
  * rendering and knows nothing about being clickable.
+ *
+ * ⚠️ A row that will draw NOTHING takes its cell with it. A dashboard row naming a resource
+ * this host does not mount drops (`dashboard-card`'s no-throw contract) — and a cell kept for
+ * it is an empty grid track the viewer reads as a card that failed to load, which is exactly
+ * the impression the drop exists to avoid. The question is asked once, here, by the same
+ * resolver the card will use.
  */
 export function DefaultCards({ rows, onOpen, Card }: CardsSlotProps) {
+    const { manifestFor, registry } = useFrameInjection();
+    const visible = rows.filter((row) => dashboardRowRenders(row, manifestFor, registry));
+
     return (
         <div
             data-frame-slot="Cards"
@@ -297,7 +307,7 @@ export function DefaultCards({ rows, onOpen, Card }: CardsSlotProps) {
                 gap: 'var(--density-gap, 1rem)',
             }}
         >
-            {rows.map((row, i) => (
+            {visible.map((row, i) => (
                 <div
                     key={(row.id as string) ?? i}
                     data-frame-card-cell

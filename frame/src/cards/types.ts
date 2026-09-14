@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import type { StatTone } from '@schemastud/ui';
 import type { FrameContext } from '../contexts';
@@ -75,9 +75,24 @@ export interface NavTilePayload {
  */
 export type IconResolver = (name: string | null | undefined) => ComponentType<{ className?: string }> | undefined;
 
+/**
+ * A host's navigation primitive, the same seam `@schemastud/nav`'s `ExpandableNav` takes as
+ * `renderLink`. Frame ships none: a raw `<a href>` full-page-reloads an Inertia or router
+ * host. The host passes one to {@link registerCardWidgets} and every anchor a card draws —
+ * the heading link, "View all", the whole nav tile — goes through it. Absent, cards render a
+ * plain anchor carrying frame's own `data-frame-*` marker.
+ */
+export type CardLinkRenderer = (props: {
+    href: string;
+    className?: string;
+    children: ReactNode;
+    'aria-label'?: string;
+}) => ReactNode;
+
 /** The registry config every card entry carries — reaches a widget as `options`. */
 export interface CardWidgetOptions {
     iconFor?: IconResolver;
+    renderLink?: CardLinkRenderer;
     [key: string]: unknown;
 }
 

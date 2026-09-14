@@ -6,13 +6,13 @@ import { FigureCard } from './FigureCard';
 import { RecentList } from './RecentList';
 import { NavTile } from './NavTile';
 import { DashboardCard } from './DashboardCard';
-import type { IconResolver } from './types';
+import type { CardLinkRenderer, IconResolver } from './types';
 
-export { StatRow, CardHeading } from './StatRow';
+export { StatRow } from './StatRow';
 export { FigureCard } from './FigureCard';
 export { RecentList } from './RecentList';
 export { NavTile } from './NavTile';
-export { DashboardCard, resolveDashboardCard } from './DashboardCard';
+export { DashboardCard, dashboardRowRenders, resolveDashboardCard } from './DashboardCard';
 export type {
     SummaryFigure,
     SummaryPayload,
@@ -20,6 +20,7 @@ export type {
     DashboardRow,
     NavTilePayload,
     IconResolver,
+    CardLinkRenderer,
     CardWidgetOptions,
     CardWidgetProps,
 } from './types';
@@ -39,6 +40,12 @@ export const CARD_WIDGETS: Record<
 export interface RegisterCardWidgetsOptions {
     /** The host's icon-name → glyph resolver; reaches every card as `options.iconFor`. */
     iconFor?: IconResolver;
+    /**
+     * The host's navigation primitive; reaches every card as `options.renderLink` and is what
+     * every anchor a card draws goes through. Absent, a card draws a plain `<a href>` — correct
+     * markup, but a full page load under a router host.
+     */
+    renderLink?: CardLinkRenderer;
 }
 
 // Registries already carrying the card set — a WeakSet so a registry that goes out of scope
@@ -66,7 +73,7 @@ const installed = new WeakSet<WidgetRegistry>();
  */
 export function registerCardWidgets(registry: WidgetRegistry, options: RegisterCardWidgetsOptions = {}): void {
     if (installed.has(registry)) return;
-    const config = { iconFor: options.iconFor };
+    const config = { iconFor: options.iconFor, renderLink: options.renderLink };
 
     registry.registerWidget(
         (s) => s[FRAME_CONTEXT_KEYWORD] === 'summary' && !s['x-widget'],

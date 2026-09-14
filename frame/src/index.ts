@@ -76,7 +76,7 @@ export {
     RecentList,
     NavTile,
     DashboardCard,
-    CardHeading,
+    dashboardRowRenders,
     type RegisterCardWidgetsOptions,
     type SummaryFigure,
     type SummaryPayload,
@@ -84,6 +84,7 @@ export {
     type DashboardRow,
     type NavTilePayload,
     type IconResolver,
+    type CardLinkRenderer,
     type CardWidgetOptions,
     type CardWidgetProps,
 } from './cards';

@@ -14,6 +14,7 @@ import {
     StatRow,
     registerCardWidgets,
     resolveDashboardCard,
+    type CardLinkRenderer,
     type DashboardRow,
     type SummaryPayload,
 } from '../src/cards';
@@ -224,12 +225,30 @@ describe('resolveDashboardCard — overview → summary → the context default'
         expect(resolveDashboardCard(row({ context: 'overview' }), m, registry).widget).toBe(FigureCard);
     });
 
-    it('a tier bound to a name the registry does not know is skipped, not rendered', () => {
+    it('a tier bound to a name the registry does not know STOPS the chain as unbound', () => {
+        // The declaration named something. Falling through to the next tier (or the default)
+        // would dress a typo as a working card with nothing on screen to say so — and would
+        // contradict what `registerCardWidgets` and `listItemRendersCards` answer for the
+        // same unknown name.
         const m = manifest({
             summary: { participates: true, widget: 'tenant-card' },
             overview: { participates: true, widget: 'unregistered-overview' },
         });
-        expect(resolveDashboardCard(row({ context: 'overview' }), m, registry).widget).toBe(HostCard);
+        const resolved = resolveDashboardCard(row({ context: 'overview' }), m, registry);
+
+        expect(resolved.unbound).toBe(true);
+        expect(resolved.widget).toBeUndefined();
+        expect(resolved.declared).toBe('unregistered-overview');
+    });
+
+    it('a summary row reads the SUMMARY tier — an overview binding never answers for it', () => {
+        // Kills "the chain is always ['overview', 'summary']": a summary row whose target
+        // declares only an overview must land on the summary DEFAULT, not the overview widget.
+        const m = manifest({ overview: { participates: true, widget: 'tenant-card' } });
+        const resolved = resolveDashboardCard(row({ context: 'summary' }), m, registry);
+
+        expect(resolved.widget).toBe(StatRow);
+        expect(resolved.tier).toBe('default');
     });
 });
 
@@ -309,6 +328,111 @@ describe('DashboardCard', () => {
         expect(screen.getByText('Usage')).toBeTruthy();
         expect(screen.getByText('Spend')).toBeTruthy();
         expect(manifestFor).not.toHaveBeenCalled();
+    });
+
+    it('a tier bound to a name nothing registered draws the UNBOUND marker, never the default card', () => {
+        const wrapper = setup({ bills: manifest({ overview: { participates: true, widget: 'typo' } }) });
+        const { container } = render(
+            <DashboardCard value={row({ resource: 'bills', context: 'overview', summary: summary({ key: 'bills', label: 'Bills' }) })} />,
+            { wrapper },
+        );
+
+        expect(container.querySelector('[data-frame-view-error]')?.textContent).toContain('typo');
+        expect(container.querySelector('[data-frame-card="figure-card"]')).toBeNull();
+        expect(container.querySelector('[data-frame-card="stat-row"]')).toBeNull();
+    });
+
+    it('an overview row that falls back to the summary binding keeps the overview chrome', () => {
+        // The row asked for an overview and the server sent one. Mounting the summary widget
+        // bare would drop `headline` / `period` / `note` with no trace.
+        const wrapper = setup({ bills: manifest({ summary: { participates: true, widget: 'stat-row' } }) });
+        const payload = summary({
+            key: 'bills',
+            label: 'Bills',
+            figures: [{ key: 'open', label: 'Open', value: 3 }],
+            overview: {
+                headline: { key: 'total', label: 'Period total', value: '$1,240' },
+                items: [],
+                period: 'Current period · 2026-09',
+                note: 'Excludes voided bills',
+            },
+        });
+        const { container } = render(
+            <DashboardCard value={row({ resource: 'bills', context: 'overview', summary: payload })} />,
+            { wrapper },
+        );
+
+        expect(container.querySelector('[data-frame-card="overview-frame"]')).toBeTruthy();
+        expect(container.querySelector('[data-frame-card="stat-row"]')).toBeTruthy();
+        expect(container.querySelector('[data-frame-figure="total"]')?.textContent).toBe('$1,240');
+        expect(screen.getByText('Current period · 2026-09')).toBeTruthy();
+        expect(screen.getByText('Excludes voided bills')).toBeTruthy();
+        expect(container.querySelectorAll('[data-stat-tile]')).toHaveLength(1);
+    });
+});
+
+// -----------------------------------------------------------------------------------------
+// 3b. renderLink — frame ships no navigation primitive.
+// -----------------------------------------------------------------------------------------
+
+describe('renderLink', () => {
+    const renderLink: CardLinkRenderer = ({ href, className, children }) => (
+        <button type="button" data-testid="router-link" data-href={href} className={className}>
+            {children}
+        </button>
+    );
+
+    /** Exactly what `SchemaView` hands a mounted widget: the matched registry entry's config. */
+    function setup() {
+        const registry = createWidgetRegistry();
+        registerCardWidgets(registry, { renderLink });
+        return {
+            options: registry.resolveEntry({ 'x-widget': 'dashboard-card' }).config,
+            wrapper: wrap(
+                makeInjection(registry, {
+                    tenants: manifest({ summary: { participates: true } }),
+                    bills: manifest(undefined),
+                }),
+            ),
+        };
+    }
+
+    const links = (container: HTMLElement) => Array.from(container.querySelectorAll('[data-testid="router-link"]'));
+
+    it('draws the heading link through the host renderer, and no raw anchor', () => {
+        const { options, wrapper } = setup();
+        const { container } = render(<DashboardCard value={row()} options={options} />, { wrapper });
+
+        expect(container.querySelector('a')).toBeNull();
+        expect(links(container)).toHaveLength(1);
+        expect(links(container)[0].getAttribute('data-href')).toBe('/operator/tenants');
+    });
+
+    it('draws "View all" through the host renderer, and no raw anchor', () => {
+        const { options, wrapper } = setup();
+        const { container } = render(
+            <DashboardCard value={row({ resource: 'bills', context: 'overview' })} options={options} />,
+            { wrapper },
+        );
+
+        expect(container.querySelector('a')).toBeNull();
+        expect(links(container).map((n) => n.textContent)).toContain('View all →');
+    });
+
+    it('draws the whole nav tile through the host renderer, and no raw anchor', () => {
+        const { options, wrapper } = setup();
+        const { container } = render(
+            <DashboardCard
+                value={row({ resource: 'usage', context: 'nav', label: 'Usage', href: '/operator/usage', summary: null })}
+                options={options}
+            />,
+            { wrapper },
+        );
+
+        expect(container.querySelector('a')).toBeNull();
+        expect(links(container)).toHaveLength(1);
+        expect(links(container)[0].getAttribute('data-href')).toBe('/operator/usage');
+        expect(screen.getByText('Usage')).toBeTruthy();
     });
 });
 
@@ -409,7 +533,9 @@ describe('leaf cards', () => {
             />,
         );
         expect(container.querySelector('[data-frame-figure="total"]')?.textContent).toBe('$1,240');
-        expect(container.querySelectorAll('.rounded-md.border.p-2')).toHaveLength(2);
+        // The headline plus one sub-tile per figure — counted by the attribute the card stamps,
+        // not by the utility classes it happens to be styled with.
+        expect(container.querySelectorAll('[data-frame-figure]')).toHaveLength(3);
         expect(container.querySelector('[data-frame-figure="draft"]')?.textContent).toContain('2');
         expect(screen.getByText('Current period · 2026-09')).toBeTruthy();
         expect(screen.getByText('Excludes voided bills')).toBeTruthy();
@@ -420,7 +546,8 @@ describe('leaf cards', () => {
             <FigureCard value={summary({ figures: [{ key: 'total', label: 'Period total', value: '$1,240' }, { key: 'draft', label: 'Draft', value: 2 }] })} />,
         );
         expect(container.querySelector('[data-frame-figure="total"]')?.textContent).toBe('$1,240');
-        expect(container.querySelectorAll('.rounded-md.border.p-2')).toHaveLength(1);
+        // The leading figure is spent on the headline slot, so one sub-tile remains: two in all.
+        expect(container.querySelectorAll('[data-frame-figure]')).toHaveLength(2);
     });
 
     it('NavTile: uses the host icon resolver, else the label initial; nothing without an href', () => {

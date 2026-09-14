@@ -1,5 +1,5 @@
-import type { ComponentType } from 'react';
 import { StatTile } from '@schemastud/ui';
+import { CardHeading, EmptyState } from './chrome';
 import type { CardWidgetProps, SummaryPayload } from './types';
 
 /**
@@ -15,11 +15,9 @@ export function StatRow({ value, options, row }: CardWidgetProps<SummaryPayload>
 
     return (
         <section data-frame-card="stat-row" className="space-y-2">
-            <CardHeading label={label} href={row?.href} Icon={Icon} />
+            <CardHeading label={label} href={row?.href} Icon={Icon} options={options} />
             {figures.length === 0 ? (
-                <div className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-                    No figures.
-                </div>
+                <EmptyState>No figures.</EmptyState>
             ) : (
                 <div
                     className="grid gap-3"
@@ -36,35 +34,5 @@ export function StatRow({ value, options, row }: CardWidgetProps<SummaryPayload>
                 </div>
             )}
         </section>
-    );
-}
-
-/** The small uppercase heading every card shares; a link when the row carries an href. */
-export function CardHeading({
-    label,
-    href,
-    Icon,
-}: {
-    label: string;
-    href?: string;
-    Icon?: ComponentType<{ className?: string }>;
-}) {
-    const body = (
-        <>
-            {Icon ? <Icon className="size-3.5" /> : null}
-            <span className="truncate">{label}</span>
-        </>
-    );
-    const className =
-        'flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground';
-
-    return href ? (
-        <a href={href} data-frame-card-heading className={`${className} hover:text-foreground`}>
-            {body}
-        </a>
-    ) : (
-        <h3 data-frame-card-heading className={className}>
-            {body}
-        </h3>
     );
 }

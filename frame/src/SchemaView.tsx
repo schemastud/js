@@ -40,6 +40,40 @@ function scalar(value: unknown): string {
 }
 
 /**
+ * The prop bundle a read surface mounts a resolved widget with: the value twice (widgets
+ * written against RJSF read `formData`, ones written against the seam read `value`), the node
+ * it resolved against, the read-only hints, and the matched registry config as `options`.
+ *
+ * Exported because `dashboard-card` mounts a widget the same way and had re-implemented this
+ * bundle field-for-field; two copies of it drift the day one of them gains a prop.
+ */
+export function widgetMountProps(value: unknown, schema: SchemaNode, options?: Record<string, unknown>) {
+    return { value, formData: value, schema, readOnly: true, disabled: true, options: options ?? {} };
+}
+
+/**
+ * How frame shows a binding that NAMED a widget the registry could not resolve — the honest
+ * marker, never a plausible-looking default standing in for a typo. `SchemaView` draws it for
+ * an unbound heavyweight field; `dashboard-card` draws it for an unbound summary/overview tier.
+ */
+export function UnboundWidget({
+    label,
+    widget,
+    kind = 'unbound-heavyweight',
+}: {
+    label: string;
+    widget: unknown;
+    kind?: string;
+}): ReactNode {
+    return (
+        <div data-frame-view={kind}>
+            <span data-frame-view-label>{label}</span>
+            <span data-frame-view-error>[unbound widget: {String(widget)}]</span>
+        </div>
+    );
+}
+
+/**
  * Mount a single resolved node read-only. A resolved COMPONENT gets the value +
  * read-only hints; everything else (miss, string widget name, non-participating)
  * renders the read-only scalar default.
@@ -69,12 +103,7 @@ function ViewNode({
                 `[frame] SchemaView: heavyweight widget "${cm.widget}" is unbound (no registry match) for context "${ctx}".`,
             );
         }
-        return (
-            <div data-frame-view="unbound-heavyweight">
-                <span data-frame-view-label>{label}</span>
-                <span data-frame-view-error>[unbound widget: {String(cm?.widget)}]</span>
-            </div>
-        );
+        return <UnboundWidget label={label} widget={cm?.widget} />;
     }
 
     // A resolved COMPONENT renders read-only; a string widget name (RJSF-only) or a
@@ -85,14 +114,7 @@ function ViewNode({
         <div data-frame-view="field">
             <span data-frame-view-label>{label}</span>
             {Widget ? (
-                <Widget
-                    value={value}
-                    formData={value}
-                    schema={node}
-                    readOnly
-                    disabled
-                    options={resolved.config ?? {}}
-                />
+                <Widget {...widgetMountProps(value, node, resolved.config)} />
             ) : (
                 <span data-frame-view-value>{scalar(value)}</span>
             )}

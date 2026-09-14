@@ -164,13 +164,15 @@ describe('ListShell — the cards path', () => {
         expect(container.innerHTML).not.toContain('{"resource"');
     });
 
-    it('a row whose target manifest is missing drops — the other cards still render', async () => {
+    it('a row whose target manifest is missing drops — cell and all', async () => {
         const rows = [...DASHBOARD_ROWS, { ...DASHBOARD_ROWS[0], resource: 'ghost', label: 'Ghost' }];
         const { container } = render(<ListShell resource="operator-dashboard" columns={[]} manifest={DASHBOARD} />, {
             wrapper: wrap(makeInjection(rows as Row[])),
         });
 
-        await waitFor(() => expect(cards(container)).toHaveLength(4));
+        // Four rows, three of them drawable: the ghost takes its CELL with it, rather than
+        // leaving an empty grid track that reads as a card which failed to load.
+        await waitFor(() => expect(cards(container)).toHaveLength(3));
         expect(container.querySelectorAll('[data-frame-card="dashboard-card"]')).toHaveLength(2);
         expect(screen.queryByText('Ghost')).toBeNull();
     });
@@ -218,13 +220,24 @@ describe('ListShell — the table path is untouched', () => {
         expect(container.querySelector('[data-frame-slot="Cards"]')).toBeNull();
     });
 
-    it("a root that PARTICIPATES but binds nothing (tower's threads/compositions shape) keeps its table", async () => {
+    it("a root that PARTICIPATES but binds nothing (tower's threads/compositions shape) renders the SAME markup as no root entry at all", async () => {
+        // "Byte-identical" is a claim about two renders, so the test compares two renders. The
+        // only difference between the manifests is the participating-but-unbound root entry; if
+        // it changed one byte of the table — a wrapper, an attribute, a JSON.stringify(record)
+        // where a row used to be — this equality is what says so.
+        const baseline = render(<ListShell resource="threads" columns={[]} manifest={TABLE} />, {
+            wrapper: wrap(makeInjection(TABLE_ROWS)),
+        });
+        await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
+        const withoutRootEntry = baseline.container.innerHTML;
+        cleanup();
+
         const { container } = render(<ListShell resource="threads" columns={[]} manifest={PARTICIPATES_UNBOUND} />, {
             wrapper: wrap(makeInjection(TABLE_ROWS)),
         });
-
         await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
-        expect(screen.getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Identifier', 'Title']);
+
+        expect(container.innerHTML).toBe(withoutRootEntry);
         expect(container.querySelector('[data-frame-slot="Cards"]')).toBeNull();
         // And, crucially, no JSON.stringify(record) anywhere — the unbound scalar default was never reached.
         expect(container.innerHTML).not.toContain('{"id"');

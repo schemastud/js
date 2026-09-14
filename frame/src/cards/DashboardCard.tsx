@@ -1,15 +1,13 @@
-import type { ComponentType } from 'react';
-import type { SchemaNode, WidgetRegistry } from '@schemastud/seam';
+import type { ReactNode } from 'react';
+import type { WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from '../context';
 import { INHERITS, type ContextManifest, type FrameContext, type NodeParticipation } from '../contexts';
-import { resolveWidgetFor, type ResolvedForContext } from '../resolveWidgetFor';
+import { isWidgetComponent, resolveWidgetFor, type ResolvedForContext } from '../resolveWidgetFor';
+import { UnboundWidget, widgetMountProps } from '../SchemaView';
+import { OverviewFrame, ROOT_NODE } from './chrome';
 import { NavTile } from './NavTile';
-import type { CardWidgetProps, DashboardRow, SummaryPayload } from './types';
-
-const ROOT_NODE: SchemaNode = { type: 'object' };
-
-const isComponent = (widget: ResolvedForContext['widget']): widget is ComponentType<any> =>
-    widget !== undefined && typeof widget !== 'string';
+import type { ManifestLookup, Row } from '../types';
+import type { CardWidgetOptions, CardWidgetProps, DashboardRow, SummaryPayload } from './types';
 
 /**
  * A root entry counts as a binding only when it PARTICIPATES. A `#[Summary(false)]` opt-out
@@ -25,6 +23,17 @@ function bindingOf(
     return cm?.participates ? cm : undefined;
 }
 
+export interface DashboardCardResolution extends ResolvedForContext {
+    /**
+     * WHICH declaration produced this widget — `'overview'` / `'summary'` for a named binding
+     * (an overview that merely inherited the summary's name reports `'summary'`, because that
+     * is the widget that will draw), `'default'` for the row context's registry default.
+     */
+    tier: 'overview' | 'summary' | 'default';
+    /** The widget name the declaration asked for, when it asked for one. */
+    declared?: string;
+}
+
 /**
  * The fallback chain for a dashboard row against its target's manifest:
  * `overview` (when the row asks for it and the target participates) → `summary` (when the
@@ -33,15 +42,19 @@ function bindingOf(
  *
  * The cascade parent is derived HERE from the manifest (`byNode['']?.[INHERITS[ctx]]`) —
  * `SchemaView` passes `undefined` for every context, so an `overview` resolved through it
- * never cascades; a card is the one surface where `overview ← summary` has to. A tier whose
- * entry names a widget the registry does not know is skipped rather than rendered: the
- * declaration nominated, nothing authorized, and the next tier still answers honestly.
+ * never cascades; a card is the one surface where `overview ← summary` has to.
+ *
+ * ⚠️ A tier whose declared name resolves to NO component STOPS the chain (`unbound`), it does
+ * not fall through. The declaration named something; taking the next tier or the default would
+ * dress a typo as a working card and there would be nothing on the screen to say so. That is
+ * the same answer `registerCardWidgets` and `listItemRendersCards` give for an unknown name,
+ * and all three now agree.
  */
 export function resolveDashboardCard(
     row: DashboardRow,
     manifest: ContextManifest,
     registry: WidgetRegistry,
-): ResolvedForContext {
+): DashboardCardResolution {
     const root = manifest.byNode[''] ?? {};
     const own: Extract<FrameContext, 'summary' | 'overview'> = row.context === 'overview' ? 'overview' : 'summary';
     const chain: Extract<FrameContext, 'summary' | 'overview'>[] = own === 'overview' ? ['overview', 'summary'] : ['summary'];
@@ -49,11 +62,46 @@ export function resolveDashboardCard(
     for (const ctx of chain) {
         const cm = bindingOf(root, ctx);
         if (!cm) continue;
-        const resolved = resolveWidgetFor(ROOT_NODE, ctx, cm, bindingOf(root, INHERITS[ctx]), registry);
-        if (isComponent(resolved.widget)) return resolved;
+        const lender = bindingOf(root, INHERITS[ctx]);
+        const resolved = resolveWidgetFor(ROOT_NODE, ctx, cm, lender, registry);
+        // The name actually in play: the tier's own, else the one it inherited across the
+        // cascade edge. It is what the unbound marker has to be able to say.
+        const inherited = cm.widget === undefined && cm.inheritsBinding !== false ? lender?.widget : undefined;
+        const declared = cm.widget ?? inherited;
+        if (resolved.unbound || isWidgetComponent(resolved.widget)) {
+            // A widget the tier only INHERITED is the lender's widget, and it draws the lender's
+            // rendering — so the overview chrome is still this row's to supply.
+            return { ...resolved, tier: inherited !== undefined ? (INHERITS[ctx] as 'summary') : ctx, declared };
+        }
     }
 
-    return resolveWidgetFor(ROOT_NODE, own, { participates: true }, undefined, registry);
+    return {
+        ...resolveWidgetFor(ROOT_NODE, own, { participates: true }, undefined, registry),
+        tier: 'default',
+    };
+}
+
+/**
+ * Will this row draw ANYTHING? The question `DefaultCards` asks before it lays out a cell, so
+ * a row that drops takes its cell with it instead of leaving an empty grid track where a card
+ * ought to be. A row that is not a dashboard row is not this function's business (an ordinary
+ * resource's cards path renders through `SchemaView` and always draws something); a `'nav'` row
+ * needs no lookup at all; an unbound tier DOES draw — its honest marker.
+ */
+export function dashboardRowRenders(
+    record: Row,
+    manifestFor: ManifestLookup | undefined,
+    registry: WidgetRegistry,
+): boolean {
+    const row = record as Partial<DashboardRow>;
+    if (typeof row.context !== 'string' || typeof row.resource !== 'string') return true;
+    if (row.context === 'nav') return true;
+
+    const manifest = manifestFor?.(row.resource);
+    if (!manifest) return false;
+
+    const resolved = resolveDashboardCard(row as DashboardRow, manifest, registry);
+    return resolved.unbound === true || isWidgetComponent(resolved.widget);
 }
 
 /**
@@ -61,6 +109,11 @@ export function resolveDashboardCard(
  * `context` to the TARGET resource's root entry (see {@link resolveDashboardCard}) and mounts
  * the resolved card with the row's `summary` payload; a `'nav'` row draws a {@link NavTile}
  * without any lookup.
+ *
+ * An `overview` row that fell back to the target's SUMMARY binding is mounted inside the
+ * {@link OverviewFrame} — heading, headline, period, note — with the summary widget as the
+ * body. The row asked for an overview and the server sent an overview payload; rendering the
+ * summary widget bare would drop `headline`/`period`/`note` on the floor with no trace.
  *
  * A row whose target manifest this host cannot reach (a contributed card naming a resource
  * the host does not mount, or a manifest still in flight) renders NOTHING — it drops, it
@@ -85,7 +138,16 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
     if (!manifest) return null;
 
     const resolved = resolveDashboardCard(row, manifest, registry);
-    if (!isComponent(resolved.widget)) return null;
+    const cell = (body: ReactNode) => (
+        <div data-frame-card="dashboard-card" data-frame-card-resource={row.resource} data-frame-card-context={row.context}>
+            {body}
+        </div>
+    );
+
+    if (resolved.unbound) {
+        return cell(<UnboundWidget kind="unbound" label={row.label} widget={resolved.declared} />);
+    }
+    if (!isWidgetComponent(resolved.widget)) return null;
     const Widget = resolved.widget;
 
     const payload: SummaryPayload = row.summary ?? {
@@ -94,18 +156,23 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
         icon: row.icon,
         figures: [],
     };
+    const merged: CardWidgetOptions = { ...(options ?? {}), ...(resolved.config ?? {}) };
+    const body = <Widget {...widgetMountProps(payload, ROOT_NODE, merged)} row={row} />;
 
-    return (
-        <div data-frame-card="dashboard-card" data-frame-card-resource={row.resource} data-frame-card-context={row.context}>
-            <Widget
-                value={payload}
-                formData={payload}
-                schema={ROOT_NODE}
-                readOnly
-                disabled
-                options={{ ...(options ?? {}), ...(resolved.config ?? {}) }}
-                row={row}
-            />
-        </div>
+    if (row.context !== 'overview' || resolved.tier !== 'summary') return cell(body);
+
+    return cell(
+        <OverviewFrame
+            card="overview-frame"
+            label={payload.label ?? row.label}
+            Icon={merged.iconFor?.(payload.icon ?? row.icon)}
+            href={row.href}
+            period={payload.overview?.period ?? undefined}
+            note={payload.overview?.note ?? undefined}
+            headline={payload.overview?.headline ?? undefined}
+            options={merged}
+        >
+            {body}
+        </OverviewFrame>,
     );
 }

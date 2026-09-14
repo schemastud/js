@@ -10,8 +10,6 @@ import { cn } from './cn';
  */
 export type StatTone = 'default' | 'active' | 'busy' | 'warn' | 'danger';
 
-export const STAT_TONES: readonly StatTone[] = ['default', 'active', 'busy', 'warn', 'danger'];
-
 const TONE_CLASS: Record<StatTone, string> = {
     default: 'text-muted-foreground',
     active: 'text-signal',

@@ -29,6 +29,16 @@ function mergeOptions(a?: Record<string, unknown>, b?: Record<string, unknown>) 
     return mergeUiSchema(a as any, b as any) as Record<string, unknown>;
 }
 
+/**
+ * Did the registry answer with a mountable COMPONENT? The one shape of this question: a
+ * resolution is either a component, a bare RJSF widget NAME (a string the seam registry
+ * passes through to RJSF, which no read surface can mount), or a miss.
+ */
+export const isWidgetComponent = (
+    widget: ResolvedWidget['widget'],
+): widget is Exclude<ResolvedWidget['widget'], string | undefined> =>
+    widget !== undefined && typeof widget !== 'string';
+
 export interface ResolvedForContext extends ResolvedWidget {
     /** Whether the node participates in this context at all. */
     participates: boolean;

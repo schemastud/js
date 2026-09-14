@@ -1,3 +1,4 @@
+import { CardLink } from './chrome';
 import type { CardWidgetProps, NavTilePayload } from './types';
 
 /**
@@ -5,16 +6,21 @@ import type { CardWidgetProps, NavTilePayload } from './types';
  * description? }`, nothing else: the tile is realm-blind and reads only what the nav
  * contribution stamped. With no icon resolver (or an unknown name) it draws the label's
  * initial in the glyph well rather than nothing, so a row of tiles keeps its rhythm.
+ *
+ * The whole tile IS the link, so it goes through the host's injected `renderLink` like every
+ * other anchor a card draws — a nav tile that full-page-reloads is the worst offender of the
+ * five, since navigation is the only thing it does.
  */
 export function NavTile({ value, options }: CardWidgetProps<NavTilePayload>) {
     if (!value?.href) return null;
     const Icon = options?.iconFor?.(value.icon);
 
     return (
-        <a
+        <CardLink
             href={value.href}
-            data-frame-card="nav-tile"
             className="group flex items-center gap-3 rounded-md border bg-card p-3 text-card-foreground transition-colors hover:border-primary/40 hover:bg-muted/40"
+            marker={{ 'data-frame-card': 'nav-tile' }}
+            options={options}
         >
             <span
                 aria-hidden
@@ -34,6 +40,6 @@ export function NavTile({ value, options }: CardWidgetProps<NavTilePayload>) {
                     </span>
                 ) : null}
             </span>
-        </a>
+        </CardLink>
     );
 }

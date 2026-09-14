@@ -20,6 +20,29 @@ part — the primitive a host account/app shell hangs its nav on), and `cn`.
 2. **No app coupling — ever.** No `@/…`, no `sonner`, no `ziggy-js`, no `@inertiajs/*`.
    Enforced on every build by `npm run lint:imports` (rehome-components §8b).
 
+## Semantic tone tokens
+
+`StatTile` is the one primitive whose `tone` prop reaches past the shadcn base palette. The
+five tones resolve to exactly four token classes plus the muted default:
+
+| tone | class |
+|---|---|
+| `default` | `text-muted-foreground` |
+| `active` | `text-signal` |
+| `busy` | `text-info` |
+| `warn` | `text-warning` |
+| `danger` | `text-destructive` |
+
+`text-destructive` comes with any shadcn theme. The other three do **not**: a host must declare
+`--color-signal`, `--color-info` and `--color-warning` in its `@theme` block. The flagship's
+`~/Herd/splicewire-app/ui/src/index.css` is the worked example — `--color-signal: var(--signal);`
+and its two siblings, each pointing at a token the theme already defines in light and dark.
+
+An undeclared token renders **untoned**, never a raw hue: Tailwind simply emits no rule for the
+class, the glyph well keeps its inherited colour, and the tile stays legible. That is the whole
+reason nothing here names a hue — a host re-treats a tone by re-declaring the token, never by
+forking the component.
+
 ## Consuming under Tailwind v4
 
 Tailwind v4 ignores symlinked `node_modules` by default, so a consumer must scan this

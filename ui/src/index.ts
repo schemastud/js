@@ -99,4 +99,4 @@ export {
 export { DataTable, type ServerPagination, type DataTableSort } from './DataTable';
 export { SidePanel, type SidePanelProps } from './side-panel';
 export { ListState, ListSkeleton } from './list-state';
-export { StatTile, STAT_TONES, type StatTileProps, type StatTone } from './stat-tile';
+export { StatTile, type StatTileProps, type StatTone } from './stat-tile';
