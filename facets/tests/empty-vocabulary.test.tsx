@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FacetsProvider } from '../src/context';
@@ -128,6 +128,16 @@ function mount(schema: FilterSchema) {
 afterEach(cleanup);
 
 describe('an empty filter vocabulary', () => {
+    it('keeps sorting usable without saved-view support and never fetches saved views', async () => {
+        const transport = mount(POPULATED);
+        const sort = await screen.findByLabelText('Sort by');
+        fireEvent.change(sort, { target: { value: 'created_at' } });
+        expect((sort as HTMLSelectElement).value).toBe('created_at');
+        expect(screen.queryByText('Save current view')).toBeNull();
+        expect(screen.queryByText('Saved views')).toBeNull();
+        expect(transport.getSavedFilters).not.toHaveBeenCalled();
+    });
+
     it.each([
         { label: 'no properties', schema: EMPTY },
         {
@@ -152,9 +162,13 @@ describe('an empty filter vocabulary', () => {
 
     it('still renders the bar when the resource DOES declare a vocabulary', async () => {
         // The negative case. Without it, `return null` unconditionally would pass the test above.
-        const transport = mount(POPULATED);
+        const transport = mount({
+            ...POPULATED,
+            savedViewsResource: 'personal-views',
+        });
 
         expect(await screen.findByLabelText('Sort by')).toBeDefined();
+        expect(await screen.findByText('Save current view')).toBeDefined();
         await waitFor(() => expect(transport.getSavedFilters).toHaveBeenCalledWith('thing'));
     });
 });

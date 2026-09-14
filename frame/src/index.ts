@@ -174,3 +174,10 @@ export {
     type UseUrlState,
     type FilterSchema,
 } from '@schemastud/facets';
+
+export {
+    createResourceTransport,
+    type FrameCrudTransport,
+    type ResourceFilterHttp,
+    type FilterSchemaResponse,
+} from './resourceTransport';

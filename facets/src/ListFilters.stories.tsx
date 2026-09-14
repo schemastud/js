@@ -7,7 +7,7 @@ import { MockFacetsProvider, type TransportFixtures } from './story-harness';
 /**
  * Facets/ListFilters (component-seams ticket 16). The generalized facets surface every
  * list mounts: the `FacetsBar` over the resource's schema PLUS `SavedViews` for that
- * same resource — save/list/apply/delete come along for free. It is pure wiring over
+ * same resource when its schema advertises saved-view support. It is pure wiring over
  * `useListFilters(resource)`; a new list mounts by spreading the hook result. Renders
  * nothing until the schema resolves. Catalogued here through the real keystone hook so
  * the story exercises the actual URL⇄filter contract, not a hand-built state object.

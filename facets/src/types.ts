@@ -62,6 +62,8 @@ export interface FilterSchemaProperty {
 }
 
 export interface FilterSchema {
+    /** Application capability metadata, normalized from the schema response envelope. */
+    savedViewsResource?: string;
     properties: Record<string, FilterSchemaProperty>;
 }
 

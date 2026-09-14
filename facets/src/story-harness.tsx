@@ -57,6 +57,7 @@ export const mockPrimitives: FacetsPrimitives = {
 // renders: a leading `search` facet, a relational `select` + `multiselect` (both
 // option-backed via `optionsRef`), an inline `text` facet, plus two sortable fields.
 export const DEMO_SCHEMA: FilterSchema = {
+    savedViewsResource: 'demo-views',
     properties: {
         name: {
             title: 'Name',
