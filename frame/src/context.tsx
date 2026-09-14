@@ -15,7 +15,11 @@ const installedRegistries = new WeakSet<WidgetRegistry>();
 function ensureBuiltinWidgets(registry: WidgetRegistry | undefined | null): void {
     // Tolerate a missing/partial registry (a host that hasn't wired one, or a test
     // partial). Don't hard-crash; there is simply nothing to install into.
-    if (!registry || typeof registry !== 'object' || typeof registry.registerWidget !== 'function') {
+    if (
+        !registry ||
+        typeof registry !== 'object' ||
+        typeof registry.registerWidget !== 'function'
+    ) {
         return;
     }
     if (installedRegistries.has(registry)) return;
@@ -30,7 +34,7 @@ function ensureBuiltinWidgets(registry: WidgetRegistry | undefined | null): void
 /**
  * One provider at the app root carrying the whole FrameInjection bundle. It also
  * wires the sub-contexts frame's shells lean on: facets' provider (transport +
- * primitives + URL-state, which useListFilters reads) and seam's WidgetRegistry
+ * primitives + URL-state + host permissions) and seam's WidgetRegistry
  * context (which SchemaForm resolves widgets through). A host sets this up once.
  */
 export function FrameProvider({ value, children }: { value: FrameInjection; children: ReactNode }) {
@@ -45,8 +49,9 @@ export function FrameProvider({ value, children }: { value: FrameInjection; chil
             transport: value.transport,
             primitives: value.primitives,
             useUrlState: value.useUrlState,
+            can: value.can,
         }),
-        [value.transport, value.primitives, value.useUrlState],
+        [value.transport, value.primitives, value.useUrlState, value.can]
     );
 
     return (
@@ -65,7 +70,7 @@ export function useFrameInjection(): FrameInjection {
     const injection = useContext(FrameContext);
     if (!injection) {
         throw new Error(
-            '@schemastud/frame: no FrameProvider found. Wrap your app in <FrameProvider value={{ transport, primitives, useUrlState, registry, schemaFetcher, can }}>.',
+            '@schemastud/frame: no FrameProvider found. Wrap your app in <FrameProvider value={{ transport, primitives, useUrlState, registry, schemaFetcher, can }}>.'
         );
     }
     return injection;

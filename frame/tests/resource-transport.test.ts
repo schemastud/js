@@ -29,16 +29,24 @@ function fixture() {
         remove: vi.fn(async () => undefined),
     };
     let reference: string | null | undefined = 'team-views';
-    const read = vi.fn(async (url: string, _params?: Record<string, string>) =>
-        url.includes('/options/')
-            ? { data: [{ value: 'open', label: 'Open' }] }
-            : {
-                  data: {
-                      properties: {},
-                      savedViewsResource: 'untrusted-schema-value',
+    let permissions: { create: boolean; update: boolean; delete: boolean } | null | undefined = {
+        create: false,
+        update: false,
+        delete: false,
+    };
+    const read = vi.fn(
+        async (url: string, _params?: Record<string, string>): Promise<unknown> =>
+            url.includes('/options/')
+                ? { data: [{ value: 'open', label: 'Open' }] }
+                : {
+                      data: {
+                          properties: {},
+                          savedViewsResource: 'untrusted-schema-value',
+                          savedViewsCan: { create: true, update: true, delete: true },
+                      },
+                      savedViewsResource: reference,
+                      savedViewsCan: permissions,
                   },
-                  savedViewsResource: reference,
-              },
     );
     const transport = createResourceTransport(crud, {
         resourceUrl: (resource) => `/realm/resources/${resource}`,
@@ -53,15 +61,45 @@ function fixture() {
         support: (value: typeof reference) => {
             reference = value;
         },
+        permissions: (value: typeof permissions) => {
+            permissions = value;
+        },
     };
 }
 
 describe('resource behavior composition', () => {
+    it('discovers declared variants and requests the selected resource schema', async () => {
+        const { transport, read } = fixture();
+        const variants = {
+            resource: 'papers',
+            variants: [
+                { key: 'papers', resource: 'papers', canonical: true, sameAsCanonical: true },
+                {
+                    key: 'recent/papers',
+                    resource: 'papers',
+                    canonical: false,
+                    sameAsCanonical: false,
+                },
+            ],
+        };
+        read.mockResolvedValueOnce({ data: variants });
+        expect(await transport.getFilterVariants('papers')).toEqual(variants);
+        expect(read).toHaveBeenLastCalledWith(
+            '/realm/resources/papers/filters/variants',
+            undefined,
+        );
+        await transport.getFilterSchema('papers', 'recent/papers');
+        expect(read).toHaveBeenLastCalledWith(
+            '/realm/resources/papers/filters/recent%2Fpapers/schema',
+            undefined,
+        );
+    });
     it('preserves resource, option reference and search, and normalizes envelope metadata', async () => {
         const { transport, read } = fixture();
         expect(await transport.getFilterSchema('articles')).toEqual({
             properties: {},
             savedViewsResource: 'team-views',
+            savedViewsCan: { create: false, update: false, delete: false },
         });
         expect(await transport.getFilterOptions('articles', 'owner/name', 'Ada & Lin')).toEqual([
             { value: 'open', label: 'Open' },
@@ -87,6 +125,23 @@ describe('resource behavior composition', () => {
         expect(crud.list).toHaveBeenNthCalledWith(2, 'team-views', {
             'filter[resource]': 'articles',
             page: '2',
+            perPage: '25',
+        });
+    });
+
+    it('discovers variant-only saved views and forwards the selected variant to ordinary CRUD listing', async () => {
+        const { transport, read, crud, records } = fixture();
+        read.mockImplementation(async (url) => ({
+            data: { properties: {} },
+            savedViewsResource: url.endsWith('/recent/schema') ? 'recent-views' : null,
+        }));
+        expect(await transport.getSavedFilters('articles')).toEqual([]);
+        expect(crud.list).not.toHaveBeenCalled();
+        expect(await transport.getSavedFilters('articles', 'recent')).toEqual(records);
+        expect(crud.list).toHaveBeenCalledWith('recent-views', {
+            'filter[resource]': 'articles',
+            filterVariant: 'recent',
+            page: '1',
             perPage: '25',
         });
     });
@@ -126,6 +181,15 @@ describe('resource behavior composition', () => {
             ).toBeUndefined();
             expect(await transport.getSavedFilters('articles')).toEqual([]);
             expect(crud.list).not.toHaveBeenCalled();
+        },
+    );
+
+    it.each([null, undefined])(
+        'does not promote schema properties into mutation permission when envelope metadata is %s',
+        async (value) => {
+            const { transport, permissions } = fixture();
+            permissions(value);
+            expect((await transport.getFilterSchema('articles')).savedViewsCan).toBeUndefined();
         },
     );
 

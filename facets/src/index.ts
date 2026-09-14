@@ -1,5 +1,10 @@
 // Injection seam
-export { FacetsProvider, FacetsResourceProvider, useFacetsInjection, useFacetsResource } from './context';
+export {
+    FacetsProvider,
+    FacetsResourceProvider,
+    useFacetsInjection,
+    useFacetsResource,
+} from './context';
 
 // Surface components
 export { FacetsBar } from './FacetsBar';
@@ -15,6 +20,7 @@ export type { ListFilters as ListFiltersState } from './useListFilters';
 // Data hooks (over injected transport)
 export {
     useFilterSchema,
+    useFilterVariants,
     useFilterOptions,
     useSavedFilters,
     useSaveFilter,
@@ -22,13 +28,7 @@ export {
 } from './data';
 
 // Sort vocabulary (shared with the host DataTable)
-export {
-    parseSort,
-    serializeSort,
-    toggleSortKey,
-    sortStateFor,
-    type SortKey,
-} from './sort';
+export { parseSort, serializeSort, toggleSortKey, sortStateFor, type SortKey } from './sort';
 
 // Canonical x-filter / x-sort types + injection contracts
 export type {
@@ -38,6 +38,9 @@ export type {
     SortDescriptor,
     FilterSchemaProperty,
     FilterSchema,
+    ResourceMutationPermissions,
+    FilterVariant,
+    FilterVariants,
     FilterOption,
     SavedFilterQueryParameters,
     SavedFilter,

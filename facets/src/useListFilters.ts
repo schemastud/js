@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useFacetsInjection } from './context';
-import { useFilterSchema } from './data';
-import type { FilterSchema, SavedFilterQueryParameters } from './types';
+import { filterSchemaOptions, useFilterSchema, useFilterVariants } from './data';
+import { parseSort, serializeSort } from './sort';
+import type { FilterSchema, FilterVariant, SavedFilterQueryParameters } from './types';
 
 /**
  * The one keystone hook every list surface mounts to get the generalized facets
@@ -25,7 +27,10 @@ import type { FilterSchema, SavedFilterQueryParameters } from './types';
 export interface ListFilters {
     resource: string;
     schema: FilterSchema | undefined;
-    /** All query params (filter[...] + sort + anything else) for the list query. */
+    variants: FilterVariant[];
+    filterVariant: string | null;
+    onVariantChange: (variant: string | null) => void;
+    /** All query params, including filterVariant, for the ordinary list request. */
     requestParams: Record<string, string>;
     /** Decoded `filter[...]` values, keyed by each descriptor's query name. */
     filterValues: Record<string, string>;
@@ -38,9 +43,9 @@ export interface ListFilters {
     /** Set/clear the shared `sort` param. */
     onSortChange: (value: string | null) => void;
     /** Apply a saved view, pruning keys the resource no longer declares. */
-    applyView: (params: SavedFilterQueryParameters) => void;
+    applyView: (params: SavedFilterQueryParameters) => Promise<void>;
     /**
-     * The current filter/sort fingerprint — changes iff a facet or the sort changed.
+     * The current filter/sort/variant fingerprint — changes when query behavior changes.
      * Feed it plus the list query's `isFetching` to `useFilterChangeDim` for the
      * DataTable's `loading`, so the table dims on a real re-filter but not on a
      * background refetch (poll / window-focus).
@@ -48,11 +53,11 @@ export interface ListFilters {
     filterFingerprint: string;
 }
 
-/** Serialize just the filter[...]/sort keys of a URLSearchParams for change detection. */
+/** Serialize the filter, sort and variant keys for query-change detection. */
 function filterFingerprint(searchParams: URLSearchParams): string {
     const parts: string[] = [];
     for (const [key, value] of searchParams.entries()) {
-        if (key.startsWith('filter[') || key === 'sort') {
+        if (key.startsWith('filter[') || key === 'sort' || key === 'filterVariant') {
             parts.push(`${key}=${value}`);
         }
     }
@@ -60,9 +65,20 @@ function filterFingerprint(searchParams: URLSearchParams): string {
 }
 
 export function useListFilters(resource: string): ListFilters {
-    const { useUrlState } = useFacetsInjection();
+    const { useUrlState, transport } = useFacetsInjection();
+    const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useUrlState();
-    const schemaQuery = useFilterSchema(resource);
+    const applySequence = useRef(0);
+    const queryString = searchParams.toString();
+    useLayoutEffect(() => {
+        applySequence.current++;
+        return () => {
+            applySequence.current++;
+        };
+    }, [resource, queryString]);
+    const filterVariant = searchParams.get('filterVariant') || null;
+    const schemaQuery = useFilterSchema(resource, filterVariant ?? undefined);
+    const variantsQuery = useFilterVariants(resource);
     const schema = schemaQuery.data;
 
     const requestParams = Object.fromEntries(searchParams.entries());
@@ -90,20 +106,10 @@ export function useListFilters(resource: string): ListFilters {
         [schema],
     );
 
-    // Filter names the resource currently declares — used to prune a saved view
-    // whose resource has since dropped a filter, so an old view still applies.
-    const knownFilterNames = useMemo(
-        () =>
-            new Set(
-                Object.values(schema?.properties ?? {})
-                    .map((prop) => prop['x-filter']?.name)
-                    .filter((name): name is string => Boolean(name)),
-            ),
-        [schema],
-    );
-
     const setParam = (key: string, value: string | null) => {
+        applySequence.current++;
         setSearchParams((prev) => {
+            prev.delete('page');
             if (value === null || value === '') {
                 prev.delete(key);
             } else {
@@ -113,23 +119,58 @@ export function useListFilters(resource: string): ListFilters {
         });
     };
 
-    // Apply a saved view by replacing the filter[...]/sort state wholesale. Keys
-    // the resource no longer declares are silently ignored, so resource evolution
-    // never breaks a saved view.
-    const applyView = (params: SavedFilterQueryParameters) => {
-        setSearchParams((prev) => {
-            for (const key of [...prev.keys()]) {
-                if (key.startsWith('filter[') || key === 'sort') {
-                    prev.delete(key);
-                }
+    // Changing vocabulary or applying a view replaces the current query state,
+    // retaining unrelated host URL parameters.
+    const clearQuery = (params: URLSearchParams) => {
+        for (const key of [...params.keys()]) {
+            if (
+                key.startsWith('filter[') ||
+                key === 'sort' ||
+                key === 'filterVariant' ||
+                key === 'page'
+            ) {
+                params.delete(key);
             }
+        }
+    };
+
+    const onVariantChange = (variant: string | null) => {
+        applySequence.current++;
+        setSearchParams((previous) => {
+            clearQuery(previous);
+            if (variant) previous.set('filterVariant', variant);
+            return previous;
+        });
+    };
+
+    const applyView = async (params: SavedFilterQueryParameters) => {
+        const sequence = ++applySequence.current;
+        // Resolve the saved view's vocabulary before pruning. The currently displayed
+        // variant may declare entirely different filters and sorts.
+        const selectedSchema = await queryClient
+            .fetchQuery(filterSchemaOptions(transport, resource, params.filterVariant))
+            .catch((error: unknown) => {
+                if (sequence === applySequence.current) throw error;
+                return undefined;
+            });
+        // A newer view, manual query edit, navigation or unmount supersedes this request.
+        if (!selectedSchema || sequence !== applySequence.current) return;
+        const properties = Object.values(selectedSchema.properties ?? {});
+        const knownFilters = new Set(properties.map((property) => property['x-filter']?.name));
+        const knownSorts = new Set(properties.map((property) => property['x-sort']?.name));
+        setSearchParams((prev) => {
+            clearQuery(prev);
+            if (params.filterVariant) prev.set('filterVariant', params.filterVariant);
             for (const [name, value] of Object.entries(params.filter ?? {})) {
-                if (knownFilterNames.size === 0 || knownFilterNames.has(name)) {
+                if (knownFilters.has(name)) {
                     prev.set(`filter[${name}]`, value);
                 }
             }
-            if (params.sort) {
-                prev.set('sort', params.sort);
+            const sort = serializeSort(
+                parseSort(params.sort ?? null).filter((entry) => knownSorts.has(entry.field)),
+            );
+            if (sort) {
+                prev.set('sort', sort);
             }
             return prev;
         });
@@ -140,6 +181,9 @@ export function useListFilters(resource: string): ListFilters {
     return {
         resource,
         schema,
+        variants: variantsQuery.data?.variants ?? [],
+        filterVariant,
+        onVariantChange,
         requestParams,
         filterValues,
         sort,

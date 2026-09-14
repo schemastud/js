@@ -149,6 +149,7 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FrameTran
         remove: () => Promise.resolve(),
         // Facets seam — minimal valid shapes so the filter bar mounts without error.
         getFilterSchema: () => Promise.resolve({ properties: {} }),
+        getFilterVariants: (resource) => Promise.resolve({ resource, variants: [] }),
         getFilterOptions: () => Promise.resolve([]),
         getSavedFilters: () => Promise.resolve([]),
         saveFilter: (resource, payload) =>

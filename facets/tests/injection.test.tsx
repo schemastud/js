@@ -41,6 +41,7 @@ const SCHEMA: FilterSchema = {
 function makeTransport(): FacetsTransport {
     return {
         getFilterSchema: vi.fn(async () => SCHEMA),
+        getFilterVariants: vi.fn(async (resource) => ({ resource, variants: [] })),
         getFilterOptions: vi.fn(async () => []),
         getSavedFilters: vi.fn(async () => []),
         saveFilter: vi.fn(async () => ({

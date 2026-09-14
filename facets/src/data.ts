@@ -1,20 +1,49 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFacetsInjection, useFacetsResource } from './context';
-import type { FilterSchema, FilterOption, SavedFilter, SavedFilterQueryParameters } from './types';
+import type {
+    FacetsTransport,
+    FilterSchema,
+    FilterOption,
+    SavedFilterQueryParameters,
+} from './types';
 
 /**
- * The five list-surface data hooks, each resolving through the host-injected
- * transport (never a bundled HTTP client). Cache keys and stale times match the
- * app's former in-tree hooks so behaviour is identical after extraction.
+ * List-surface data hooks, each resolving through the host-injected
+ * transport (never a bundled HTTP client). Schema and saved-view cache keys
+ * distinguish the resource and selected variant.
  */
 
 /** The generated filter schema for a resource (carries x-filter / x-sort). */
-export function useFilterSchema(resource: string) {
+export function filterSchemaOptions(
+    transport: FacetsTransport,
+    resource: string,
+    variant?: string
+) {
+    return {
+        queryKey: ['filter-schema', resource, variant ?? null],
+        // A host's list-wide keepPreviousData default must not carry another
+        // resource or variant's vocabulary and permissions into this one.
+        placeholderData: undefined,
+        staleTime: 5 * 60_000,
+        queryFn: () =>
+            variant
+                ? transport.getFilterSchema(resource, variant)
+                : transport.getFilterSchema(resource),
+    };
+}
+
+export function useFilterSchema(resource: string, variant?: string) {
+    const { transport } = useFacetsInjection();
+    return useQuery(filterSchemaOptions(transport, resource, variant));
+}
+
+export function useFilterVariants(resource: string) {
     const { transport } = useFacetsInjection();
     return useQuery({
-        queryKey: ['filter-schema', resource],
+        queryKey: ['filter-variants', resource],
+        placeholderData: undefined,
         staleTime: 5 * 60_000,
-        queryFn: () => transport.getFilterSchema(resource),
+        queryFn: () => transport.getFilterVariants(resource),
     });
 }
 
@@ -31,19 +60,22 @@ export function useFilterOptions(ref: string | undefined, search: string, resour
         enabled: Boolean(ref) && Boolean(target),
         staleTime: 60_000,
         queryFn: () =>
-            transport.getFilterOptions(
-                target as string,
-                ref as string,
-                search,
-            ) as Promise<FilterOption[]>,
+            transport.getFilterOptions(target as string, ref as string, search) as Promise<
+                FilterOption[]
+            >,
     });
 }
 
-export function useSavedFilters(resource: string) {
+export function useSavedFilters(resource: string, enabled = true, variant?: string) {
     const { transport } = useFacetsInjection();
     return useQuery({
-        queryKey: ['saved-filters', resource],
-        queryFn: () => transport.getSavedFilters(resource) as Promise<SavedFilter[]>,
+        queryKey: ['saved-filters', resource, variant ?? null],
+        placeholderData: undefined,
+        enabled,
+        queryFn: () =>
+            variant
+                ? transport.getSavedFilters(resource, variant)
+                : transport.getSavedFilters(resource),
     });
 }
 
@@ -57,11 +89,14 @@ export function useSaveFilter(resource: string) {
     });
 }
 
-export function useDeleteSavedFilter(resource: string) {
+export function useDeleteSavedFilter(resource: string, variant?: string) {
     const { transport } = useFacetsInjection();
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: (id: string) => transport.deleteSavedFilter(resource, id),
+        mutationFn: (id: string) =>
+            variant
+                ? transport.deleteSavedFilter(resource, id, variant)
+                : transport.deleteSavedFilter(resource, id),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved-filters', resource] }),
     });
 }

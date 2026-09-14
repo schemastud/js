@@ -35,6 +35,7 @@ import type {
     FacetsTransport,
     FilterOption,
     FilterSchema,
+    FilterVariant,
     SavedFilter,
 } from './types';
 
@@ -58,6 +59,7 @@ export const mockPrimitives: FacetsPrimitives = {
 // option-backed via `optionsRef`), an inline `text` facet, plus two sortable fields.
 export const DEMO_SCHEMA: FilterSchema = {
     savedViewsResource: 'demo-views',
+    savedViewsCan: { create: true, update: true, delete: true },
     properties: {
         name: {
             title: 'Name',
@@ -114,6 +116,7 @@ const DEMO_SAVED_FILTERS: SavedFilter[] = [
         query_parameters: { filter: { status: 'draft' }, sort: '-createdAt' },
         visibility: 'private',
         is_default: false,
+        can: { create: true, update: true, delete: true },
     },
     {
         id: 'v2',
@@ -122,6 +125,7 @@ const DEMO_SAVED_FILTERS: SavedFilter[] = [
         query_parameters: { filter: { circuit: 'c1' } },
         visibility: 'private',
         is_default: false,
+        can: { create: true, update: true, delete: true },
     },
 ];
 
@@ -130,10 +134,13 @@ const NEVER = new Promise<never>(() => {});
 // ── Transport fixtures ──────────────────────────────────────────────────────────
 export interface TransportFixtures {
     schema?: FilterSchema;
+    variants?: FilterVariant[];
+    variantSchemas?: Record<string, FilterSchema>;
     options?: Record<string, FilterOption[]>;
     savedFilters?: SavedFilter[];
     /** Never-resolving reads so the surface parks on its loading path (deterministic). */
     loading?: boolean;
+    loadingSavedFilters?: boolean;
     /** `saveFilter` rejects with a 422-shaped error — the SavedViews error state. */
     saveRejects422?: boolean;
 }
@@ -141,16 +148,22 @@ export interface TransportFixtures {
 /** An in-memory `FacetsTransport` — resolves schema/options/saved-filters from fixtures. */
 export function createMockTransport(fixtures: TransportFixtures = {}): FacetsTransport {
     return {
-        getFilterSchema: () => {
+        getFilterSchema: (_resource, variant) => {
             if (fixtures.loading) return NEVER;
+            if (variant)
+                return fixtures.variantSchemas?.[variant]
+                    ? Promise.resolve(fixtures.variantSchemas[variant])
+                    : Promise.reject(new Error(`Unknown filter variant: ${variant}`));
             return Promise.resolve(fixtures.schema ?? DEMO_SCHEMA);
         },
+        getFilterVariants: (resource) =>
+            Promise.resolve({ resource, variants: fixtures.variants ?? [] }),
         getFilterOptions: (_resource, ref) => {
             if (fixtures.loading) return NEVER;
             return Promise.resolve((fixtures.options ?? DEMO_OPTIONS)[ref] ?? []);
         },
         getSavedFilters: () => {
-            if (fixtures.loading) return NEVER;
+            if (fixtures.loading || fixtures.loadingSavedFilters) return NEVER;
             return Promise.resolve(fixtures.savedFilters ?? DEMO_SAVED_FILTERS);
         },
         saveFilter: (resource, payload) => {
@@ -169,6 +182,7 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FacetsTra
                 query_parameters: payload.query_parameters,
                 visibility: 'private',
                 is_default: false,
+                can: { create: true, update: true, delete: true },
             });
         },
         deleteSavedFilter: () => Promise.resolve(),
@@ -214,7 +228,7 @@ export function MockFacetsProvider({ children, fixtures }: MockFacetsProviderPro
         }),
         // fixtures is a per-story literal; identity-stable across a story's life.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [],
+        []
     );
 
     return (

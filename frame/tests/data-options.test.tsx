@@ -20,6 +20,7 @@ afterEach(cleanup);
 function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport {
     return {
         getFilterSchema: vi.fn(async () => ({ properties: {} })),
+        getFilterVariants: vi.fn(async (resource) => ({ resource, variants: [] })),
         getFilterOptions: vi.fn(async () => []),
         getSavedFilters: vi.fn(async () => []),
         saveFilter: vi.fn(async () => ({

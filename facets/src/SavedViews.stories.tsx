@@ -90,7 +90,7 @@ export const SaveError: Story = {
 /** state = loading — the saved-filters query parks, so no chips render yet. */
 export const Loading: Story = {
     render: () => (
-        <MockFacetsProvider fixtures={{ loading: true }}>
+        <MockFacetsProvider fixtures={{ loadingSavedFilters: true }}>
             <SavedViews resource="fragments" current={current} onApply={() => {}} />
         </MockFacetsProvider>
     ),

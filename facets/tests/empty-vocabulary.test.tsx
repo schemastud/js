@@ -37,6 +37,7 @@ const POPULATED: FilterSchema = {
 function makeTransport(schema: FilterSchema): FacetsTransport {
     return {
         getFilterSchema: vi.fn(async () => schema),
+        getFilterVariants: vi.fn(async (resource) => ({ resource, variants: [] })),
         getFilterOptions: vi.fn(async () => []),
         getSavedFilters: vi.fn(async () => []),
         saveFilter: vi.fn(async () => ({
@@ -165,6 +166,7 @@ describe('an empty filter vocabulary', () => {
         const transport = mount({
             ...POPULATED,
             savedViewsResource: 'personal-views',
+            savedViewsCan: { create: true, update: true, delete: true },
         });
 
         expect(await screen.findByLabelText('Sort by')).toBeDefined();

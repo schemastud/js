@@ -51,6 +51,23 @@ function FragmentsPage() {
 }
 ```
 
+## Variants and saved views
+
+`getFilterVariants(resource)` returns `{ resource, variants }`, where each variant declares
+`key`, `resource`, `canonical`, and `sameAsCanonical`. The generic list offers selection when
+noncanonical variants exist, including when the default vocabulary is empty. Selection calls
+`getFilterSchema(resource, variant)` and travels with ordinary list requests as the top-level
+`filterVariant` URL parameter. Switching clears filters, sort and page; saved views preserve
+the variant and restore only filters and sorts its current schema declares.
+
+Saved-view support comes from the schema response's `savedViewsResource`. Mutation controls
+also require server permissions: `savedViewsCan.create` for Save and each saved row's
+`can.delete` for Delete. Missing permissions leave readable views applicable and hide the
+corresponding mutation. An optional `FacetsInjection.can(action, resource, record?)` can further
+restrict those actions; it receives the advertised saved-view resource and, for deletion, the
+actual row. `FrameProvider` forwards its existing `can` callback. The backend remains the
+authority when a request executes.
+
 ## Peers
 
 `react >=18`, `@tanstack/react-query ^5`, `lucide-react`. No router, no HTTP client.

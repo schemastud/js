@@ -1,7 +1,7 @@
 import { Bookmark, Check, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useFacetsInjection } from './context';
-import { useDeleteSavedFilter, useSaveFilter, useSavedFilters } from './data';
+import { useDeleteSavedFilter, useFilterSchema, useSaveFilter, useSavedFilters } from './data';
 import type { SavedFilterQueryParameters } from './types';
 
 interface AxiosLikeError {
@@ -30,18 +30,29 @@ export function SavedViews({
 }: {
     resource: string;
     current: SavedFilterQueryParameters;
-    onApply: (params: SavedFilterQueryParameters) => void;
+    onApply: (params: SavedFilterQueryParameters) => void | Promise<void>;
 }) {
-    const { Button, Input } = useFacetsInjection().primitives;
-    const views = useSavedFilters(resource);
+    const {
+        primitives: { Button, Input },
+        can,
+    } = useFacetsInjection();
+    const schema = useFilterSchema(resource, current.filterVariant).data;
+    const savedResource = schema?.savedViewsResource;
+    const views = useSavedFilters(resource, Boolean(savedResource), current.filterVariant);
     const save = useSaveFilter(resource);
-    const remove = useDeleteSavedFilter(resource);
+    const remove = useDeleteSavedFilter(resource, current.filterVariant);
 
     const [naming, setNaming] = useState(false);
     const [name, setName] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const canCreate = Boolean(
+        savedResource &&
+            schema?.savedViewsCan?.create === true &&
+            (!can || can('create', savedResource))
+    );
 
     const submit = async () => {
+        if (!canCreate) return;
         setError(null);
         try {
             await save.mutateAsync({ name, query_parameters: current });
@@ -51,6 +62,17 @@ export function SavedViews({
             setError(firstValidationMessage(e) ?? 'That view could not be saved.');
         }
     };
+
+    const apply = async (params: SavedFilterQueryParameters) => {
+        setError(null);
+        try {
+            await onApply(params);
+        } catch {
+            setError('That view could not be applied.');
+        }
+    };
+
+    if (!savedResource) return null;
 
     return (
         <div className="flex flex-wrap items-center gap-2">
@@ -66,18 +88,20 @@ export function SavedViews({
                     <button
                         type="button"
                         className="font-medium hover:underline"
-                        onClick={() => onApply(view.query_parameters ?? {})}
+                        onClick={() => void apply(view.query_parameters ?? {})}
                     >
                         {view.name}
                     </button>
-                    <button
-                        type="button"
-                        aria-label={`Delete ${view.name}`}
-                        disabled={remove.isPending}
-                        onClick={() => remove.mutate(view.id)}
-                    >
-                        <Trash2 className="size-3 text-destructive" />
-                    </button>
+                    {view.can?.delete === true && (!can || can('delete', savedResource, view)) && (
+                        <button
+                            type="button"
+                            aria-label={`Delete ${view.name}`}
+                            disabled={remove.isPending}
+                            onClick={() => remove.mutate(view.id)}
+                        >
+                            <Trash2 className="size-3 text-destructive" />
+                        </button>
+                    )}
                 </span>
             ))}
 
@@ -85,46 +109,49 @@ export function SavedViews({
                 <span className="text-xs text-muted-foreground">None yet.</span>
             )}
 
-            {naming ? (
-                <div className="flex items-center gap-1">
-                    <Input
-                        value={name}
-                        autoFocus
-                        placeholder="View name"
-                        className="h-7 w-40 text-xs"
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
-                            e.key === 'Enter' && name && submit()
-                        }
-                    />
-                    <Button
-                        size="icon"
-                        variant="outline"
-                        className="size-7"
-                        aria-label="Confirm save"
-                        disabled={!name || save.isPending}
-                        onClick={submit}
-                    >
-                        <Check />
+            {canCreate &&
+                (naming ? (
+                    <div className="flex items-center gap-1">
+                        <Input
+                            value={name}
+                            autoFocus
+                            placeholder="View name"
+                            className="h-7 w-40 text-xs"
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                setName(e.target.value)
+                            }
+                            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) =>
+                                e.key === 'Enter' && name && submit()
+                            }
+                        />
+                        <Button
+                            size="icon"
+                            variant="outline"
+                            className="size-7"
+                            aria-label="Confirm save"
+                            disabled={!name || save.isPending}
+                            onClick={submit}
+                        >
+                            <Check />
+                        </Button>
+                        <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-7"
+                            aria-label="Cancel save"
+                            onClick={() => {
+                                setNaming(false);
+                                setError(null);
+                            }}
+                        >
+                            <X />
+                        </Button>
+                    </div>
+                ) : (
+                    <Button size="sm" variant="outline" onClick={() => setNaming(true)}>
+                        Save current view
                     </Button>
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7"
-                        aria-label="Cancel save"
-                        onClick={() => {
-                            setNaming(false);
-                            setError(null);
-                        }}
-                    >
-                        <X />
-                    </Button>
-                </div>
-            ) : (
-                <Button size="sm" variant="outline" onClick={() => setNaming(true)}>
-                    Save current view
-                </Button>
-            )}
+                ))}
 
             {error && <span className="text-xs text-destructive">{error}</span>}
         </div>

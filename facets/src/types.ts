@@ -64,12 +64,31 @@ export interface FilterSchemaProperty {
 export interface FilterSchema {
     /** Application capability metadata, normalized from the schema response envelope. */
     savedViewsResource?: string;
+    savedViewsCan?: ResourceMutationPermissions;
     properties: Record<string, FilterSchemaProperty>;
+}
+
+export interface ResourceMutationPermissions {
+    create: boolean;
+    update: boolean;
+    delete: boolean;
 }
 
 export interface FilterOption {
     value: string;
     label: string;
+}
+
+export interface FilterVariant {
+    key: string;
+    resource: string;
+    canonical: boolean;
+    sameAsCanonical: boolean;
+}
+
+export interface FilterVariants {
+    resource: string;
+    variants: FilterVariant[];
 }
 
 /**
@@ -79,6 +98,7 @@ export interface FilterOption {
 export interface SavedFilterQueryParameters {
     filter?: Record<string, string>;
     sort?: string;
+    filterVariant?: string;
 }
 
 export interface SavedFilter {
@@ -88,6 +108,8 @@ export interface SavedFilter {
     query_parameters: SavedFilterQueryParameters;
     visibility: string;
     is_default: boolean;
+    /** Server-authorized mutations for this record, including ownership checks. */
+    can?: ResourceMutationPermissions;
 }
 
 /**
@@ -96,13 +118,14 @@ export interface SavedFilter {
  *
  * Note the shape divergence from the `@schemastud/seam` precedent: seam injects a
  * single async function (`schemaFetcher: (ref) => Promise<SchemaNode>`), because a
- * form needs exactly one operation (resolve a $ref). A list surface needs five
+ * form needs exactly one operation (resolve a $ref). A list surface needs several
  * distinct operations, so facets injects a *named-method transport object* rather
  * than a bare function. This is the first learning frame's shell contract inherits:
  * the transport seam is per-capability, not one-size.
  */
 export interface FacetsTransport {
-    getFilterSchema(resource: string): Promise<FilterSchema>;
+    getFilterSchema(resource: string, variant?: string): Promise<FilterSchema>;
+    getFilterVariants(resource: string): Promise<FilterVariants>;
     /**
      * Resolve a named options source for a resource. `resource` was added when the filter surface
      * became per-resource (splicewire api-surface-coherence 35): the flat, resource-less options
@@ -110,12 +133,12 @@ export interface FacetsTransport {
      * authenticated caller.
      */
     getFilterOptions(resource: string, ref: string, search: string): Promise<FilterOption[]>;
-    getSavedFilters(resource: string): Promise<SavedFilter[]>;
+    getSavedFilters(resource: string, variant?: string): Promise<SavedFilter[]>;
     saveFilter(
         resource: string,
-        payload: { name: string; query_parameters: SavedFilterQueryParameters },
+        payload: { name: string; query_parameters: SavedFilterQueryParameters }
     ): Promise<SavedFilter>;
-    deleteSavedFilter(resource: string, id: string): Promise<void>;
+    deleteSavedFilter(resource: string, id: string, variant?: string): Promise<void>;
 }
 
 /**
@@ -157,4 +180,6 @@ export interface FacetsInjection {
     transport: FacetsTransport;
     primitives: FacetsPrimitives;
     useUrlState: UseUrlState;
+    /** Optional host restriction, applied in addition to the server's permission. */
+    can?: (action: 'create' | 'update' | 'delete', resource: string, record?: unknown) => boolean;
 }

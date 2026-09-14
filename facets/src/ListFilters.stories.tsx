@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { ListFilters } from './ListFilters';
 import { useListFilters } from './useListFilters';
 import { MockFacetsProvider, type TransportFixtures } from './story-harness';
@@ -9,7 +9,7 @@ import { MockFacetsProvider, type TransportFixtures } from './story-harness';
  * list mounts: the `FacetsBar` over the resource's schema PLUS `SavedViews` for that
  * same resource when its schema advertises saved-view support. It is pure wiring over
  * `useListFilters(resource)`; a new list mounts by spreading the hook result. Renders
- * nothing until the schema resolves. Catalogued here through the real keystone hook so
+ * declared variant selection independently of vocabulary loading. Catalogued here through the real keystone hook so
  * the story exercises the actual URL⇄filter contract, not a hand-built state object.
  *
  * TREATMENT axes (treatment-axes.md): the **states** axis — `loading` (schema not yet
@@ -95,5 +95,52 @@ export const NoQueryDescriptors: Story = {
         const host = within(canvasElement).getByTestId('resolved-filters');
         await waitFor(() => expect(host).toHaveAttribute('data-schema', 'resolved'));
         await expect(host).toBeEmptyDOMElement();
+    },
+};
+
+/** A producer supplies variants; the generic hook and selector own URL selection. */
+export const DeclaredVariants: Story = {
+    render: () => (
+        <Harness
+            resource="papers"
+            fixtures={{
+                schema: { properties: {} },
+                variants: [
+                    { key: 'papers', resource: 'papers', canonical: true, sameAsCanonical: true },
+                    {
+                        key: 'recent-papers',
+                        resource: 'papers',
+                        canonical: false,
+                        sameAsCanonical: false,
+                    },
+                ],
+                variantSchemas: {
+                    'recent-papers': {
+                        properties: {
+                            query: {
+                                title: 'Search papers',
+                                'x-filter': {
+                                    name: 'query',
+                                    operator: 'partial',
+                                    control: 'search',
+                                },
+                            },
+                            published: { 'x-sort': { name: 'published' } },
+                        },
+                    },
+                },
+            }}
+        />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(await canvas.findByRole('combobox', { name: 'Filter variant' }));
+        await userEvent.click(
+            await within(canvasElement.ownerDocument.body).findByRole('option', {
+                name: 'recent-papers',
+            })
+        );
+        await userEvent.type(await canvas.findByLabelText('Search'), 'ecology');
+        await expect(canvas.getByLabelText('Search')).toHaveValue('ecology');
     },
 };

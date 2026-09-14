@@ -35,6 +35,7 @@ function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport 
     return {
         // facets' five
         getFilterSchema: vi.fn(async () => ({ properties: {} })),
+        getFilterVariants: vi.fn(async (resource) => ({ resource, variants: [] })),
         getFilterOptions: vi.fn(async () => []),
         getSavedFilters: vi.fn(async () => []),
         saveFilter: vi.fn(async () => ({
