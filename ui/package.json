@@ -1,6 +1,6 @@
 {
     "name": "@schemastud/ui",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "The portable foundation UI primitives: shadcn/Radix-derived Button, Badge, Card (+ parts), Dialog, Input, Label, Select, Switch, a dependency-free Popover, and a headless TanStack DataTable — all skinned by host-owned Tailwind theme tokens (zero hard-coded colors). The generic-UI dependency a rehomed component takes statically instead of importing app-local `@/components/*`.",
     "license": "MIT",
     "type": "module",
