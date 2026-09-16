@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import { transportScope } from '@schemastud/facets';
 import type { SchemaNode } from '@schemastud/seam';
 import { useFrameInjection } from './context';
-import type { FormMode, Paginated, Row } from './types';
+import type { FormMode, FrameTransport, Paginated, Row } from './types';
 
 /**
  * Extra `useQuery` knobs a caller may thread onto a Frame read (e.g. `refetchInterval`,
@@ -11,6 +12,50 @@ import type { FormMode, Paginated, Row } from './types';
  */
 type ResourceQueryOptions<T> = Omit<UseQueryOptions<T, Error, T>, 'queryKey' | 'queryFn'>;
 
+/** Build a resource query key; existing resource/record prefixes remain usable. */
+export function resourceQueryKey(
+    transport: FrameTransport,
+    resource: string,
+    ...parts: readonly unknown[]
+) {
+    return ['frame', resource, ...parts, transportScope(transport)] as const;
+}
+
+function useResourceQuery<T>(
+    transport: FrameTransport,
+    resource: string,
+    options: UseQueryOptions<T, Error, T>,
+) {
+    const client = useQueryClient();
+    const effective = client.defaultQueryOptions(options);
+    const placeholder = effective.placeholderData;
+    const scope = transportScope(transport);
+
+    return useQuery<T, Error, T>({
+        ...effective,
+        // Preserve host pagination placeholders only within the same authority
+        // and resource, including defaults installed on the shared QueryClient.
+        placeholderData: (previous, previousQuery) => {
+            if (
+                previousQuery &&
+                (previousQuery.queryKey[0] !== 'frame' ||
+                    previousQuery.queryKey[1] !== resource ||
+                    previousQuery.queryKey.at(-1) !== scope)
+            ) {
+                return undefined;
+            }
+            return typeof placeholder === 'function'
+                ? (
+                      placeholder as (
+                          data: typeof previous,
+                          query: typeof previousQuery,
+                      ) => typeof previous
+                  )(previous, previousQuery)
+                : placeholder;
+        },
+    });
+}
+
 /** List rows for a resource through the injected transport, keyed by request params. */
 export function useResourceList(
     resource: string,
@@ -19,8 +64,8 @@ export function useResourceList(
 ) {
     const { transport } = useFrameInjection();
 
-    return useQuery<Paginated<Row>, Error, Paginated<Row>>({
-        queryKey: ['frame', resource, 'list', params],
+    return useResourceQuery<Paginated<Row>>(transport, resource, {
+        queryKey: resourceQueryKey(transport, resource, 'list', params),
         queryFn: () => transport.list(resource, params),
         ...options,
     });
@@ -29,7 +74,7 @@ export function useResourceList(
 /**
  * A single record; disabled when creating (id === null). `options` threads extra `useQuery`
  * knobs — notably `refetchInterval` for a live/polling read model (an operator provisioning
- * poll rides Frame's own `['frame',resource,'record',id]` queryKey this way, so there's one
+ * poll rides Frame's own `resourceQueryKey(transport, resource, 'record', id)` queryKey this way, so there's one
  * cache namespace end-to-end rather than a parallel bespoke fetch). The `enabled: id !== null`
  * default still holds unless `options` overrides it.
  */
@@ -40,8 +85,8 @@ export function useResourceRecord(
 ) {
     const { transport } = useFrameInjection();
 
-    return useQuery<Row, Error, Row>({
-        queryKey: ['frame', resource, 'record', id],
+    return useResourceQuery<Row>(transport, resource, {
+        queryKey: resourceQueryKey(transport, resource, 'record', id),
         queryFn: () => transport.get(resource, id as string),
         enabled: id !== null,
         ...options,
@@ -53,7 +98,8 @@ export function useFormSchema(resource: string, form: FormMode) {
     const { transport } = useFrameInjection();
 
     return useQuery<SchemaNode>({
-        queryKey: ['frame', resource, 'form-schema', form],
+        queryKey: resourceQueryKey(transport, resource, 'form-schema', form),
+        placeholderData: undefined,
         queryFn: () => transport.getFormSchema(resource, form),
         staleTime: 5 * 60 * 1000,
     });
@@ -65,10 +111,14 @@ export function useSaveResource(resource: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
+        mutationKey: resourceQueryKey(transport, resource, 'save'),
         mutationFn: ({ id, data }: { id: string | null; data: unknown }) =>
             transport.save(resource, id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['frame', resource] });
+            queryClient.invalidateQueries({
+                queryKey: ['frame', resource],
+                predicate: (query) => query.queryKey.at(-1) === transportScope(transport),
+            });
         },
     });
 }
@@ -79,9 +129,13 @@ export function useRemoveResource(resource: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
+        mutationKey: resourceQueryKey(transport, resource, 'remove'),
         mutationFn: (id: string) => transport.remove(resource, id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['frame', resource] });
+            queryClient.invalidateQueries({
+                queryKey: ['frame', resource],
+                predicate: (query) => query.queryKey.at(-1) === transportScope(transport),
+            });
         },
     });
 }

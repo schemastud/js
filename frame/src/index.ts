@@ -123,6 +123,7 @@ export {
     type AssertRouteContextOptions,
 } from './routes';
 export {
+    resourceQueryKey,
     useResourceList,
     useResourceRecord,
     useFormSchema,

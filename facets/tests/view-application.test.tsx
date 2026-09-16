@@ -26,8 +26,10 @@ function fixture() {
     };
     const snapshot = () => current;
     let release!: (value: FilterSchema) => void;
-    const pending = new Promise<FilterSchema>((resolve) => {
+    let reject!: (reason: Error) => void;
+    const pending = new Promise<FilterSchema>((resolve, fail) => {
         release = resolve;
+        reject = fail;
     });
     const transport: FacetsTransport = {
         getFilterSchema: vi.fn(async (_resource, variant) =>
@@ -41,6 +43,7 @@ function fixture() {
         },
         deleteSavedFilter: async () => undefined,
     };
+    let activeTransport = transport;
     const Noop = () => null;
     const primitives: FacetsPrimitives = {
         Button: Noop,
@@ -58,7 +61,7 @@ function fixture() {
             <QueryClientProvider client={client}>
                 <FacetsProvider
                     value={{
-                        transport,
+                        transport: activeTransport,
                         primitives,
                         useUrlState() {
                             const params = useSyncExternalStore(subscribe, snapshot);
@@ -81,7 +84,17 @@ function fixture() {
         initialProps: { resource: 'papers' },
         wrapper: Wrapper,
     });
-    return { ...hook, release: () => release(schema), snapshot, transport };
+    return {
+        ...hook,
+        release: () => release(schema),
+        reject: () => reject(new Error('Obsolete schema')),
+        snapshot,
+        transport,
+        switchTransport: () => {
+            activeTransport = { ...transport, getFilterSchema: async () => schema };
+            hook.rerender({ resource: 'papers' });
+        },
+    };
 }
 
 describe('pending saved-view application', () => {
@@ -129,4 +142,32 @@ describe('pending saved-view application', () => {
             'filter[term]': 'new',
         });
     });
+});
+
+describe('saved-view application after a transport switch', () => {
+    it.each(['success', 'error'] as const)(
+        'supersedes an obsolete %s without changing the URL',
+        async (outcome) => {
+            const f = fixture();
+            await waitFor(() => expect(f.result.current.schema).toBeDefined());
+            const applying = f.result.current.applyView({
+                filterVariant: 'slow',
+                filter: { term: 'old' },
+            });
+            await waitFor(() =>
+                expect(f.transport.getFilterSchema).toHaveBeenCalledWith('papers', 'slow'),
+            );
+            act(() => f.switchTransport());
+            await act(async () => {
+                if (outcome === 'success') f.release();
+                else f.reject();
+                await applying;
+            });
+            expect(f.snapshot().toString()).toBe('');
+            await act(async () => {
+                await f.result.current.applyView({ filter: { term: 'new' } });
+            });
+            expect(f.snapshot().get('filter[term]')).toBe('new');
+        },
+    );
 });

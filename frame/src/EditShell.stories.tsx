@@ -3,6 +3,7 @@ import { expect, userEvent, within } from 'storybook/test';
 import { useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { FrameProvider, useFrameInjection } from './context';
+import { resourceQueryKey } from './data';
 import { EditShell } from './EditShell';
 import { MockFrameProvider } from './story-harness';
 
@@ -112,7 +113,7 @@ function ReadFailureSurface({ kind }: { kind: 'record' | 'schema' | 'background'
                     onClick={() => {
                         fail.current = true;
                         void client.refetchQueries({
-                            queryKey: ['frame', 'members', 'record', '2'],
+                            queryKey: resourceQueryKey(value.transport, 'members', 'record', '2'),
                         });
                     }}
                 >

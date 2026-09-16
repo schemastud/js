@@ -75,7 +75,7 @@ export function useListFilters(resource: string): ListFilters {
         return () => {
             applySequence.current++;
         };
-    }, [resource, queryString]);
+    }, [resource, queryString, transport]);
     const filterVariant = searchParams.get('filterVariant') || null;
     const schemaQuery = useFilterSchema(resource, filterVariant ?? undefined);
     const variantsQuery = useFilterVariants(resource);

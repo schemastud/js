@@ -50,3 +50,6 @@ export type {
     UseUrlState,
     FacetsInjection,
 } from './types';
+
+// Shared runtime identity for consumers composing resource query keys.
+export { transportScope } from './transportScope';

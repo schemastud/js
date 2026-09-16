@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { transportScope } from './transportScope';
 import { useFacetsInjection, useFacetsResource } from './context';
 import type {
     FacetsTransport,
@@ -10,17 +11,17 @@ import type {
 /**
  * List-surface data hooks, each resolving through the host-injected
  * transport (never a bundled HTTP client). Schema and saved-view cache keys
- * distinguish the resource and selected variant.
+ * distinguish the transport, resource and selected variant.
  */
 
 /** The generated filter schema for a resource (carries x-filter / x-sort). */
 export function filterSchemaOptions(
     transport: FacetsTransport,
     resource: string,
-    variant?: string
+    variant?: string,
 ) {
     return {
-        queryKey: ['filter-schema', resource, variant ?? null],
+        queryKey: ['filter-schema', resource, variant ?? null, transportScope(transport)],
         // A host's list-wide keepPreviousData default must not carry another
         // resource or variant's vocabulary and permissions into this one.
         placeholderData: undefined,
@@ -40,7 +41,7 @@ export function useFilterSchema(resource: string, variant?: string) {
 export function useFilterVariants(resource: string) {
     const { transport } = useFacetsInjection();
     return useQuery({
-        queryKey: ['filter-variants', resource],
+        queryKey: ['filter-variants', resource, transportScope(transport)],
         placeholderData: undefined,
         staleTime: 5 * 60_000,
         queryFn: () => transport.getFilterVariants(resource),
@@ -56,7 +57,8 @@ export function useFilterOptions(ref: string | undefined, search: string, resour
     const contextResource = useFacetsResource();
     const target = resource ?? contextResource;
     return useQuery({
-        queryKey: ['filter-options', target, ref, search],
+        queryKey: ['filter-options', target, ref, search, transportScope(transport)],
+        placeholderData: undefined,
         enabled: Boolean(ref) && Boolean(target),
         staleTime: 60_000,
         queryFn: () =>
@@ -69,7 +71,7 @@ export function useFilterOptions(ref: string | undefined, search: string, resour
 export function useSavedFilters(resource: string, enabled = true, variant?: string) {
     const { transport } = useFacetsInjection();
     return useQuery({
-        queryKey: ['saved-filters', resource, variant ?? null],
+        queryKey: ['saved-filters', resource, variant ?? null, transportScope(transport)],
         placeholderData: undefined,
         enabled,
         queryFn: () =>
@@ -83,9 +85,14 @@ export function useSaveFilter(resource: string) {
     const { transport } = useFacetsInjection();
     const queryClient = useQueryClient();
     return useMutation({
+        mutationKey: ['saved-filters', resource, transportScope(transport), 'save'],
         mutationFn: (payload: { name: string; query_parameters: SavedFilterQueryParameters }) =>
             transport.saveFilter(resource, payload),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved-filters', resource] }),
+        onSuccess: () =>
+            queryClient.invalidateQueries({
+                queryKey: ['saved-filters', resource],
+                predicate: (query) => query.queryKey.at(-1) === transportScope(transport),
+            }),
     });
 }
 
@@ -93,11 +100,22 @@ export function useDeleteSavedFilter(resource: string, variant?: string) {
     const { transport } = useFacetsInjection();
     const queryClient = useQueryClient();
     return useMutation({
+        mutationKey: [
+            'saved-filters',
+            resource,
+            transportScope(transport),
+            'delete',
+            variant ?? null,
+        ],
         mutationFn: (id: string) =>
             variant
                 ? transport.deleteSavedFilter(resource, id, variant)
                 : transport.deleteSavedFilter(resource, id),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['saved-filters', resource] }),
+        onSuccess: () =>
+            queryClient.invalidateQueries({
+                queryKey: ['saved-filters', resource],
+                predicate: (query) => query.queryKey.at(-1) === transportScope(transport),
+            }),
     });
 }
 

@@ -78,3 +78,15 @@ authority when a request executes.
 operators. The canonical source of truth is co-located with the operators at
 `laravel-data-filters/resources/types/filter-schema.ts`, and a PHP conformance test
 fails if the operator emission drifts from it. Keep this copy in lockstep.
+
+### Transport lifetime and query caching
+
+Keep the injected transport object stable while its realm, tenant and principal are stable.
+Replace it when that authority changes. Frame and facets scope cached reads, mutations and
+pending saved-view application to that object, so providers may share a QueryClient safely.
+Changing credentials inside an existing transport does not change its cache identity.
+
+The implicit identity is opaque and runtime-local. It does not provide a persistent-cache or
+SSR hydration protocol. Existing resource query prefixes still support deliberate broad
+invalidation; Frame's `resourceQueryKey(transport, resource, ...parts)` builds an exact key
+for seeding or targeting one transport. Mutation hooks invalidate their own transport only.
