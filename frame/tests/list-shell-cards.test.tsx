@@ -72,7 +72,8 @@ const TARGETS: Record<string, ContextManifest> = {
     bills: { byNode: {}, inherits: {}, known: KNOWN_CONTEXTS },
 };
 
-function makeTransport(rows: Row[]): FrameTransport {
+/** `envelope` overrides the page fields of the list answer — the default is one page of 25. */
+function makeTransport(rows: Row[], envelope: Partial<Omit<Paginated<Row>, 'data'>> = {}): FrameTransport {
     return {
         getFilterSchema: vi.fn(async () => ({ properties: {} })),
         getFilterVariants: vi.fn(async (resource: string) => ({ resource, variants: [] })),
@@ -87,7 +88,7 @@ function makeTransport(rows: Row[]): FrameTransport {
             is_default: false,
         })),
         deleteSavedFilter: vi.fn(async () => undefined),
-        list: vi.fn(async (): Promise<Paginated<Row>> => ({ data: rows, total: rows.length, page: 1, perPage: 25 })),
+        list: vi.fn(async (): Promise<Paginated<Row>> => ({ data: rows, total: rows.length, page: 1, perPage: 25, ...envelope })),
         get: vi.fn(async (_r, id) => ({ id })),
         getFormSchema: vi.fn(async () => ({ type: 'object', properties: {} })),
         save: vi.fn(async (_r, id, data) => ({ id: id ?? '3', ...(data as Row) })),
@@ -116,11 +117,15 @@ function useMemoryUrlState() {
     return [params, set] as const;
 }
 
-function makeInjection(rows: Row[], over: Partial<FrameInjection> = {}): FrameInjection {
+function makeInjection(
+    rows: Row[],
+    over: Partial<FrameInjection> = {},
+    envelope: Partial<Omit<Paginated<Row>, 'data'>> = {},
+): FrameInjection {
     const registry = createWidgetRegistry();
     registerCardWidgets(registry);
     return {
-        transport: makeTransport(rows),
+        transport: makeTransport(rows, envelope),
         primitives,
         useUrlState: useMemoryUrlState,
         registry,
@@ -250,6 +255,53 @@ describe('ListShell — the table path is untouched', () => {
 
         await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
         expect(container.querySelector('[data-frame-slot="Table"]')).toBeTruthy();
+    });
+});
+
+describe('ListShell — the pager on a single page', () => {
+    const pagers = (container: HTMLElement) => container.querySelectorAll('[data-frame-slot="Pagination"]');
+    const eightRows: DashboardRow[] = Array.from({ length: 8 }, (_, i) => ({
+        ...DASHBOARD_ROWS[0],
+        resource: 'tenants',
+        label: `Tenants ${i}`,
+    }));
+
+    it('the cards path with an 8-row single page renders NO pager, above or below', async () => {
+        const { container } = render(<ListShell resource="operator-dashboard" columns={[]} manifest={DASHBOARD} />, {
+            wrapper: wrap(makeInjection(eightRows as Row[], {}, { total: 8, page: 1, perPage: 25 })),
+        });
+
+        await waitFor(() => expect(cards(container)).toHaveLength(8));
+        expect(pagers(container)).toHaveLength(0);
+    });
+
+    it("beam's Unpaged shape — `total == perPage` — is one page too", async () => {
+        const { container } = render(<ListShell resource="operator-dashboard" columns={[]} manifest={DASHBOARD} />, {
+            wrapper: wrap(makeInjection(eightRows as Row[], {}, { total: 8, page: 1, perPage: 8 })),
+        });
+
+        await waitFor(() => expect(cards(container)).toHaveLength(8));
+        expect(pagers(container)).toHaveLength(0);
+    });
+
+    it('a 30-row / 25-per-page table still shows the pager (both placements)', async () => {
+        const page = Array.from({ length: 25 }, (_, i) => ({ id: String(i + 1), title: `Row ${i + 1}` }));
+        const { container } = render(<ListShell resource="widgets" columns={[]} manifest={TABLE} />, {
+            wrapper: wrap(makeInjection(page, {}, { total: 30, page: 1, perPage: 25 })),
+        });
+
+        await waitFor(() => expect(screen.getByText('Row 1')).toBeTruthy());
+        expect(pagers(container)).toHaveLength(2);
+        expect(container.querySelector('[data-frame-page]')?.textContent).toBe('1 / 2');
+    });
+
+    it('a stale URL past page 1 over a one-page answer keeps the pager as the way back', async () => {
+        const { container } = render(<ListShell resource="widgets" columns={[]} manifest={TABLE} />, {
+            wrapper: wrap(makeInjection(TABLE_ROWS, {}, { total: 2, page: 3, perPage: 25 })),
+        });
+
+        await waitFor(() => expect(screen.getByText('Alpha')).toBeTruthy());
+        expect(pagers(container)).toHaveLength(2);
     });
 });
 

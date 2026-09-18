@@ -149,14 +149,25 @@ export function ListShell({
 
     const rows: Row[] = query.data?.data ?? [];
 
-    const showTopPagination = paginationPlacement === 'top' || paginationPlacement === 'both';
+    const currentPage = query.data?.page ?? page;
+    const perPage = query.data?.perPage ?? rows.length;
+    const total = query.data?.total ?? rows.length;
+    // One page is not paged. A pre-paginated envelope whose `total` fits its `perPage` is the
+    // whole list — beam's `Unpaged` backing behind every `{realm}-dashboard` answers
+    // `total == perPage` — and a Prev/Next bar around it ("Page 1 of 1 · 8 total", above AND
+    // below the grid) is chrome asserting a navigation that does not exist. Kept whenever the
+    // URL is past page 1: a stale `?page=3` over a one-page answer still needs its way back.
+    const singlePage = currentPage <= 1 && total <= Math.max(1, perPage);
+
+    const showTopPagination =
+        !singlePage && (paginationPlacement === 'top' || paginationPlacement === 'both');
     const showBottomPagination =
-        paginationPlacement === 'bottom' || paginationPlacement === 'both';
+        !singlePage && (paginationPlacement === 'bottom' || paginationPlacement === 'both');
     const paginationBar = (
         <Pagination
-            page={query.data?.page ?? page}
-            perPage={query.data?.perPage ?? rows.length}
-            total={query.data?.total ?? rows.length}
+            page={currentPage}
+            perPage={perPage}
+            total={total}
             onPageChange={onPageChange}
             onPerPageChange={onPerPageChange}
         />

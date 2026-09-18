@@ -11,7 +11,9 @@ import {
     FigureCard,
     NavTile,
     RecentList,
+    RecordLine,
     StatRow,
+    formatRecordTime,
     registerCardWidgets,
     resolveDashboardCard,
     type CardLinkRenderer,
@@ -137,7 +139,7 @@ describe('registerCardWidgets', () => {
             expect(registry.resolveWidget({ 'x-widget': name })).toBe(widget);
         }
         expect(Object.keys(CARD_WIDGETS).sort()).toEqual(
-            ['dashboard-card', 'figure-card', 'nav-tile', 'recent-list', 'stat-row'],
+            ['dashboard-card', 'figure-card', 'nav-tile', 'recent-list', 'record-line', 'stat-row'],
         );
     });
 
@@ -478,19 +480,114 @@ describe('RecentList', () => {
         expect(container.innerHTML).not.toContain('{"id"');
     });
 
-    it('falls to a display name per item — never JSON — when the target binds no list-item component', () => {
+    // What `CentralActivityData` carries: no name/title/label — text in `description`, the verb in
+    // `event`, the moment in `created_at`. The measured defect rendered these as `5,4,3,2,1`.
+    const centralItems = [
+        { id: 5, event: 'created', description: 'Tenant acme provisioned', created_at: '2026-01-05T09:00:00Z' },
+        { id: 4, event: 'suspended', description: 'globex suspended by operator', created_at: '2026-01-04T09:00:00Z' },
+        { id: 3, description: 'Realm bootstrapped', created_at: 'not a date' },
+    ];
+    const centralRow = row({
+        resource: 'activity',
+        context: 'overview',
+        href: '/operator/activity',
+        summary: summary({ key: 'activity', label: 'Recent activity', figures: [], overview: { items: centralItems } }),
+    });
+
+    it('renders record-line per item — description, event badge, time; never the id — when the target declares NO list-item name', () => {
         const registry = createWidgetRegistry();
         registerCardWidgets(registry);
         const wrapper = wrap(makeInjection(registry, { activity: manifest({ 'list-item': { participates: true } }) }));
 
-        const { container } = render(
-            <RecentList value={activityRow.summary!} row={activityRow} />,
-            { wrapper },
+        const { container } = render(<RecentList value={centralRow.summary!} row={centralRow} />, { wrapper });
+
+        expect(container.querySelectorAll('[data-frame-record-line]')).toHaveLength(3);
+        expect(Array.from(container.querySelectorAll('[data-frame-record-line-text]')).map((n) => n.textContent)).toEqual([
+            'Tenant acme provisioned',
+            'globex suspended by operator',
+            'Realm bootstrapped',
+        ]);
+        expect(Array.from(container.querySelectorAll('[data-frame-record-line-badge]')).map((n) => n.textContent)).toEqual([
+            'created',
+            'suspended',
+        ]);
+        const times = Array.from(container.querySelectorAll('time[data-frame-record-line-time]'));
+        expect(times.map((n) => n.getAttribute('datetime'))).toEqual([
+            '2026-01-05T09:00:00Z',
+            '2026-01-04T09:00:00Z',
+            'not a date',
+        ]);
+        expect(times[0].textContent).toBe(new Date('2026-01-05T09:00:00Z').toLocaleDateString());
+        // Populated-and-wrong shows RAW, never `Invalid Date`.
+        expect(times[2].textContent).toBe('not a date');
+        expect(container.innerHTML).not.toContain('Invalid Date');
+        expect(container.querySelector('[data-frame-view-error]')).toBeNull();
+        expect(screen.queryByText('5')).toBeNull();
+        expect(container.innerHTML).not.toContain('{"id"');
+    });
+
+    it('fires the record-line default just the same with no list-item entry, and with no target manifest at all', () => {
+        const registry = createWidgetRegistry();
+        registerCardWidgets(registry);
+
+        const noEntry = render(<RecentList value={centralRow.summary!} row={centralRow} />, {
+            wrapper: wrap(makeInjection(registry, { activity: manifest(undefined) })),
+        });
+        expect(noEntry.container.querySelectorAll('[data-frame-record-line]')).toHaveLength(3);
+        cleanup();
+
+        const noManifest = render(<RecentList value={centralRow.summary!} row={centralRow} />, {
+            wrapper: wrap(makeInjection(registry, {})),
+        });
+        expect(noManifest.container.querySelectorAll('[data-frame-record-line]')).toHaveLength(3);
+        expect(noManifest.container.innerHTML).not.toContain('{"id"');
+    });
+
+    it('record-line shows the id only when the record carries no text field', () => {
+        const registry = createWidgetRegistry();
+        registerCardWidgets(registry);
+        const wrapper = wrap(makeInjection(registry, { activity: manifest({ 'list-item': { participates: true } }) }));
+
+        const { container } = render(<RecentList value={activityRow.summary!} row={activityRow} />, { wrapper });
+
+        expect(container.querySelectorAll('[data-frame-record-line]')).toHaveLength(3);
+        expect(screen.getByText('e1')).toBeTruthy();
+        expect(container.querySelector('[data-frame-record-line-badge]')).toBeNull();
+        expect(container.querySelector('[data-frame-record-line-time]')).toBeNull();
+    });
+
+    it('a DECLARED name the registry does not know stays the honest unbound marker — never record-line, never JSON', () => {
+        const registry = createWidgetRegistry();
+        registerCardWidgets(registry);
+        const wrapper = wrap(
+            makeInjection(registry, { activity: manifest({ 'list-item': { participates: true, widget: 'activity-lien' } }) }),
         );
 
-        expect(container.querySelectorAll('[data-frame-recent-fallback]')).toHaveLength(3);
-        expect(screen.getByText('e1')).toBeTruthy();
+        const { container } = render(<RecentList value={centralRow.summary!} row={centralRow} />, { wrapper });
+
+        expect(container.querySelector('[data-frame-view="unbound-list-item"] [data-frame-view-error]')?.textContent).toContain(
+            'activity-lien',
+        );
+        expect(container.querySelector('[data-frame-record-line]')).toBeNull();
+        expect(container.querySelector('[data-frame-recent-items]')).toBeNull();
         expect(container.innerHTML).not.toContain('{"id"');
+        // The card chrome survives: the heading and "View all" still reach the screen.
+        expect(container.querySelector('a[data-frame-card-link]')?.getAttribute('href')).toBe('/operator/activity');
+    });
+
+    it('a host that registers a LATER record-line replaces the default for unbound targets', () => {
+        const registry = createWidgetRegistry();
+        registerCardWidgets(registry);
+        registry.registerWidget((s) => s['x-widget'] === 'record-line', ActivityLine);
+        const wrapper = wrap(makeInjection(registry, { activity: manifest({ 'list-item': { participates: true } }) }));
+
+        render(<RecentList value={activityRow.summary!} row={activityRow} />, { wrapper });
+
+        expect(screen.getAllByTestId('activity-line').map((n) => n.textContent)).toEqual([
+            'Provisioned acme',
+            'Suspended globex',
+            'Restored initech',
+        ]);
     });
 
     it('shows an honest empty state for zero items', () => {
@@ -548,6 +645,35 @@ describe('leaf cards', () => {
         expect(container.querySelector('[data-frame-figure="total"]')?.textContent).toBe('$1,240');
         // The leading figure is spent on the headline slot, so one sub-tile remains: two in all.
         expect(container.querySelectorAll('[data-frame-figure]')).toHaveLength(2);
+    });
+
+    it('RecordLine: text field order is title | label | name | description | summary; badge is event, else status', () => {
+        const { container, rerender } = render(
+            <RecordLine value={{ id: 9, name: 'Named', description: 'Described', status: 'open' }} />,
+        );
+        expect(container.querySelector('[data-frame-record-line-text]')?.textContent).toBe('Named');
+        expect(container.querySelector('[data-frame-record-line-badge]')?.textContent).toBe('open');
+
+        rerender(<RecordLine value={{ id: 9, summary: 'Summarised', status: 'open', event: 'created' }} />);
+        expect(container.querySelector('[data-frame-record-line-text]')?.textContent).toBe('Summarised');
+        expect(container.querySelector('[data-frame-record-line-badge]')?.textContent).toBe('created');
+
+        // A blank string is absent, not a text field; the id is the last resort.
+        rerender(<RecordLine value={{ id: 9, title: '   ' }} />);
+        expect(container.querySelector('[data-frame-record-line-text]')?.textContent).toBe('9');
+    });
+
+    it('formatRecordTime: relative within a week, the locale date beyond it, raw when unparseable', () => {
+        const now = Date.parse('2026-09-18T12:00:00Z');
+        const at = (ms: number) => new Date(now - ms).toISOString();
+
+        expect(formatRecordTime(at(10_000), now)).toMatch(/now/i);
+        expect(formatRecordTime(at(5 * 60_000), now)).toMatch(/5\s?m.*ago/);
+        expect(formatRecordTime(at(2 * 3_600_000), now)).toMatch(/2\s?h.*ago/);
+        expect(formatRecordTime(at(26 * 3_600_000), now)).toMatch(/yesterday|1\s?d.*ago/);
+        expect(formatRecordTime(at(3 * 86_400_000), now)).toMatch(/3\s?d.*ago/);
+        expect(formatRecordTime(at(30 * 86_400_000), now)).toBe(new Date(now - 30 * 86_400_000).toLocaleDateString());
+        expect(formatRecordTime('not a date', now)).toBe('not a date');
     });
 
     it('NavTile: uses the host icon resolver, else the label initial; nothing without an href', () => {

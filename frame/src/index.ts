@@ -74,6 +74,8 @@ export {
     StatRow,
     FigureCard,
     RecentList,
+    RecordLine,
+    formatRecordTime,
     NavTile,
     DashboardCard,
     dashboardRowRenders,

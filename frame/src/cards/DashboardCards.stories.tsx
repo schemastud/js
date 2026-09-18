@@ -49,6 +49,20 @@ const ACTIVITY_ITEMS: Row[] = [
     { id: 'e3', tenantName: 'Initech', message: 'Provisioning', state: 'running' },
 ];
 
+/**
+ * What `splicewire/tower`'s `CentralActivityData` actually carries — no `name`/`title`/`label`;
+ * the text lives in `description`, the verb in `event`, the moment in `created_at`. Relative to
+ * the story's wall clock so the time column reads as it does live.
+ */
+const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+const CENTRAL_ACTIVITY_ITEMS: Row[] = [
+    { id: 5, event: 'created', description: 'Tenant acme provisioned', created_at: ago(2 * 60 * 1000) },
+    { id: 4, event: 'updated', description: 'Plan changed to Growth for globex', created_at: ago(3 * 3600 * 1000) },
+    { id: 3, event: 'suspended', description: 'initech suspended by operator', created_at: ago(26 * 3600 * 1000) },
+    { id: 2, event: 'created', description: 'Conduit stripe attached', created_at: ago(4 * 86400 * 1000) },
+    { id: 1, description: 'Realm bootstrapped', created_at: '2026-01-05T09:00:00Z' },
+];
+
 const ROWS: DashboardRow[] = [
     {
         resource: 'tenants',
@@ -142,6 +156,19 @@ const DERIVED: Record<string, ContextManifest> = {
     bills: manifest(),
     activity: manifest(),
 };
+
+/** The tower shape: activity binds `recent-list` for its overview and declares NO `list-item`. */
+const UNBOUND_ACTIVITY: Record<string, ContextManifest> = {
+    ...DECLARED,
+    activity: manifest({ overview: { participates: true, widget: 'recent-list' } }),
+};
+
+/** The same dashboard, with the activity row carrying `CentralActivityData` items. */
+const CENTRAL_ROWS: DashboardRow[] = ROWS.map((row) =>
+    row.resource === 'activity' && row.summary
+        ? { ...row, summary: { ...row.summary, overview: { items: CENTRAL_ACTIVITY_ITEMS } } }
+        : row,
+);
 
 // ── Harness ────────────────────────────────────────────────────────────────────────────────
 
@@ -277,7 +304,7 @@ export const Empty: Story = {
     },
 };
 
-/** All derived — no target declares a summary or overview: every card is its context default (stat-row / figure-card), the recent list falls to display names. */
+/** All derived — no target declares a summary or overview: every card is its context default (stat-row / figure-card); the recent list falls to `record-line`, which for these items (no text field) shows the id. */
 export const AllDerived: Story = {
     render: () => <DashboardHarness rows={ROWS} manifests={DERIVED} />,
     play: awaitCards,
@@ -297,6 +324,14 @@ export const OneAbsent: Story = {
         />
     ),
     play: awaitCards,
+};
+
+/** Record-line default — the activity target declares NO `list-item` (the tower shape): one line per item of `description` · `event` badge · short time, never the bare `5,4,3,2,1` measured before it. */
+export const RecordLineDefault: Story = {
+    render: () => <DashboardHarness rows={CENTRAL_ROWS} manifests={UNBOUND_ACTIVITY} />,
+    play: async ({ canvasElement }) => {
+        await within(canvasElement).findByText('Tenant acme provisioned');
+    },
 };
 
 /** viewport = mobile — the auto-fill grid collapses to one column. */

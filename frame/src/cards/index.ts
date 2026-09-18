@@ -4,6 +4,7 @@ import { FRAME_CONTEXT_KEYWORD } from '../resolveWidgetFor';
 import { StatRow } from './StatRow';
 import { FigureCard } from './FigureCard';
 import { RecentList } from './RecentList';
+import { RecordLine } from './RecordLine';
 import { NavTile } from './NavTile';
 import { DashboardCard } from './DashboardCard';
 import type { CardLinkRenderer, IconResolver } from './types';
@@ -11,6 +12,7 @@ import type { CardLinkRenderer, IconResolver } from './types';
 export { StatRow } from './StatRow';
 export { FigureCard } from './FigureCard';
 export { RecentList } from './RecentList';
+export { RecordLine, formatRecordTime } from './RecordLine';
 export { NavTile } from './NavTile';
 export { DashboardCard, dashboardRowRenders, resolveDashboardCard } from './DashboardCard';
 export type {
@@ -25,14 +27,15 @@ export type {
     CardWidgetProps,
 } from './types';
 
-/** The five default card widgets, by the `x-widget` name a declaration binds. */
+/** The six default card widgets, by the `x-widget` name a declaration binds. */
 export const CARD_WIDGETS: Record<
-    'stat-row' | 'figure-card' | 'recent-list' | 'nav-tile' | 'dashboard-card',
+    'stat-row' | 'figure-card' | 'recent-list' | 'record-line' | 'nav-tile' | 'dashboard-card',
     ComponentType<any>
 > = {
     'stat-row': StatRow,
     'figure-card': FigureCard,
     'recent-list': RecentList,
+    'record-line': RecordLine,
     'nav-tile': NavTile,
     'dashboard-card': DashboardCard,
 };
@@ -64,9 +67,14 @@ const installed = new WeakSet<WidgetRegistry>();
  *     (`!s['x-widget']`), so a declared name always wins: one registered by the host before
  *     this call is not shadowed, and one the registry does not know stays honestly unbound
  *     (`ResolvedForContext.unbound`) rather than silently taking the default.
- *  2. NAMED widgets — the five names a declaration (`#[WidgetIn('summary', 'stat-row')]`)
+ *  2. NAMED widgets — the six names a declaration (`#[WidgetIn('summary', 'stat-row')]`)
  *     binds. Registered AFTER the defaults so they sit ahead of them in the registry (later
  *     registrations are consulted first).
+ *
+ * `record-line` is a NAMED entry only — never a `list-item` context default. That predicate
+ * would make every participates-but-unbound root resolve a component, and `listItemRendersCards`
+ * would flip tower's threads/compositions tables into card grids. `recent-list` picks it by
+ * name, and only where the target declared no name.
  *
  * A host replaces any of them by registering a later predicate on the same name or the same
  * `x-frame-context` — the seam registry's ordinary override path, no hook here.
