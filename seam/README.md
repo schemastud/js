@@ -71,3 +71,30 @@ registry.registerWidget((s) => s['x-widget'] === 'citation', CitationWidget);
   (`normalizeNullableRefs`) — AJV rejects `nullable` without a `type` sibling. `required` is
   passed through untouched: the server's list is the form's list.
 - Arrays without an `items` definition are hidden rather than rendered as RJSF error blocks.
+
+## The `./vite` entry
+
+`@schemastud/seam/vite` is a Node-only subpath (it imports `node:fs`; never import it from the
+package root or a browser bundle). It derives Tailwind's `@source` list for family packages instead
+of hand-maintaining it: Tailwind v4 ignores symlinked `node_modules`, so a utility used only inside a
+`@splicewire/*` or `@schemastud/*` package's built `dist` is otherwise never generated.
+
+- `familySources({ root? })` — a Vite plugin (`enforce: 'pre'`) that injects one `@source` block per
+  resolved family `dist` directly after a stylesheet's `@import 'tailwindcss';` line.
+- `familyDistSources(root)` — the resolved family `dist` directories under `<root>/node_modules`,
+  skipping packages without a `dist` and packages whose realpath sits inside the host's own source.
+- `familySourceBlock(dist)` — the block for one dist: `@source '<dist>';` plus `@source not` for
+  `**/*.d.ts` and `**/*.map`.
+
+The starters register it ahead of `laravel()` and `tailwindcss()`:
+
+```ts
+import { familySources } from '@schemastud/seam/vite';
+
+export default defineConfig({
+    plugins: [familySources(), laravel({ /* … */ }), inertia(), react(), tailwindcss()],
+});
+```
+
+`src/vite.ts` records the measurements behind each choice (inclusive population, the `node_modules`
+realpath test, `@source not` over a positive glob).

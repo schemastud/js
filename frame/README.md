@@ -23,9 +23,9 @@ Decision: `schemastud/laravel-frame docs/adr/0003-summary-and-overview-are-colle
 
 ## Cards
 
-`src/cards/` ships the five default card widgets by `x-widget` name: `stat-row`, `figure-card`,
-`recent-list`, `nav-tile`, `dashboard-card`. A host installs them with one call on its seam
-registry:
+`src/cards/` ships the six default card widgets by `x-widget` name: `stat-row`, `figure-card`,
+`recent-list`, `record-line`, `nav-tile`, `dashboard-card`. A host installs them with one call on
+its seam registry:
 
 ```ts
 registerCardWidgets(registry, { iconFor, renderLink });
@@ -33,7 +33,11 @@ registerCardWidgets(registry, { iconFor, renderLink });
 
 `stat-row` and `figure-card` also register as the context defaults for an unbound `summary` /
 `overview` node; a declared `x-widget` name always wins, and an unknown name stays honestly
-unbound rather than silently taking the default. `iconFor` maps icon names to glyphs;
+unbound rather than silently taking the default. `record-line` is a named entry only: `RecentList`
+picks it by name for a row whose target resource declared no `list-item` widget, and it is never
+registered as a `list-item` context default (that predicate would resolve a component for every
+participates-but-unbound root and flip tabular list-items into card grids; see `cards/index.ts`).
+`iconFor` maps icon names to glyphs;
 `renderLink` is the host's navigation primitive (absent, a card draws a plain `<a href>`).
 A realm dashboard is one read-only resource of card rows rendered through these widgets:
 `splicewire/laravel-beam docs/adr/0222-a-realm-dashboard-is-one-read-only-resource-per-realm-of-card-rows.md`.
