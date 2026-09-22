@@ -9,7 +9,7 @@ import type { FrameTransport } from './types';
 
 export type FrameCrudTransport = Pick<
     FrameTransport,
-    'list' | 'get' | 'getFormSchema' | 'save' | 'remove'
+    'list' | 'get' | 'getFormSchema' | 'create' | 'save' | 'remove'
 >;
 
 export interface ResourceFilterHttp {
@@ -89,14 +89,13 @@ export function createResourceTransport(
             }
         },
         async saveFilter(resource, payload): Promise<SavedFilter> {
-            return (await crud.save(
+            return crud.create<SavedFilter>(
                 await savedResource(resource, payload.query_parameters.filterVariant),
-                null,
                 {
                     ...payload,
                     resource,
                 },
-            )) as unknown as SavedFilter;
+            );
         },
         async deleteSavedFilter(resource, id, variant): Promise<void> {
             await crud.remove(await savedResource(resource, variant), id);

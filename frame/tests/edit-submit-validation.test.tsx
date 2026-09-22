@@ -22,9 +22,9 @@ function mount(
     body?: ComponentType<FormBodySlotProps>,
 ) {
     const transport = createMockTransport({ formSchema: { schemas: schema } });
-    const save = vi.fn(async (_resource, _id, data) => ({ id: 'new-schema', ...data }));
+    const save = vi.fn(async (_resource, data) => Response.json({ id: 'new-schema', ...data }).json());
     const injection: FrameInjection = {
-        transport: { ...transport, save },
+        transport: { ...transport, create: save },
         primitives: mockPrimitives,
         registry: createWidgetRegistry(),
         schemaFetcher: async () => schema,
@@ -77,7 +77,7 @@ describe('EditShell validated Save request', () => {
             fireEvent.change(input, { target: { value: JSON.stringify(artifact) } });
             fireEvent.click(getByRole('button', { name: 'Save' }));
             await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-            expect(save).toHaveBeenLastCalledWith('schemas', null, { artifact });
+            expect(save).toHaveBeenLastCalledWith('schemas', { artifact });
             fireEvent.change(input, { target: { value: '{invalid-after-valid' } });
             fireEvent.click(getByRole('button', { name: 'Save' }));
             await waitFor(() => expect(input.getAttribute('aria-invalid')).toBe('true'));
@@ -106,7 +106,7 @@ describe('EditShell validated Save request', () => {
         await findByLabelText('artifact');
         fireEvent.click(getByRole('button', { name: 'Save' }));
         await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-        expect(save).toHaveBeenLastCalledWith('schemas', null, { artifact });
+        expect(save).toHaveBeenLastCalledWith('schemas', { artifact });
     });
 
     it('submits a custom form latest buffered draft through its registered validation handler', async () => {
@@ -131,7 +131,7 @@ describe('EditShell validated Save request', () => {
         const { save, findByRole } = mount('bare', false, BufferedBody);
         fireEvent.click(await findByRole('button', { name: 'Save' }));
         await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-        expect(save).toHaveBeenLastCalledWith('schemas', null, { artifact });
+        expect(save).toHaveBeenLastCalledWith('schemas', { artifact });
     });
 
     it('clears submission registration when the mounted form changes', async () => {
@@ -171,7 +171,7 @@ describe('EditShell validated Save request', () => {
         fireEvent.click(getByRole('button', { name: 'Save' }));
         await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
         await waitFor(() => expect(queryByRole('alert')).toBeNull());
-        expect(save).toHaveBeenLastCalledWith('schemas', null, { artifact: corrected });
+        expect(save).toHaveBeenLastCalledWith('schemas', { artifact: corrected });
         expect(JSON.parse(input.value)).toEqual(corrected);
     });
 
@@ -185,6 +185,6 @@ describe('EditShell validated Save request', () => {
         fireEvent.change(input, { target: { value: JSON.stringify(artifact) } });
         fireEvent.submit(container.querySelector('form')!);
         await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
-        expect(save).toHaveBeenLastCalledWith('schemas', null, { artifact });
+        expect(save).toHaveBeenLastCalledWith('schemas', { artifact });
     });
 });

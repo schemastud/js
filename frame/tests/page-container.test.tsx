@@ -25,7 +25,8 @@ const transport = {
     list: async () => ({ data: [], total: 0, page: 1, perPage: 25 }),
     get: async (_r: string, id: string) => ({ id, title: 'Alpha' }),
     getFormSchema: async () => ({ type: 'object', properties: { title: { type: 'string' } } }),
-    save: async (_r: string, id: string | null, data: Record<string, unknown>) => ({ id: id ?? '1', ...data }),
+    create: async (_resource: string, data: unknown) => Response.json({ id: '1', ...(data as object) }).json(),
+    save: async (_r: string, id: string, data: Record<string, unknown>) => ({ id, ...data }),
     remove: async () => undefined,
 };
 

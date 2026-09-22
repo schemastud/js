@@ -61,7 +61,8 @@ function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport 
             type: 'object',
             properties: { title: { type: 'string' } },
         })),
-        save: vi.fn(async (_r, id, data) => ({ id: id ?? '3', ...(data as Row) })),
+        create: vi.fn(async (_resource: string, data: unknown) => Response.json({ id: '3', ...(data as object) }).json()),
+        save: vi.fn(async (_r, id, data) => ({ id, ...(data as Row) })),
         remove: vi.fn(async () => undefined),
         ...overrides,
     };
@@ -261,7 +262,7 @@ describe('ListShell', () => {
 });
 
 describe('EditShell', () => {
-    it('renders a form from a mock getFormSchema and submits via transport.save', async () => {
+    it('renders a form from a mock getFormSchema and submits creation via transport.create', async () => {
         const transport = makeTransport();
         const onSaved = vi.fn();
         const Wrapper = wrap(makeInjection(transport));
@@ -286,7 +287,7 @@ describe('EditShell', () => {
         });
 
         await waitFor(() =>
-            expect(transport.save).toHaveBeenCalledWith('widgets', null, {
+            expect(transport.create).toHaveBeenCalledWith('widgets', {
                 title: 'Gamma',
             }),
         );
@@ -668,7 +669,7 @@ describe('EditShell read failures', () => {
         );
         await screen.findByRole('textbox');
         fireEvent.click(screen.getByText('Save'));
-        await waitFor(() => expect(transport.save).toHaveBeenCalledWith('widgets', null, {}));
+        await waitFor(() => expect(transport.create).toHaveBeenCalledWith('widgets', {}));
     });
 });
 

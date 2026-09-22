@@ -22,10 +22,11 @@ function fixture() {
         }),
         get: vi.fn(async () => records[0]),
         getFormSchema: vi.fn(async () => ({ type: 'object' })),
-        save: vi.fn(async (_resource, _id, data) => ({
+        create: vi.fn(async (_resource, data) => Response.json({
             id: 'new',
             ...(data as object),
-        })),
+        }).json()),
+        save: vi.fn(async (_resource, id) => ({ id })),
         remove: vi.fn(async () => undefined),
     };
     let reference: string | null | undefined = 'team-views';
@@ -157,7 +158,7 @@ describe('resource behavior composition', () => {
             resource: 'articles',
             ...payload,
         });
-        expect(crud.save).toHaveBeenCalledWith('team-views', null, {
+        expect(crud.create).toHaveBeenCalledWith('team-views', {
             resource: 'articles',
             ...payload,
         });
@@ -167,7 +168,7 @@ describe('resource behavior composition', () => {
         support(null);
         await expect(transport.saveFilter('articles', payload)).rejects.toThrow('unavailable');
         await expect(transport.deleteSavedFilter('articles', 'new')).rejects.toThrow('unavailable');
-        expect(crud.save).toHaveBeenCalledTimes(1);
+        expect(crud.create).toHaveBeenCalledTimes(1);
         expect(crud.remove).toHaveBeenCalledTimes(1);
     });
 

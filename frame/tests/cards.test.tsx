@@ -45,6 +45,7 @@ const transport = {
     list: async () => ({ data: [], total: 0, page: 1, perPage: 25 }),
     get: async () => ({}),
     getFormSchema: async () => ({ type: 'object' }),
+    create: async (_resource: string, data: unknown) => Response.json({ id: '3', ...(data as object) }).json(),
     save: async () => ({}),
     remove: async () => undefined,
 } as unknown as FrameTransport;

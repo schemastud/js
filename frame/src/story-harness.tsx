@@ -145,7 +145,8 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FrameTran
             if (fixtures.loading) return NEVER;
             return Promise.resolve(fixtures.formSchema?.[resource] ?? DEMO_FORM_SCHEMA);
         },
-        save: (_resource, id, data) => Promise.resolve({ id: id ?? 'new', ...(data as Row) }),
+        create: async (_resource: string, data: unknown) => Response.json({ id: 'new', ...(data as object) }).json(),
+        save: (_resource, id, data) => Promise.resolve({ id, ...(data as Row) }),
         remove: () => Promise.resolve(),
         // Facets seam — minimal valid shapes so the filter bar mounts without error.
         getFilterSchema: () => Promise.resolve({ properties: {} }),

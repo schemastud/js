@@ -91,7 +91,8 @@ function makeTransport(rows: Row[], envelope: Partial<Omit<Paginated<Row>, 'data
         list: vi.fn(async (): Promise<Paginated<Row>> => ({ data: rows, total: rows.length, page: 1, perPage: 25, ...envelope })),
         get: vi.fn(async (_r, id) => ({ id })),
         getFormSchema: vi.fn(async () => ({ type: 'object', properties: {} })),
-        save: vi.fn(async (_r, id, data) => ({ id: id ?? '3', ...(data as Row) })),
+        create: vi.fn(async (_resource: string, data: unknown) => Response.json({ id: '3', ...(data as object) }).json()),
+        save: vi.fn(async (_r, id, data) => ({ id, ...(data as Row) })),
         remove: vi.fn(async () => undefined),
     } as unknown as FrameTransport;
 }

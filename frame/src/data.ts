@@ -113,7 +113,7 @@ export function useSaveResource(resource: string) {
     return useMutation({
         mutationKey: resourceQueryKey(transport, resource, 'save'),
         mutationFn: ({ id, data }: { id: string | null; data: unknown }) =>
-            transport.save(resource, id, data),
+            id === null ? transport.create<Row>(resource, data) : transport.save(resource, id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: ['frame', resource],

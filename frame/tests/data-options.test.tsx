@@ -37,7 +37,8 @@ function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport 
         ),
         get: vi.fn(async (_r, id) => ({ id, title: 'Alpha', isBusy: true })),
         getFormSchema: vi.fn(async () => ({ type: 'object', properties: {} })),
-        save: vi.fn(async (_r, id, data) => ({ id: id ?? '3', ...(data as Row) })),
+        create: vi.fn(async (_resource: string, data: unknown) => Response.json({ id: '3', ...(data as object) }).json()),
+        save: vi.fn(async (_r, id, data) => ({ id, ...(data as Row) })),
         remove: vi.fn(async () => undefined),
         ...overrides,
     };

@@ -48,7 +48,8 @@ function makeInjection(): FrameInjection {
         list: vi.fn(async () => ({ data: [], total: 0, page: 1, perPage: 25 })),
         get: vi.fn(async (_r, id) => ({ id })),
         getFormSchema: vi.fn(async () => ({ type: 'object', properties: {} })),
-        save: vi.fn(async (_r, id, data) => ({ id: id ?? '1', ...(data as object) })),
+        create: vi.fn(async (_resource: string, data: unknown) => Response.json({ id: '1', ...(data as object) }).json()),
+        save: vi.fn(async (_r, id, data) => ({ id, ...(data as object) })),
         remove: vi.fn(async () => undefined),
     };
 

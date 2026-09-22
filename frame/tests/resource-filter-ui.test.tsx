@@ -59,7 +59,7 @@ function fixture(initial = '', can: FrameCan = () => true) {
         })),
         get: vi.fn(async () => ({ id: 'paper' })),
         getFormSchema: vi.fn(async () => ({ type: 'object' })),
-        save: vi.fn(async (_resource, _id, data) => {
+        create: vi.fn(async (_resource, data) => {
             const row = {
                 ...(data as Row),
                 id: 'view-1',
@@ -68,8 +68,9 @@ function fixture(initial = '', can: FrameCan = () => true) {
                 is_default: false,
             };
             saved.push(row);
-            return row;
+            return Response.json(row).json();
         }),
+        save: vi.fn(async (_resource, id) => ({ id })),
         remove: vi.fn(async () => undefined),
     };
     const read = vi.fn(async (url: string) => {
@@ -177,7 +178,7 @@ describe('declared filter variants in the generic Frame list', () => {
         });
         fireEvent.click(screen.getByRole('button', { name: 'Confirm save' }));
         await screen.findByRole('button', { name: 'Recent ecology' });
-        expect(crud.save).toHaveBeenCalledWith('team-views', null, {
+        expect(crud.create).toHaveBeenCalledWith('team-views', {
             resource: 'papers',
             name: 'Recent ecology',
             query_parameters: {

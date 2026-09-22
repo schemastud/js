@@ -29,14 +29,16 @@ export type FrameCan = (action: FrameAction, resource: string, record?: unknown)
 
 // -----------------------------------------------------------------------------
 // Transport — facets' 5 methods + CRUD. Named-method object (a list/edit surface
-// needs many operations). `getFormSchema`/`save` reach the server; the host's
+// needs many operations). `getFormSchema`/`create`/`save` reach the server; the host's
 // persist strategy and JsonSchemaGenerator->forRequest() sit BELOW this seam.
 // -----------------------------------------------------------------------------
 export interface FrameTransport extends FacetsTransport {
     list(resource: string, params: Record<string, string>): Promise<Paginated<Row>>;
     get(resource: string, id: string): Promise<Row>;
     getFormSchema(resource: string, form: FormMode): Promise<SchemaNode>;
-    save(resource: string, id: string | null, data: unknown): Promise<Row>;
+    /** Create returns the resource's declared createResultData, or its ordinary row by default. */
+    create<Result = Row>(resource: string, data: unknown): Promise<Result>;
+    save(resource: string, id: string, data: unknown): Promise<Row>;
     remove(resource: string, id: string): Promise<void>;
 }
 
@@ -193,6 +195,8 @@ export interface AdminResourceDefinition {
     data: string;
     query: string | null;
     editData: string | null;
+    /** Generated create-result type identity; null means the ordinary read projection. */
+    createResultData: string | null;
     policy: string | null;
     form: FormMode;
     /**

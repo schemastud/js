@@ -60,6 +60,7 @@ function makeTransport(authority: string, gate?: Promise<void>): FrameTransport 
         ),
         getFilterOptions: vi.fn(() => result([{ value: authority, label: authority }])),
         getSavedFilters: vi.fn(() => result([saved])),
+        create: vi.fn(async () => Response.json(await result(row)).json()),
         save: vi.fn(() => result(row)),
         remove: vi.fn(() => result(undefined)),
         saveFilter: vi.fn(() => result(saved)),
@@ -231,6 +232,14 @@ describe('shared QueryClient, distinct Frame transports', () => {
 
 const writes = [
     {
+        name: 'resource create',
+        method: 'create',
+        useWrite: () => {
+            const mutation = useSaveResource('things');
+            return () => mutation.mutateAsync({ id: null, data: { title: 'created' } });
+        },
+    },
+    {
         name: 'resource save',
         method: 'save',
         useWrite: () => {
@@ -313,7 +322,7 @@ describe('pending mutations retain their transport', () => {
             expect(second.getSavedFilters).toHaveBeenCalledTimes(1);
             f.switchTo(first);
             hook.rerender();
-            const read = method === 'save' || method === 'remove' ? 'list' : 'getSavedFilters';
+            const read = method === 'create' || method === 'save' || method === 'remove' ? 'list' : 'getSavedFilters';
             await waitFor(() => expect(first[read]).toHaveBeenCalledTimes(2));
             hook.unmount();
             f.client.clear();

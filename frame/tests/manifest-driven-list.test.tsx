@@ -80,7 +80,8 @@ function makeTransport(): FrameTransport {
             type: 'object',
             properties: { title: { type: 'string' } },
         })),
-        save: vi.fn(async (_r, id, data) => ({ id: id ?? '3', ...(data as Row) })),
+        create: vi.fn(async (_resource: string, data: unknown) => Response.json({ id: '3', ...(data as object) }).json()),
+        save: vi.fn(async (_r, id, data) => ({ id, ...(data as Row) })),
         remove: vi.fn(async () => undefined),
     };
 }

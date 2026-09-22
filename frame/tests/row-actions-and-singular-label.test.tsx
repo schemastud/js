@@ -75,7 +75,8 @@ function makeTransport(): FrameTransport {
         ),
         get: vi.fn(async (_r, id) => ({ id, name: 'Alpha' })),
         getFormSchema: vi.fn(async () => ({ type: 'object', properties: {} })),
-        save: vi.fn(async (_r, id, data) => ({ id: id ?? '2', ...(data as Row) })),
+        create: vi.fn(async (_resource: string, data: unknown) => Response.json({ id: '2', ...(data as object) }).json()),
+        save: vi.fn(async (_r, id, data) => ({ id, ...(data as Row) })),
         remove,
     };
 }
