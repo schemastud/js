@@ -83,3 +83,59 @@ describe('open JSON object field', () => {
         ).toBeTypeOf('function');
     });
 });
+
+describe('controlled JSON draft validation', () => {
+    it.each(['{broken', '[]', 'null', '42', '"text"'])(
+        'announces an invalid initial draft without submitting it: %s',
+        (draft) => {
+            const onSubmit = vi.fn();
+            const { getByLabelText, getByRole, container } = render(
+                <SchemaForm schema={schema} formData={{ artifact: draft }} onSubmit={onSubmit} />,
+            );
+            const input = getByLabelText('Artifact');
+            expect(input).toHaveProperty('value', draft);
+            expect(input.getAttribute('aria-invalid')).toBe('true');
+            const message = getByRole('alert');
+            expect(message.textContent).toBe('Enter a valid JSON object.');
+            expect(input.getAttribute('aria-describedby')).toBe(message.id);
+            fireEvent.submit(container.querySelector('form')!);
+            expect(onSubmit).not.toHaveBeenCalled();
+        },
+    );
+
+    it('keeps text and accessible validation together across controlled replay and replacement', async () => {
+        const onSubmit = vi.fn();
+        const tree = (artifact: unknown) => (
+            <SchemaForm schema={schema} formData={{ artifact }} onSubmit={onSubmit} />
+        );
+        const { getByLabelText, rerender, container } = render(tree({ version: 1 }));
+        const input = getByLabelText('Artifact');
+        fireEvent.change(input, { target: { value: '{local-invalid' } });
+        expect(input.getAttribute('aria-invalid')).toBe('true');
+        // The parent can replay a different invalid draft; it is still invalid data, not a reset.
+        rerender(tree('{replayed-invalid'));
+        expect(input).toHaveProperty('value', '{replayed-invalid');
+        expect(input.getAttribute('aria-invalid')).toBe('true');
+        const errorId = input.getAttribute('aria-describedby');
+        expect(errorId).toBe('root_artifact-error');
+        expect(document.getElementById(errorId!)?.textContent).toBe('Enter a valid JSON object.');
+        fireEvent.submit(container.querySelector('form')!);
+        expect(onSubmit).not.toHaveBeenCalled();
+        rerender(tree({ version: 2 }));
+        expect(input).toHaveProperty('value', JSON.stringify({ version: 2 }, null, 2));
+        expect(input.getAttribute('aria-invalid')).toBe('false');
+        expect(input.hasAttribute('aria-describedby')).toBe(false);
+        expect(document.getElementById('root_artifact-error')).toBeNull();
+        fireEvent.submit(container.querySelector('form')!);
+        await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+        expect(onSubmit.mock.calls[0][0].formData).toEqual({ artifact: { version: 2 } });
+        rerender(tree('{replayed-invalid'));
+        expect(input.getAttribute('aria-invalid')).toBe('true');
+        fireEvent.submit(container.querySelector('form')!);
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+        fireEvent.change(input, { target: { value: '{"version":3}' } });
+        fireEvent.submit(container.querySelector('form')!);
+        await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
+        expect(onSubmit.mock.calls[1][0].formData).toEqual({ artifact: { version: 3 } });
+    });
+});
