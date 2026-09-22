@@ -1,0 +1,15 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "title": "BeamSchemaInputData",
+    "properties": {
+        "artifact": {
+            "type": "object",
+            "x-stud-widget": "json"
+        }
+    },
+    "required": [
+        "artifact"
+    ],
+    "$id": "BeamSchemaInputData"
+}

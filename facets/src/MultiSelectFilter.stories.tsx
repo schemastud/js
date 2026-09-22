@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
-import { within } from 'storybook/test';
+import { expect, userEvent, within } from 'storybook/test';
 import { FacetsResourceProvider } from './context';
 import { MultiSelectFilter } from './MultiSelectFilter';
 import type { FilterDescriptor } from './types';
@@ -9,9 +9,8 @@ import { MockFacetsProvider } from './story-harness';
 /**
  * Facets/MultiSelectFilter (component-seams ticket 16). The type-ahead,
  * Options-Source-backed relational picker the facet popover mounts — an Input + a
- * results list + removable chips, no native `<select>`. Options resolve exclusively
- * through the injected transport keyed by the descriptor's `optionsRef`; the control
- * never hand-codes an endpoint. Rendered here over the workbench injection with the
+ * results list + removable chips, no native `<select>`. Relational options resolve
+ * through the injected transport; finite enum/bool declarations supply inline options. Rendered here over the workbench injection with the
  * fixture `statuses`/`circuits` option sources.
  *
  * TREATMENT axes (treatment-axes.md): the **cardinality** axis is component-defined,
@@ -102,4 +101,39 @@ export const SelectPopulated: Story = {
  *  while the query is in flight (the type-ahead's pending path). */
 export const Loading: Story = {
     render: () => <FilterHost descriptor={multiDescriptor} loading />,
+};
+
+/** Inline enum options are the same declaration emitted by resource-backed filters. */
+export const InlineOptions: Story = {
+    render: () => <FilterHost descriptor={{
+        operator: 'set', name: 'status', control: 'multiselect', options: [
+            { value: 'draft', label: 'Draft' }, { value: 'published', label: 'Published' }, { value: 'archived', label: 'Archived' },
+        ],
+    }} initialValue="draft" />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await expect(canvas.getByRole('button', { name: 'Remove Draft' })).toBeVisible();
+        const search = canvas.getByPlaceholderText('Search…');
+        await userEvent.click(search);
+        await expect(canvas.getByRole('button', { name: 'Archived' })).toBeVisible();
+        await userEvent.type(search, 'unmatched');
+        await expect(canvas.queryByRole('list')).not.toBeInTheDocument();
+        await expect(canvas.queryByRole('button', { name: 'Published' })).not.toBeInTheDocument();
+        await expect(canvas.queryByRole('button', { name: 'Archived' })).not.toBeInTheDocument();
+        await userEvent.clear(search);
+        await userEvent.type(search, 'pub');
+        await expect(canvas.queryByRole('button', { name: 'Archived' })).not.toBeInTheDocument();
+        await userEvent.click(canvas.getByRole('button', { name: 'Published' }));
+        await expect(canvas.getByRole('button', { name: 'Remove Published' })).toBeVisible();
+        await userEvent.click(canvas.getByRole('button', { name: 'Remove Draft' }));
+        await expect(canvas.queryByRole('button', { name: 'Remove Draft' })).not.toBeInTheDocument();
+    },
+};
+
+export const InlineScalarOptions: Story = {
+    render: () => <FilterHost descriptor={{
+        operator: 'set', name: 'enabled', control: 'multiselect', options: [
+            { value: false, label: 'No' }, { value: true, label: 'Yes' }, { value: 0, label: 'Zero' },
+        ],
+    }} initialValue="false,0" />,
 };

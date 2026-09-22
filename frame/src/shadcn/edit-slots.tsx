@@ -41,7 +41,7 @@ export function ShadcnToggle({
     );
 }
 
-export function ShadcnSaveBar({ saving, readOnly, onSave, onCancel }: SaveBarSlotProps) {
+export function ShadcnSaveBar({ saving, canSubmit, readOnly, onSave, onCancel }: SaveBarSlotProps) {
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     return (
@@ -59,7 +59,12 @@ export function ShadcnSaveBar({ saving, readOnly, onSave, onCancel }: SaveBarSlo
                 </Button>
             ) : null}
             {!readOnly ? (
-                <Button type="button" disabled={saving} onClick={onSave} data-frame-action="save">
+                <Button
+                    type="button"
+                    disabled={saving || !canSubmit}
+                    onClick={onSave}
+                    data-frame-action="save"
+                >
                     {saving ? 'Saving…' : 'Save'}
                 </Button>
             ) : null}

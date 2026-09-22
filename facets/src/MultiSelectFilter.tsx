@@ -1,15 +1,13 @@
 import { X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFacetsInjection } from './context';
 import { useFilterOptions } from './data';
 import type { FilterDescriptor } from './types';
 
 /**
- * A type-ahead, Options-Source-backed relational picker — composed from an Input + a
- * results list + removable chips (no native `<select>`, per house rules). Options
- * resolve exclusively through the Options Source client keyed by the descriptor's
- * `optionsRef`, with server-side type-ahead; the control never hand-codes an
- * options endpoint.
+ * A type-ahead picker over declared inline options or an Options Source, composed from
+ * an Input, results and removable chips. Finite enum/bool options search locally;
+ * relational options resolve through `optionsRef` with server-side type-ahead.
  *
  * Serves both cardinalities off the descriptor's `control`: `multiselect` accrues a
  * comma-joined id set, `select` holds a single relational id (replace-on-pick,
@@ -33,19 +31,24 @@ export function MultiSelectFilter({
     const single = descriptor.control === 'select';
     const [search, setSearch] = useState('');
     const [open, setOpen] = useState(false);
-    const options = useFilterOptions(descriptor.optionsRef, search);
+    const options = useFilterOptions(descriptor.options === undefined ? descriptor.optionsRef : undefined, search);
+    // URL state uses strings; enum/bool/number declarations retain their labels while
+    // crossing that boundary. Keep the full inline set for initial and hidden chips.
+    const inlineOptions = useMemo(() => descriptor.options?.map((option) => ({
+        value: String(option.value), label: option.label,
+    })), [descriptor.options]);
+    const optionsData = inlineOptions ?? options.data;
 
     const selected = value ? value.split(',') : [];
 
     // Remember labels for values we've seen, so chips read as names not ids.
     const labels = useRef<Record<string, string>>({});
-    for (const option of options.data ?? []) {
+    for (const option of optionsData ?? []) {
         labels.current[option.value] = option.label;
     }
 
     // Report resolved labels upward after commit (never during render), so a host
     // can render names for values chosen here.
-    const optionsData = options.data;
     useEffect(() => {
         if (onLabelsResolved && (optionsData?.length ?? 0) > 0) {
             onLabelsResolved({ ...labels.current });
@@ -69,7 +72,9 @@ export function MultiSelectFilter({
         onChange(next.length ? next.join(',') : null);
     };
 
-    const available = (options.data ?? []).filter((option) => !selected.includes(option.value));
+    const available = (optionsData ?? []).filter((option) =>
+        !selected.includes(option.value) && (inlineOptions === undefined || option.label.toLowerCase().includes(search.toLowerCase())),
+    );
 
     return (
         <div className="space-y-1.5">

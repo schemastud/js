@@ -57,7 +57,21 @@ function walkUiSchema(
 ): UiSchema {
     const ui: UiSchema = {};
 
-    const { widget, config } = registry.resolveEntry(schema);
+    let { widget, config } = registry.resolveEntry(schema);
+    // Plain open-object editing belongs to forms, not to general widget/card resolution.
+    if (
+        widget === undefined &&
+        !schema['x-widget'] &&
+        schema.type === 'object' &&
+        !schema.$ref &&
+        !schema.anyOf &&
+        !schema.oneOf &&
+        !schema.allOf &&
+        Object.keys(schema.properties ?? {}).length === 0 &&
+        schema.additionalProperties !== false
+    ) {
+        ({ widget, config } = registry.resolveEntry({ ...schema, 'x-widget': 'json' }));
+    }
     let fieldReplacesAnyOrOneOf = false;
     if (widget !== undefined) {
         // RJSF routes ui:widget only on primitive fields; a component resolved
@@ -88,7 +102,10 @@ function walkUiSchema(
     // caller uiSchema still wins last through mergeUiSchema.
     const declaredOptions = schema['x-widget-options'];
     const options = mergeOptions(
-        mergeOptions(config, fieldReplacesAnyOrOneOf ? { fieldReplacesAnyOrOneOf: true } : undefined),
+        mergeOptions(
+            config,
+            fieldReplacesAnyOrOneOf ? { fieldReplacesAnyOrOneOf: true } : undefined,
+        ),
         declaredOptions && typeof declaredOptions === 'object' && !Array.isArray(declaredOptions)
             ? (declaredOptions as Record<string, unknown>)
             : undefined,

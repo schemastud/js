@@ -1,5 +1,6 @@
 import { createFormIntentBus } from '@schemastud/seam';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { flushSync } from 'react-dom';
 import { useFrameInjection } from './context';
 import { DefaultContainer, DefaultFormBody, DefaultSaveBar, DefaultToggle } from './slots/defaults';
 import { useFormSchema, useResourceRecord, useSaveResource } from './data';
@@ -32,6 +33,13 @@ function EditShellRecord({
     const { can, hooks, editSlots, primitives } = useFrameInjection();
     const [form, setForm] = useState<FormMode>(formProp);
     const [formData, setFormData] = useState<Row>({});
+
+    const submitHandler = useRef<(() => void) | null>(null);
+    const [canSubmit, setCanSubmit] = useState(false);
+    const registerSubmit = useCallback((handler: (() => void) | null) => {
+        submitHandler.current = handler;
+        setCanSubmit(handler !== null);
+    }, []);
 
     const dirty = useRef(false);
     const intentBus = useMemo(() => createFormIntentBus(), []);
@@ -69,8 +77,8 @@ function EditShellRecord({
         (container === 'page'
             ? PageContainer
             : container === 'bare'
-              ? BareContainer
-              : (editSlots?.Container ?? DefaultContainer));
+            ? BareContainer
+            : editSlots?.Container ?? DefaultContainer);
 
     // Detail (readOnly) still resolves against `view`; create/update gate on their action.
     const effectiveReadOnly = readOnly || !can(id === null ? 'create' : 'update', resource);
@@ -138,11 +146,25 @@ function EditShellRecord({
                         setFormData(data);
                     }}
                     onSubmit={submit}
+                    registerSubmit={registerSubmit}
                 />
+                {saveMutation.isError && (
+                    <div role="alert" data-frame-shell="save-error">
+                        {saveMutation.error?.message || 'Could not save changes.'}
+                    </div>
+                )}
                 <SaveBar
                     saving={saveMutation.isPending}
+                    canSubmit={canSubmit}
                     readOnly={effectiveReadOnly || readFailed}
-                    onSave={() => submit(formData)}
+                    onSave={() => {
+                        if (!submitHandler.current || effectiveReadOnly || readFailed || !ready)
+                            return;
+                        // Commit buffered widget state, including controlled form reconciliation,
+                        // before the registered body validates and submits its current draft.
+                        flushSync(() => intentBus.flushCommits());
+                        submitHandler.current?.();
+                    }}
                     onCancel={onCancel}
                 />
             </div>

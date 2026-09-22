@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 afterEach(cleanup);
@@ -48,12 +48,14 @@ function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport 
         })),
         deleteSavedFilter: vi.fn(async () => undefined),
         // frame's CRUD
-        list: vi.fn(async (): Promise<Paginated<Row>> => ({
-            data: ROWS,
-            total: 2,
-            page: 1,
-            perPage: 25,
-        })),
+        list: vi.fn(
+            async (): Promise<Paginated<Row>> => ({
+                data: ROWS,
+                total: 2,
+                page: 1,
+                perPage: 25,
+            }),
+        ),
         get: vi.fn(async (_r, id) => ({ id, title: 'Alpha' })),
         getFormSchema: vi.fn(async () => ({
             type: 'object',
@@ -115,10 +117,23 @@ function wrap(injection: FrameInjection) {
 
 // A lightweight FormBody override — proves the shell wiring without dragging RJSF
 // into jsdom, and honors readOnly (the shell's contract with the slot).
-function MockFormBody({ schema, formData, readOnly, onChange, onSubmit }: FormBodySlotProps) {
+function MockFormBody({
+    schema,
+    formData,
+    readOnly,
+    onChange,
+    onSubmit,
+    registerSubmit,
+}: FormBodySlotProps) {
+    const ref = useRef<HTMLFormElement>(null);
+    useEffect(() => {
+        registerSubmit(() => ref.current?.requestSubmit());
+        return () => registerSubmit(null);
+    }, [registerSubmit]);
     const props = (schema.properties ?? {}) as Record<string, unknown>;
     return (
         <form
+            ref={ref}
             data-testid="mock-form"
             onSubmit={(e) => {
                 e.preventDefault();

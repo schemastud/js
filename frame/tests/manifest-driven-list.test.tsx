@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry } from '@schemastud/seam';
 import { FrameProvider } from '../src/context';
@@ -67,12 +67,14 @@ function makeTransport(): FrameTransport {
             is_default: false,
         })),
         deleteSavedFilter: vi.fn(async () => undefined),
-        list: vi.fn(async (): Promise<Paginated<Row>> => ({
-            data: ROWS,
-            total: 2,
-            page: 1,
-            perPage: 25,
-        })),
+        list: vi.fn(
+            async (): Promise<Paginated<Row>> => ({
+                data: ROWS,
+                total: 2,
+                page: 1,
+                perPage: 25,
+            }),
+        ),
         get: vi.fn(async (_r, id) => ({ id, title: 'Alpha' })),
         getFormSchema: vi.fn(async () => ({
             type: 'object',
@@ -296,8 +298,22 @@ describe('FrameInjection.listSlots — the host names its design system once', (
     });
 });
 
-function MockFormBody({ onSubmit, formData }: FormBodySlotProps) {
-    return <form data-testid="mock-form" onSubmit={() => onSubmit(formData)} />;
+function MockFormBody({ onSubmit, formData, registerSubmit }: FormBodySlotProps) {
+    const ref = useRef<HTMLFormElement>(null);
+    useEffect(() => {
+        registerSubmit(() => ref.current?.requestSubmit());
+        return () => registerSubmit(null);
+    }, [registerSubmit]);
+    return (
+        <form
+            ref={ref}
+            data-testid="mock-form"
+            onSubmit={(event) => {
+                event.preventDefault();
+                onSubmit(formData);
+            }}
+        />
+    );
 }
 
 describe('FrameInjection.editSlots — and the one slot the container prop outranks', () => {

@@ -9,6 +9,7 @@ import type {
 import { ButtonGroupWidget } from './widgets/button-group';
 import { ComboboxWidget } from './widgets/combobox';
 import { StarRatingWidget } from './widgets/star-rating';
+import { JsonField } from './widgets/json';
 
 const FORMAT_INPUTS = ['date', 'date-time', 'email', 'uri'];
 
@@ -38,7 +39,10 @@ const defaultEntries: RegistryEntry[] = [
     { predicate: (s) => Array.isArray(s.enum), widget: undefined },
     // format-based
     { predicate: (s) => s.format === 'file', widget: 'file' },
-    { predicate: (s) => FORMAT_INPUTS.includes(s.format as string), widget: undefined },
+    {
+        predicate: (s) => FORMAT_INPUTS.includes(s.format as string),
+        widget: undefined,
+    },
     // type-based and string fallback: RJSF defaults are the contract
 ];
 
@@ -49,6 +53,7 @@ export function createWidgetRegistry(): WidgetRegistry {
     // this, not the singleton) still gets it, no separate host-side registration.
     const entries: RegistryEntry[] = [
         { predicate: (s) => s['x-widget'] === 'combobox', widget: ComboboxWidget },
+        { predicate: (s) => s['x-widget'] === 'json', widget: JsonField },
         ...defaultEntries,
     ];
 
@@ -60,8 +65,7 @@ export function createWidgetRegistry(): WidgetRegistry {
         const predicate =
             typeof predicateOrKey === 'function'
                 ? predicateOrKey
-                : (s: SchemaNode) =>
-                      s.type === predicateOrKey || s['x-widget'] === predicateOrKey;
+                : (s: SchemaNode) => s.type === predicateOrKey || s['x-widget'] === predicateOrKey;
         // Later registrations take precedence.
         entries.unshift({ predicate, widget, config });
     }

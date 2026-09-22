@@ -293,7 +293,6 @@ export interface RealmDefinition {
     stack?: string[];
 }
 
-
 // =============================================================================
 // Slot prop contracts
 // =============================================================================
@@ -476,6 +475,8 @@ export interface FormBodySlotProps {
     form: FormMode;
     onChange: (data: Row) => void;
     onSubmit: (data: Row) => void;
+    /** Register this body's validated submission path; null keeps the shell Save unavailable. */
+    registerSubmit: (handler: (() => void) | null) => void;
 }
 
 export interface EditSlots {
@@ -487,6 +488,7 @@ export interface EditSlots {
 
 export interface SaveBarSlotProps {
     saving: boolean;
+    canSubmit: boolean;
     readOnly: boolean;
     onSave: () => void;
     onCancel?: () => void;

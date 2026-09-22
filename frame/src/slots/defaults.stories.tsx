@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useEffect } from 'react';
 import { createFormIntentBus, type SchemaNode } from '@schemastud/seam';
 import {
     DefaultCell,
@@ -61,7 +62,12 @@ export const ToolbarNoCreate: Story = {
     render: () => (
         <MockFrameProvider>
             <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
-                <DefaultToolbar resource="members" canCreate={false} framesCreate onNew={() => {}} />
+                <DefaultToolbar
+                    resource="members"
+                    canCreate={false}
+                    framesCreate
+                    onNew={() => {}}
+                />
                 canCreate=false → Toolbar renders null.
             </div>
         </MockFrameProvider>
@@ -124,7 +130,12 @@ export const TableDensity: Story = {
     parameters: { vr: { density: true } },
     render: () => (
         <MockFrameProvider>
-            <DefaultTable columns={columns} rows={densityRows} Cell={DefaultCell} onOpen={() => {}} />
+            <DefaultTable
+                columns={columns}
+                rows={densityRows}
+                Cell={DefaultCell}
+                onOpen={() => {}}
+            />
         </MockFrameProvider>
     ),
 };
@@ -181,6 +192,7 @@ export const FormBody: Story = {
     render: () => (
         <MockFrameProvider>
             <DefaultFormBody
+                registerSubmit={() => {}}
                 schema={editSchema}
                 formData={{ name: 'Grace Hopper', role: 'admin' }}
                 intentBus={createFormIntentBus()}
@@ -202,11 +214,19 @@ const seriesSchema: SchemaNode = {
 } as SchemaNode;
 
 /** A stand-in bespoke whole-object form — what `registerFormForSchema('series', …)` resolves to. */
-function DemoSeriesForm({ formData }: FormBodySlotProps) {
+function DemoSeriesForm({ formData, registerSubmit }: FormBodySlotProps) {
+    useEffect(() => registerSubmit(null), [registerSubmit]);
     return (
-        <div data-testid="canonical-series-form" className="rounded-md border border-dashed p-3 text-sm">
-            <div className="mb-1 font-medium text-foreground">Canonical series editor — resolved by kind</div>
-            <div className="text-muted-foreground">title: {String((formData as { title?: unknown }).title ?? '')}</div>
+        <div
+            data-testid="canonical-series-form"
+            className="rounded-md border border-dashed p-3 text-sm"
+        >
+            <div className="mb-1 font-medium text-foreground">
+                Canonical series editor — resolved by kind
+            </div>
+            <div className="text-muted-foreground">
+                title: {String((formData as { title?: unknown }).title ?? '')}
+            </div>
         </div>
     );
 }
@@ -223,6 +243,7 @@ export const FormBodyCanonicalForm: Story = {
         return (
             <MockFrameProvider formResolver={resolver}>
                 <DefaultFormBody
+                    registerSubmit={() => {}}
                     schema={seriesSchema}
                     formData={{ title: 'Weekly drop' }}
                     intentBus={createFormIntentBus()}
@@ -247,6 +268,7 @@ export const FormBodyResolverFallthrough: Story = {
         return (
             <MockFrameProvider formResolver={resolver}>
                 <DefaultFormBody
+                    registerSubmit={() => {}}
                     schema={editSchema}
                     formData={{ name: 'Grace Hopper', role: 'admin' }}
                     intentBus={createFormIntentBus()}
@@ -261,13 +283,21 @@ export const FormBodyResolverFallthrough: Story = {
 };
 
 /** Toggle — the `enriched | bare` form-mode radio group. */
-export const Toggle: Story = { render: () => <DefaultToggle value="enriched" onChange={() => {}} /> };
+export const Toggle: Story = {
+    render: () => <DefaultToggle value="enriched" onChange={() => {}} />,
+};
 
 /** SaveBar, editable — Cancel + Save. */
 export const SaveBar: Story = {
     render: () => (
         <MockFrameProvider>
-            <DefaultSaveBar saving={false} readOnly={false} onSave={() => {}} onCancel={() => {}} />
+            <DefaultSaveBar
+                canSubmit
+                saving={false}
+                readOnly={false}
+                onSave={() => {}}
+                onCancel={() => {}}
+            />
         </MockFrameProvider>
     ),
 };
@@ -276,7 +306,13 @@ export const SaveBar: Story = {
 export const SaveBarSaving: Story = {
     render: () => (
         <MockFrameProvider>
-            <DefaultSaveBar saving readOnly={false} onSave={() => {}} onCancel={() => {}} />
+            <DefaultSaveBar
+                canSubmit
+                saving
+                readOnly={false}
+                onSave={() => {}}
+                onCancel={() => {}}
+            />
         </MockFrameProvider>
     ),
 };
@@ -285,7 +321,13 @@ export const SaveBarSaving: Story = {
 export const SaveBarReadOnly: Story = {
     render: () => (
         <MockFrameProvider>
-            <DefaultSaveBar saving={false} readOnly onCancel={() => {}} onSave={() => {}} />
+            <DefaultSaveBar
+                canSubmit
+                saving={false}
+                readOnly
+                onCancel={() => {}}
+                onSave={() => {}}
+            />
         </MockFrameProvider>
     ),
 };

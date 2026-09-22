@@ -1,5 +1,5 @@
 import { SchemaForm } from '@schemastud/seam';
-import type { ComponentType, ReactNode } from 'react';
+import { useEffect, useRef, type ComponentType, type ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useFrameInjection } from '../context';
 import { dashboardRowRenders } from '../cards';
@@ -215,7 +215,11 @@ export function DefaultPagination({ page, perPage, total, onPageChange }: Pagina
             <span data-frame-page>
                 {page} / {lastPage}
             </span>
-            <Button type="button" disabled={page >= lastPage} onClick={() => onPageChange(page + 1)}>
+            <Button
+                type="button"
+                disabled={page >= lastPage}
+                onClick={() => onPageChange(page + 1)}
+            >
                 Next
             </Button>
         </div>
@@ -332,8 +336,8 @@ export function DefaultCards({ rows, onOpen, Card }: CardsSlotProps) {
  * affordance rides a FormIntentBus on formContext (not props).
  */
 export function DefaultFormBody(props: FormBodySlotProps) {
-    const { schema, formData, intentBus, readOnly, onChange, onSubmit } = props;
-    const { schemaFetcher, registry, formResolver } = useFrameInjection();
+    const { schema, readOnly } = props;
+    const { formResolver } = useFrameInjection();
 
     // Canonical form resolution (order: root x-widget > form-by-kind > generic). A form registered
     // for the object's schema kind renders in place of the generic SchemaForm; an explicit root
@@ -347,8 +351,27 @@ export function DefaultFormBody(props: FormBodySlotProps) {
         );
     }
 
+    return <SchemaFormBody {...props} />;
+}
+
+function SchemaFormBody({
+    schema,
+    formData,
+    intentBus,
+    readOnly,
+    onChange,
+    onSubmit,
+    registerSubmit,
+}: FormBodySlotProps) {
+    const { schemaFetcher, registry } = useFrameInjection();
+    const root = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        registerSubmit(() => root.current?.querySelector('form')?.requestSubmit());
+        return () => registerSubmit(null);
+    }, [registerSubmit]);
+
     return (
-        <div data-frame-slot="FormBody" data-frame-readonly={readOnly ? '' : undefined}>
+        <div ref={root} data-frame-slot="FormBody" data-frame-readonly={readOnly ? '' : undefined}>
             <SchemaForm
                 schema={schema}
                 formData={formData}
@@ -392,7 +415,13 @@ export function DefaultToggle({
     );
 }
 
-export function DefaultSaveBar({ saving, readOnly, onSave, onCancel }: SaveBarSlotProps) {
+export function DefaultSaveBar({
+    saving,
+    canSubmit,
+    readOnly,
+    onSave,
+    onCancel,
+}: SaveBarSlotProps) {
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     return (
@@ -403,7 +432,12 @@ export function DefaultSaveBar({ saving, readOnly, onSave, onCancel }: SaveBarSl
                 </Button>
             ) : null}
             {!readOnly ? (
-                <Button type="button" disabled={saving} onClick={onSave} data-frame-action="save">
+                <Button
+                    type="button"
+                    disabled={saving || !canSubmit}
+                    onClick={onSave}
+                    data-frame-action="save"
+                >
                     {saving ? 'Saving…' : 'Save'}
                 </Button>
             ) : null}
