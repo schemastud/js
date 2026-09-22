@@ -48,7 +48,10 @@ export function ShadcnTable(props: {
 }) {
     const { columns, rows, onOpen, Cell, RowActions, sort } = props;
     return (
-        <div data-frame-slot="Table" className="overflow-hidden rounded-lg border border-border bg-card">
+        <div
+            data-frame-slot="Table"
+            className="overflow-hidden rounded-lg border border-border bg-card"
+        >
             <table className="w-full border-collapse text-left text-sm">
                 <thead>
                     <tr className="border-b border-border bg-muted/40 text-[11px] tracking-[0.12em] text-muted-foreground uppercase">
@@ -69,12 +72,18 @@ export function ShadcnTable(props: {
                             }`}
                         >
                             {columns.map((c) => (
-                                <td key={c.field} className="px-4 py-3 align-middle text-foreground/90">
+                                <td
+                                    key={c.field}
+                                    className="px-4 py-3 align-middle text-foreground/90"
+                                >
                                     <Cell column={c} record={row} />
                                 </td>
                             ))}
                             {RowActions ? (
-                                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                <td
+                                    className="px-4 py-3 text-right"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
                                     <RowActions record={row} />
                                 </td>
                             ) : null}
@@ -94,7 +103,8 @@ export function ShadcnTable(props: {
 function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
     const { column, sort } = props;
     const label = column.header ?? column.field;
-    const sortable = Boolean(sort) && Boolean(column.sortField) && sort!.sortableFields.has(column.sortField!);
+    const sortable =
+        Boolean(sort) && Boolean(column.sortField) && sort!.sortableFields.has(column.sortField!);
 
     if (!sortable) {
         return <th className="px-4 py-3 font-medium">{label}</th>;
@@ -148,7 +158,11 @@ export function ShadcnCell(props: CellSlotProps) {
         return <span className="text-muted-foreground">—</span>;
     }
     if (typeof value === 'boolean') {
-        return <span className={value ? 'text-primary' : 'text-muted-foreground'}>{value ? 'Yes' : 'No'}</span>;
+        return (
+            <span className={value ? 'text-primary' : 'text-muted-foreground'}>
+                {value ? 'Yes' : 'No'}
+            </span>
+        );
     }
     return <DefaultCell {...props} />;
 }
@@ -182,9 +196,7 @@ export function ShadcnErrorState({ error, retry }: ErrorSlotProps) {
             className="rounded-lg border border-destructive/40 bg-destructive/5 px-6 py-12 text-center text-sm"
         >
             <div className="font-medium text-destructive">Could not load this list.</div>
-            {message ? (
-                <div className="mt-2 text-muted-foreground">{message}</div>
-            ) : null}
+            {message ? <div className="mt-2 text-muted-foreground">{message}</div> : null}
             <Button type="button" size="sm" variant="outline" className="mt-4" onClick={retry}>
                 Retry
             </Button>
@@ -213,32 +225,38 @@ export function ShadcnToolbar({
     );
 }
 
-export function ShadcnPagination({
-    page,
-    perPage,
-    total,
-    onPageChange,
-    onPerPageChange,
-    perPageOptions,
-}: PaginationSlotProps) {
-    const { primitives } = useFrameInjection();
-    const { Button, SimpleSelect } = primitives;
-    const lastPage = Math.max(1, Math.ceil(total / Math.max(1, perPage)));
-    const options = perPageOptions ?? [10, 25, 50, 100];
+export function ShadcnPagination(props: PaginationSlotProps) {
+    const {
+        primitives: { Button, SimpleSelect },
+    } = useFrameInjection();
+    const lastPage =
+        props.mode === 'offset' ? Math.max(1, Math.ceil(props.total / props.perPage)) : 1;
+    const options = props.perPageOptions ?? [10, 25, 50, 100];
     return (
-        <div data-frame-slot="Pagination" className="mt-3 flex items-center justify-between text-sm">
+        <div
+            data-frame-slot="Pagination"
+            className="mt-3 flex flex-wrap items-center justify-between gap-2 text-sm"
+        >
             <div className="flex items-center gap-2 text-muted-foreground">
-                <span>
-                    Page {page} of {lastPage} · {total} total
-                </span>
-                {onPerPageChange && SimpleSelect && (
+                {props.mode === 'offset' && (
+                    <span>
+                        Page {props.page} of {lastPage} · {props.total} total
+                    </span>
+                )}
+                {props.onPerPageChange && SimpleSelect && (
                     <span className="flex items-center gap-1.5">
-                        <span aria-hidden>·</span>
+                        {props.mode === 'offset' && <span aria-hidden>·</span>}
                         <span>Rows</span>
                         <SimpleSelect
-                            value={String(perPage)}
-                            onValueChange={(value: string) => onPerPageChange(Number(value))}
-                            options={options.map((n) => ({ value: String(n), label: String(n) }))}
+                            value={String(props.perPage)}
+                            disabled={props.disabled}
+                            onValueChange={(value: string) =>
+                                props.onPerPageChange?.(Number(value))
+                            }
+                            options={options.map((n) => ({
+                                value: String(n),
+                                label: String(n),
+                            }))}
                             aria-label="Rows per page"
                             className="h-7 w-[4.75rem]"
                         />
@@ -246,12 +264,30 @@ export function ShadcnPagination({
                 )}
             </div>
             <div className="flex gap-2">
+                {props.mode === 'cursor' && (
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={props.disabled || props.isFirst}
+                        onClick={props.onFirst}
+                    >
+                        First
+                    </Button>
+                )}
                 <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => onPageChange(page - 1)}
+                    disabled={
+                        props.disabled ||
+                        (props.mode === 'offset' ? props.page <= 1 : !props.hasPrevious)
+                    }
+                    onClick={() =>
+                        props.mode === 'offset'
+                            ? props.onPageChange(props.page - 1)
+                            : props.onPrevious()
+                    }
                 >
                     ‹ Prev
                 </Button>
@@ -259,8 +295,15 @@ export function ShadcnPagination({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={page >= lastPage}
-                    onClick={() => onPageChange(page + 1)}
+                    disabled={
+                        props.disabled ||
+                        (props.mode === 'offset' ? props.page >= lastPage : !props.hasNext)
+                    }
+                    onClick={() =>
+                        props.mode === 'offset'
+                            ? props.onPageChange(props.page + 1)
+                            : props.onNext()
+                    }
                 >
                     Next ›
                 </Button>

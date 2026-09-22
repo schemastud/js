@@ -23,12 +23,7 @@ import type { ComponentType } from 'react';
  *     modelled — the former types only knew the relational `optionsRef` path.
  */
 export type FilterControl =
-    | 'text'
-    | 'select'
-    | 'multiselect'
-    | 'search'
-    | 'date-range'
-    | 'number-range';
+    'text' | 'select' | 'multiselect' | 'search' | 'date-range' | 'number-range';
 
 export interface FilterInlineOption {
     value: string | number | boolean;
@@ -136,7 +131,7 @@ export interface FacetsTransport {
     getSavedFilters(resource: string, variant?: string): Promise<SavedFilter[]>;
     saveFilter(
         resource: string,
-        payload: { name: string; query_parameters: SavedFilterQueryParameters }
+        payload: { name: string; query_parameters: SavedFilterQueryParameters },
     ): Promise<SavedFilter>;
     deleteSavedFilter(resource: string, id: string, variant?: string): Promise<void>;
 }
@@ -172,7 +167,10 @@ export interface FacetsPrimitives {
  * setter. This is the third learning: a batteries-UX rung that owns URL state is
  * router-coupled unless the router is injected too.
  */
-export type UrlStateSetter = (updater: (prev: URLSearchParams) => URLSearchParams) => void;
+export type UrlStateSetter = (
+    updater: (prev: URLSearchParams) => URLSearchParams,
+    options?: { replace?: boolean },
+) => void;
 export type UseUrlState = () => readonly [URLSearchParams, UrlStateSetter];
 
 /** The full injection bundle a host supplies once via {@link FacetsProvider}. */

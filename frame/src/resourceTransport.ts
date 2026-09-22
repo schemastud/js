@@ -6,6 +6,7 @@ import type {
     SavedFilter,
 } from '@schemastud/facets';
 import type { FrameTransport } from './types';
+import { parseResourcePage } from './resourcePage';
 
 export type FrameCrudTransport = Pick<
     FrameTransport,
@@ -71,20 +72,43 @@ export function createResourceTransport(
             const schema = await getFilterSchema(resource, variant);
             if (!schema.savedViewsResource) return [];
             const rows: SavedFilter[] = [];
-            for (let page = 1; ; page++) {
-                const result = await crud.list(schema.savedViewsResource, {
-                    'filter[resource]': resource,
-                    ...(variant ? { filterVariant: variant } : {}),
-                    page: String(page),
-                    perPage: '25',
-                });
-                if (result.page !== page || result.perPage <= 0) {
-                    throw new Error('Saved views returned invalid pagination.');
-                }
+            let mode: 'offset' | 'cursor' | undefined;
+            let page = 1;
+            let cursor: string | undefined;
+            const seen = new Set<string>();
+            for (;;) {
+                const result = parseResourcePage(
+                    await crud.list(schema.savedViewsResource, {
+                        'filter[resource]': resource,
+                        ...(variant ? { filterVariant: variant } : {}),
+                        ...(cursor ? { cursor } : { page: String(page) }),
+                        per_page: '25',
+                    }),
+                );
+                const currentMode = 'nextCursor' in result ? 'cursor' : 'offset';
+                if (mode && mode !== currentMode)
+                    throw new Error('Saved views changed pagination mode.');
+                mode = currentMode;
                 rows.push(...(result.data as unknown as SavedFilter[]));
-                if (result.page * result.perPage >= result.total) return rows;
-                if (result.data.length === 0) {
-                    throw new Error('Saved views returned an incomplete page.');
+                if ('nextCursor' in result) {
+                    if (result.nextCursor === null) return rows;
+                    if (seen.has(result.nextCursor))
+                        throw new Error('Saved views returned cyclic pagination.');
+                    if (result.data.length === 0)
+                        throw new Error('Saved views returned an incomplete page.');
+                    seen.add(result.nextCursor);
+                    cursor = result.nextCursor;
+                } else {
+                    if (result.page !== page)
+                        throw new Error('Saved views returned invalid pagination.');
+                    if (result.page * result.perPage >= result.total) {
+                        if (rows.length !== result.total)
+                            throw new Error('Saved views returned an incomplete page.');
+                        return rows;
+                    }
+                    if (result.data.length !== result.perPage)
+                        throw new Error('Saved views returned an incomplete page.');
+                    page++;
                 }
             }
         },

@@ -10,13 +10,15 @@ afterEach(cleanup);
 
 const schema: FilterSchema = {
     properties: {
-        term: { 'x-filter': { name: 'term', operator: 'partial', control: 'search' } },
+        term: {
+            'x-filter': { name: 'term', operator: 'partial', control: 'search' },
+        },
         title: { 'x-sort': { name: 'title' } },
     },
 };
 
-function fixture() {
-    let current = new URLSearchParams();
+function fixture(initial = '') {
+    let current = new URLSearchParams(initial);
     const listeners = new Set<() => void>();
     const subscribe = (listener: () => void) => {
         listeners.add(listener);
@@ -55,7 +57,9 @@ function fixture() {
         SimpleSelect: Noop,
         Badge: Noop,
     };
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+    });
     function Wrapper({ children }: { children: ReactNode }) {
         return (
             <QueryClientProvider client={client}>
@@ -129,9 +133,15 @@ describe('pending saved-view application', () => {
     it('lets the newer saved-view choice win when the older schema finishes last', async () => {
         const { result, release, snapshot } = fixture();
         await waitFor(() => expect(result.current.schema).toBeDefined());
-        const older = result.current.applyView({ filterVariant: 'slow', filter: { term: 'old' } });
+        const older = result.current.applyView({
+            filterVariant: 'slow',
+            filter: { term: 'old' },
+        });
         await act(async () => {
-            await result.current.applyView({ filterVariant: 'fast', filter: { term: 'new' } });
+            await result.current.applyView({
+                filterVariant: 'fast',
+                filter: { term: 'new' },
+            });
         });
         await act(async () => {
             release();
@@ -171,3 +181,21 @@ describe('saved-view application after a transport switch', () => {
         },
     );
 });
+
+it.each(['filter', 'sort', 'variant', 'view'] as const)(
+    'resets both pagination forms on %s changes',
+    async (change) => {
+        const { result, snapshot } = fixture('page=3&cursor=opaque&per_page=50&tab=keep');
+        await waitFor(() => expect(result.current.schema).toBeDefined());
+        await act(async () => {
+            if (change === 'filter') result.current.onFilterChange('term', 'new');
+            if (change === 'sort') result.current.onSortChange('title');
+            if (change === 'variant') result.current.onVariantChange('recent');
+            if (change === 'view') await result.current.applyView({ filter: { term: 'saved' } });
+        });
+        expect(snapshot().has('page')).toBe(false);
+        expect(snapshot().has('cursor')).toBe(false);
+        expect(snapshot().get('per_page')).toBe('50');
+        expect(snapshot().get('tab')).toBe('keep');
+    },
+);

@@ -64,7 +64,11 @@ export {
 } from './columnKinds';
 export { getPath } from './getPath';
 export { createFormResolver, kindOfSchema } from './FormResolver';
-export { resolveWidgetFor, FRAME_CONTEXT_KEYWORD, type ResolvedForContext } from './resolveWidgetFor';
+export {
+    resolveWidgetFor,
+    FRAME_CONTEXT_KEYWORD,
+    type ResolvedForContext,
+} from './resolveWidgetFor';
 export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
 export {
@@ -106,7 +110,12 @@ export {
     readResourceRefConfig,
     type ResourceRefConfig,
 } from './ResourceRefWidget';
-export { createFrameHooks, type FrameHooks, type SubmittedHandler, type SubmittedContext } from './hooks';
+export {
+    createFrameHooks,
+    type FrameHooks,
+    type SubmittedHandler,
+    type SubmittedContext,
+} from './hooks';
 export { useFrameSidePanelStore, type FrameSidePanelEntry } from './frameSidePanel';
 export {
     createRouteRegistry,
@@ -153,6 +162,8 @@ export {
 export type {
     Row,
     Paginated,
+    CursorPaginated,
+    ResourcePage,
     FormMode,
     FrameAction,
     FrameCan,
@@ -208,3 +219,6 @@ export {
     type ResourceFilterHttp,
     type FilterSchemaResponse,
 } from './resourceTransport';
+
+export { parseResourcePage } from './resourcePage';
+export { useBrowserUrlState } from '@schemastud/facets';

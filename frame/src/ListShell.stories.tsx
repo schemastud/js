@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { within } from 'storybook/test';
+import { expect, userEvent, within } from 'storybook/test';
 import { ListShell } from './ListShell';
 import type { FrameColumn } from './types';
 import { MockFrameProvider } from './story-harness';
@@ -86,4 +86,83 @@ export const Mobile: Story = {
         </MockFrameProvider>
     ),
     play: awaitRows,
+};
+
+// Cursor states use the same shell and provider as offset resources. Token and light/dark
+// treatments come from the workbench; opaque tokens are fixtures, never displayed labels.
+const cursorPages = {
+    '': {
+        data: [
+            {
+                id: '1',
+                name: 'Ada Lovelace',
+                email: 'ada@example.test',
+                role: 'owner',
+            },
+        ],
+        perPage: 25,
+        nextCursor: 'second',
+    },
+    second: {
+        data: [
+            {
+                id: '2',
+                name: 'Grace Hopper',
+                email: 'grace@example.test',
+                role: 'admin',
+            },
+        ],
+        perPage: 25,
+        nextCursor: 'empty',
+    },
+    empty: { data: [], perPage: 25, nextCursor: null },
+};
+const cursorRender = (initialQuery = '') => (
+    <MockFrameProvider fixtures={{ cursorPages, initialQuery }}>
+        <ListShell resource="members" columns={columns} paginationPlacement="bottom" />
+    </MockFrameProvider>
+);
+export const CursorFirst: Story = {
+    render: () => cursorRender(),
+    play: awaitRows,
+};
+export const CursorMiddle: Story = {
+    render: () => cursorRender(),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await canvas.findByText('Ada Lovelace');
+        await userEvent.click(canvas.getByRole('button', { name: 'Next' }));
+        await canvas.findByText('Grace Hopper');
+        await expect(canvas.getByRole('button', { name: 'Prev' })).toBeEnabled();
+    },
+};
+export const CursorTerminal: Story = {
+    render: () => cursorRender(),
+    play: async (context) => {
+        await CursorMiddle.play?.(context);
+        const canvas = within(context.canvasElement);
+        await userEvent.click(canvas.getByRole('button', { name: 'Next' }));
+        await canvas.findByText('No records.');
+        await expect(canvas.getByRole('button', { name: 'First' })).toBeEnabled();
+        await expect(canvas.getByRole('button', { name: 'Next' })).toBeDisabled();
+    },
+};
+export const CursorReplay: Story = {
+    render: () => cursorRender('cursor=second'),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await canvas.findByText('Grace Hopper');
+        await expect(canvas.getByRole('button', { name: 'Prev' })).toBeDisabled();
+    },
+};
+export const CursorMobile: Story = {
+    ...CursorFirst,
+    parameters: { viewport: { defaultViewport: 'mobile1' } },
+};
+export const CursorLoading: Story = {
+    render: () => (
+        <MockFrameProvider fixtures={{ cursorPages, loading: true }}>
+            <ListShell resource="members" columns={columns} />
+        </MockFrameProvider>
+    ),
 };

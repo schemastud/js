@@ -13,7 +13,7 @@
 //   • <MockMount> + makeMount — a static EditShellMountValue, for the mount-driven
 //     edit panes (StatusBar / SavePill / Inspector / PalettePane / MissingSlots).
 // =============================================================================
-import { useMemo, useState, type ComponentType, type ReactNode } from 'react';
+import { useMemo, useSyncExternalStore, type ComponentType, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
     Badge,
@@ -33,6 +33,7 @@ import {
     type WidgetRegistry,
 } from '@schemastud/seam';
 import { FrameProvider } from './context';
+import type { UseUrlState } from '@schemastud/facets';
 import {
     EditShellMountProvider,
     type Conformance,
@@ -44,7 +45,7 @@ import type {
     FrameInjection,
     FramePrimitives,
     FrameTransport,
-    Paginated,
+    ResourcePage,
     Row,
 } from './types';
 
@@ -73,9 +74,7 @@ function InlinePanel({ children, ...rest }: { children?: ReactNode }) {
 }
 
 /** A minimal inline table so the ListShell default renders without host chrome. */
-const PlainTable: ComponentType<any> = ({ children }: { children?: ReactNode }) => (
-    <>{children}</>
-);
+const PlainTable: ComponentType<any> = ({ children }: { children?: ReactNode }) => <>{children}</>;
 
 export const mockPrimitives: FramePrimitives = {
     Button,
@@ -102,13 +101,40 @@ export interface TransportFixtures {
     empty?: boolean;
     /** Never-resolving promises so the shell parks on its Loading state (deterministic). */
     loading?: boolean;
+    /** Deterministic cursor pages, keyed by the request token (empty string is the first page). */
+    cursorPages?: Record<string, { data: Row[]; perPage: number; nextCursor: string | null }>;
+    initialQuery?: string;
 }
 
 const DEMO_MEMBERS: Row[] = [
-    { id: '1', name: 'Ada Lovelace', email: 'ada@analytical.engine', role: 'owner', active: true },
-    { id: '2', name: 'Grace Hopper', email: 'grace@navy.mil', role: 'admin', active: true },
-    { id: '3', name: 'Alan Turing', email: 'alan@bletchley.uk', role: 'member', active: false },
-    { id: '4', name: 'Katherine Johnson', email: 'kj@nasa.gov', role: 'member', active: true },
+    {
+        id: '1',
+        name: 'Ada Lovelace',
+        email: 'ada@analytical.engine',
+        role: 'owner',
+        active: true,
+    },
+    {
+        id: '2',
+        name: 'Grace Hopper',
+        email: 'grace@navy.mil',
+        role: 'admin',
+        active: true,
+    },
+    {
+        id: '3',
+        name: 'Alan Turing',
+        email: 'alan@bletchley.uk',
+        role: 'member',
+        active: false,
+    },
+    {
+        id: '4',
+        name: 'Katherine Johnson',
+        email: 'kj@nasa.gov',
+        role: 'member',
+        active: true,
+    },
 ];
 
 const DEMO_FORM_SCHEMA: SchemaNode = {
@@ -131,10 +157,17 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FrameTran
 
     return {
         // CRUD
-        list: (resource): Promise<Paginated<Row>> => {
+        list: (resource, params): Promise<ResourcePage<Row>> => {
             if (fixtures.loading) return NEVER;
+            if (fixtures.cursorPages)
+                return Promise.resolve(fixtures.cursorPages[params.cursor ?? '']);
             const data = rowsFor(resource);
-            return Promise.resolve({ data, total: data.length, page: 1, perPage: 25 });
+            return Promise.resolve({
+                data,
+                total: data.length,
+                page: 1,
+                perPage: 25,
+            });
         },
         get: (resource, id) => {
             if (fixtures.loading) return NEVER;
@@ -145,7 +178,8 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FrameTran
             if (fixtures.loading) return NEVER;
             return Promise.resolve(fixtures.formSchema?.[resource] ?? DEMO_FORM_SCHEMA);
         },
-        create: async (_resource: string, data: unknown) => Response.json({ id: 'new', ...(data as object) }).json(),
+        create: async (_resource: string, data: unknown) =>
+            Response.json({ id: 'new', ...(data as object) }).json(),
         save: (_resource, id, data) => Promise.resolve({ id, ...(data as Row) }),
         remove: () => Promise.resolve(),
         // Facets seam — minimal valid shapes so the filter bar mounts without error.
@@ -175,14 +209,27 @@ function makeQueryClient(): QueryClient {
     });
 }
 
-/** react-router-free URL-state — a functional-setter over `useState`, matching the app's shape. */
-function useMemoryUrlState() {
-    const [params, setParams] = useState(() => new URLSearchParams());
-    return [
-        params,
-        (updater: (prev: URLSearchParams) => URLSearchParams) =>
-            setParams((prev) => updater(new URLSearchParams(prev))),
-    ] as const;
+/** One store per provider, shared by independent facets and pagination hook consumers. */
+function createMemoryUrlState(initial = ''): UseUrlState {
+    let current = new URLSearchParams(initial);
+    const listeners = new Set<() => void>();
+    const snapshot = () => current;
+    const subscribe = (notify: () => void) => {
+        listeners.add(notify);
+        return () => {
+            listeners.delete(notify);
+        };
+    };
+    return function useMemoryUrlState() {
+        const params = useSyncExternalStore(subscribe, snapshot, snapshot);
+        return [
+            params,
+            (updater) => {
+                current = updater(new URLSearchParams(current));
+                listeners.forEach((notify) => notify());
+            },
+        ] as const;
+    };
 }
 
 export interface MockFrameProviderProps {
@@ -215,7 +262,7 @@ export function MockFrameProvider({
         return {
             transport: createMockTransport(fixtures),
             primitives: mockPrimitives,
-            useUrlState: useMemoryUrlState,
+            useUrlState: createMemoryUrlState(fixtures?.initialQuery),
             registry,
             schemaFetcher: async (ref: string): Promise<SchemaNode> => ({ $id: ref }) as SchemaNode,
             can,
@@ -335,8 +382,13 @@ function DemoEditorWidget({ record, readOnly, editShellMount }: DemoEditorProps)
             { nodeType: 'heading', label: 'Heading', category: 'block' },
             { nodeType: 'paragraph', label: 'Paragraph', category: 'block' },
         ]);
-        editShellMount?.publishConformance(makeConformance({ requiredFilled: 3, incompleteNodeIds: ['s1'] }));
-        editShellMount?.registerNodeAccess({ getNode: () => DEMO_NODE, setNodeAttrs: () => {} });
+        editShellMount?.publishConformance(
+            makeConformance({ requiredFilled: 3, incompleteNodeIds: ['s1'] }),
+        );
+        editShellMount?.registerNodeAccess({
+            getNode: () => DEMO_NODE,
+            setNodeAttrs: () => {},
+        });
         editShellMount?.selectNode('s1');
         return true;
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -349,8 +401,8 @@ function DemoEditorWidget({ record, readOnly, editShellMount }: DemoEditorProps)
                 {(record?.name as string) ?? 'Untitled record'}
             </div>
             <p className="text-muted-foreground">
-                A demo heavyweight editor canvas{readOnly ? ' (read-only)' : ''}. In the product this is a
-                blockdoc / circuit-graph widget mounted full-surface over the record.
+                A demo heavyweight editor canvas{readOnly ? ' (read-only)' : ''}. In the product
+                this is a blockdoc / circuit-graph widget mounted full-surface over the record.
             </p>
         </div>
     );

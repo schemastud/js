@@ -53,3 +53,5 @@ export type {
 
 // Shared runtime identity for consumers composing resource query keys.
 export { transportScope } from './transportScope';
+
+export { useBrowserUrlState } from './useBrowserUrlState';

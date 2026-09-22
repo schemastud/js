@@ -20,6 +20,7 @@ import {
 } from './slots/defaults';
 import { resolveRowActions } from './rowActions';
 import { useResourceList } from './data';
+import { useListPagination } from './useListPagination';
 import type { ContextManifest } from './contexts';
 import type { FrameColumn, ListShellProps, Row } from './types';
 
@@ -38,9 +39,8 @@ export function ListShell({
     onCellCommit,
     paginationPlacement = 'both',
 }: ListShellProps) {
-    const { useUrlState, can, registry, listSlots } = useFrameInjection();
+    const { can, registry, listSlots } = useFrameInjection();
     const filters = useListFilters(resource);
-    const [searchParams, setSearchParams] = useUrlState();
 
     const query = useResourceList(resource, filters.requestParams);
 
@@ -132,46 +132,17 @@ export function ListShell({
     const Loading = slots?.Loading ?? listSlots?.Loading ?? DefaultLoading;
     const Pagination = slots?.Pagination ?? listSlots?.Pagination ?? DefaultPagination;
 
-    const page = Number(searchParams.get('page') ?? '1');
-    const onPageChange = (next: number) =>
-        setSearchParams((prev) => {
-            prev.set('page', String(next));
-            return prev;
-        });
-    // Page size rides the URL (`per_page`) like every other list param, so facets folds
-    // it into requestParams and the transport sends it. Changing size resets to page 1.
-    const onPerPageChange = (nextPerPage: number) =>
-        setSearchParams((prev) => {
-            prev.set('per_page', String(nextPerPage));
-            prev.set('page', '1');
-            return prev;
-        });
-
     const rows: Row[] = query.data?.data ?? [];
-
-    const currentPage = query.data?.page ?? page;
-    const perPage = query.data?.perPage ?? rows.length;
-    const total = query.data?.total ?? rows.length;
-    // One page is not paged. A pre-paginated envelope whose `total` fits its `perPage` is the
-    // whole list — beam's `Unpaged` backing behind every `{realm}-dashboard` answers
-    // `total == perPage` — and a Prev/Next bar around it ("Page 1 of 1 · 8 total", above AND
-    // below the grid) is chrome asserting a navigation that does not exist. Kept whenever the
-    // URL is past page 1: a stale `?page=3` over a one-page answer still needs its way back.
-    const singlePage = currentPage <= 1 && total <= Math.max(1, perPage);
-
-    const showTopPagination =
-        !singlePage && (paginationPlacement === 'top' || paginationPlacement === 'both');
-    const showBottomPagination =
-        !singlePage && (paginationPlacement === 'bottom' || paginationPlacement === 'both');
-    const paginationBar = (
-        <Pagination
-            page={currentPage}
-            perPage={perPage}
-            total={total}
-            onPageChange={onPageChange}
-            onPerPageChange={onPerPageChange}
-        />
+    const pagination = useListPagination(
+        resource,
+        query.data,
+        query.isFetching || query.isPlaceholderData,
     );
+    const showTopPagination =
+        pagination.visible && (paginationPlacement === 'top' || paginationPlacement === 'both');
+    const showBottomPagination =
+        pagination.visible && (paginationPlacement === 'bottom' || paginationPlacement === 'both');
+    const paginationBar = pagination.props ? <Pagination {...pagination.props} /> : null;
 
     return (
         <div data-frame-shell="list">
@@ -199,13 +170,13 @@ export function ListShell({
                 // ordering these the other way is exactly the bug this branch exists to end —
                 // every 5xx on every Frame list rendered as "No records." (api-surface-coherence 107).
                 <ErrorState error={query.error} retry={() => void query.refetch()} />
-            ) : rows.length === 0 ? (
-                <Empty />
             ) : (
                 <>
                     {/* Top bar gets breathing room below it before the table header. */}
                     {showTopPagination && <div className="mb-3">{paginationBar}</div>}
-                    {cardsPath && manifest ? (
+                    {rows.length === 0 ? (
+                        <Empty />
+                    ) : cardsPath && manifest ? (
                         <Cards
                             resource={resource}
                             rows={rows}
@@ -268,7 +239,10 @@ function withEditableCells(
 ): FrameColumn[] {
     if (!manifest) return resolved;
 
-    const properties = ((schema as SchemaNode | undefined)?.properties ?? {}) as Record<string, SchemaNode>;
+    const properties = ((schema as SchemaNode | undefined)?.properties ?? {}) as Record<
+        string,
+        SchemaNode
+    >;
 
     return resolved.map((col) => {
         // Host override wins for its field — never wrap it. A `'declared'` cell is frame's

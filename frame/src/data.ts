@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import { transportScope } from '@schemastud/facets';
 import type { SchemaNode } from '@schemastud/seam';
 import { useFrameInjection } from './context';
-import type { FormMode, FrameTransport, Paginated, Row } from './types';
+import type { FormMode, FrameTransport, ResourcePage, Row } from './types';
 
 /**
  * Extra `useQuery` knobs a caller may thread onto a Frame read (e.g. `refetchInterval`,
@@ -60,11 +60,11 @@ function useResourceQuery<T>(
 export function useResourceList(
     resource: string,
     params: Record<string, string>,
-    options?: ResourceQueryOptions<Paginated<Row>>,
+    options?: ResourceQueryOptions<ResourcePage<Row>>,
 ) {
     const { transport } = useFrameInjection();
 
-    return useResourceQuery<Paginated<Row>>(transport, resource, {
+    return useResourceQuery<ResourcePage<Row>>(transport, resource, {
         queryKey: resourceQueryKey(transport, resource, 'list', params),
         queryFn: () => transport.list(resource, params),
         ...options,
@@ -113,7 +113,9 @@ export function useSaveResource(resource: string) {
     return useMutation({
         mutationKey: resourceQueryKey(transport, resource, 'save'),
         mutationFn: ({ id, data }: { id: string | null; data: unknown }) =>
-            id === null ? transport.create<Row>(resource, data) : transport.save(resource, id, data),
+            id === null
+                ? transport.create<Row>(resource, data)
+                : transport.save(resource, id, data),
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: ['frame', resource],

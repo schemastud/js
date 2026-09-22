@@ -110,6 +110,7 @@ export function useListFilters(resource: string): ListFilters {
         applySequence.current++;
         setSearchParams((prev) => {
             prev.delete('page');
+            prev.delete('cursor');
             if (value === null || value === '') {
                 prev.delete(key);
             } else {
@@ -127,7 +128,8 @@ export function useListFilters(resource: string): ListFilters {
                 key.startsWith('filter[') ||
                 key === 'sort' ||
                 key === 'filterVariant' ||
-                key === 'page'
+                key === 'page' ||
+                key === 'cursor'
             ) {
                 params.delete(key);
             }

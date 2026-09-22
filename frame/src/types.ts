@@ -17,6 +17,15 @@ export interface Paginated<T> {
     perPage: number;
 }
 
+/** A streamed page has no total or numbered-page claim. */
+export interface CursorPaginated<T> {
+    data: T[];
+    perPage: number;
+    nextCursor: string | null;
+}
+
+export type ResourcePage<T> = Paginated<T> | CursorPaginated<T>;
+
 export type FormMode = 'enriched' | 'bare';
 
 // -----------------------------------------------------------------------------
@@ -33,7 +42,7 @@ export type FrameCan = (action: FrameAction, resource: string, record?: unknown)
 // persist strategy and JsonSchemaGenerator->forRequest() sit BELOW this seam.
 // -----------------------------------------------------------------------------
 export interface FrameTransport extends FacetsTransport {
-    list(resource: string, params: Record<string, string>): Promise<Paginated<Row>>;
+    list(resource: string, params: Record<string, string>): Promise<ResourcePage<Row>>;
     get(resource: string, id: string): Promise<Row>;
     getFormSchema(resource: string, form: FormMode): Promise<SchemaNode>;
     /** Create returns the resource's declared createResultData, or its ordinary row by default. */
@@ -433,16 +442,31 @@ export interface ErrorSlotProps {
     retry: () => void;
 }
 
-export interface PaginationSlotProps {
-    page: number;
+interface PaginationCommonProps {
     perPage: number;
-    total: number;
-    onPageChange: (page: number) => void;
-    /** Change the page size; absent when the host doesn't offer a size control. */
+    disabled?: boolean;
     onPerPageChange?: (perPage: number) => void;
-    /** Page-size choices offered by the size control (defaults to 10/25/50/100). */
     perPageOptions?: number[];
 }
+
+export type PaginationSlotProps = PaginationCommonProps &
+    (
+        | {
+              mode: 'offset';
+              page: number;
+              total: number;
+              onPageChange: (page: number) => void;
+          }
+        | {
+              mode: 'cursor';
+              hasNext: boolean;
+              hasPrevious: boolean;
+              isFirst: boolean;
+              onNext: () => void;
+              onPrevious: () => void;
+              onFirst: () => void;
+          }
+    );
 
 export interface ListShellProps {
     resource: string;

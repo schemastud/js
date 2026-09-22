@@ -159,21 +159,39 @@ export const Loading: Story = {
 export const PaginationFirst: Story = {
     render: () => (
         <MockFrameProvider>
-            <DefaultPagination page={1} perPage={25} total={120} onPageChange={() => {}} />
+            <DefaultPagination
+                mode="offset"
+                page={1}
+                perPage={25}
+                total={120}
+                onPageChange={() => {}}
+            />
         </MockFrameProvider>
     ),
 };
 export const PaginationMiddle: Story = {
     render: () => (
         <MockFrameProvider>
-            <DefaultPagination page={3} perPage={25} total={120} onPageChange={() => {}} />
+            <DefaultPagination
+                mode="offset"
+                page={3}
+                perPage={25}
+                total={120}
+                onPageChange={() => {}}
+            />
         </MockFrameProvider>
     ),
 };
 export const PaginationLast: Story = {
     render: () => (
         <MockFrameProvider>
-            <DefaultPagination page={5} perPage={25} total={120} onPageChange={() => {}} />
+            <DefaultPagination
+                mode="offset"
+                page={5}
+                perPage={25}
+                total={120}
+                onPageChange={() => {}}
+            />
         </MockFrameProvider>
     ),
 };
@@ -339,6 +357,50 @@ export const Container: Story = {
             <DefaultContainer>
                 <div className="text-sm">Edit surface content sits inside the container slot.</div>
             </DefaultContainer>
+        </MockFrameProvider>
+    ),
+};
+
+export const CursorPaginationStates: Story = {
+    render: () => (
+        <MockFrameProvider>
+            <div className="space-y-4">
+                {[
+                    { label: 'First', isFirst: true, hasPrevious: false, hasNext: true },
+                    { label: 'Middle', isFirst: false, hasPrevious: true, hasNext: true },
+                    {
+                        label: 'Terminal',
+                        isFirst: false,
+                        hasPrevious: true,
+                        hasNext: false,
+                    },
+                    {
+                        label: 'Replayed',
+                        isFirst: false,
+                        hasPrevious: false,
+                        hasNext: true,
+                    },
+                    {
+                        label: 'Loading',
+                        isFirst: false,
+                        hasPrevious: true,
+                        hasNext: true,
+                        disabled: true,
+                    },
+                ].map(({ label, ...state }) => (
+                    <div key={label}>
+                        <p>{label}</p>
+                        <DefaultPagination
+                            mode="cursor"
+                            perPage={25}
+                            {...state}
+                            onFirst={() => {}}
+                            onPrevious={() => {}}
+                            onNext={() => {}}
+                        />
+                    </div>
+                ))}
+            </div>
         </MockFrameProvider>
     ),
 };

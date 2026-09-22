@@ -200,25 +200,54 @@ export function DefaultLoading() {
     );
 }
 
-export function DefaultPagination({ page, perPage, total, onPageChange }: PaginationSlotProps) {
-    const { primitives } = useFrameInjection();
-    const { Button } = primitives;
-    const lastPage = Math.max(1, Math.ceil(total / Math.max(1, perPage)));
+export function DefaultPagination(props: PaginationSlotProps) {
+    const {
+        primitives: { Button },
+    } = useFrameInjection();
+    const lastPage =
+        props.mode === 'offset' ? Math.max(1, Math.ceil(props.total / props.perPage)) : 1;
     return (
         <div
             data-frame-slot="Pagination"
             style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
         >
-            <Button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-                Prev
-            </Button>
-            <span data-frame-page>
-                {page} / {lastPage}
-            </span>
+            {props.mode === 'cursor' && (
+                <Button
+                    type="button"
+                    disabled={props.disabled || props.isFirst}
+                    onClick={props.onFirst}
+                >
+                    First
+                </Button>
+            )}
             <Button
                 type="button"
-                disabled={page >= lastPage}
-                onClick={() => onPageChange(page + 1)}
+                disabled={
+                    props.disabled ||
+                    (props.mode === 'offset' ? props.page <= 1 : !props.hasPrevious)
+                }
+                onClick={() =>
+                    props.mode === 'offset'
+                        ? props.onPageChange(props.page - 1)
+                        : props.onPrevious()
+                }
+            >
+                Prev
+            </Button>
+            {props.mode === 'offset' && (
+                <span data-frame-page>
+                    {props.page} / {lastPage}
+                </span>
+            )}
+            <Button
+                type="button"
+                disabled={
+                    props.disabled ||
+                    (props.mode === 'offset' ? props.page >= lastPage : !props.hasNext)
+                }
+                onClick={() =>
+                    props.mode === 'offset' ? props.onPageChange(props.page + 1) : props.onNext()
+                }
             >
                 Next
             </Button>
@@ -246,7 +275,10 @@ export function DefaultTable(props: {
     // `canvas-surface` (component-seams ticket 36/38). Horizontal padding is fixed
     // (density governs vertical rhythm only). The fallback preserves the pre-token
     // 0.5rem render where no `[data-density]` is in scope (e.g. plain prod mounts).
-    const cellStyle = { paddingBlock: 'var(--density-row-py, 0.5rem)', paddingInline: '0.5rem' };
+    const cellStyle = {
+        paddingBlock: 'var(--density-row-py, 0.5rem)',
+        paddingInline: '0.5rem',
+    };
     return (
         <table data-frame-slot="Table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>

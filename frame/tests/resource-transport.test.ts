@@ -22,10 +22,12 @@ function fixture() {
         }),
         get: vi.fn(async () => records[0]),
         getFormSchema: vi.fn(async () => ({ type: 'object' })),
-        create: vi.fn(async (_resource, data) => Response.json({
-            id: 'new',
-            ...(data as object),
-        }).json()),
+        create: vi.fn(async (_resource, data) =>
+            Response.json({
+                id: 'new',
+                ...(data as object),
+            }).json(),
+        ),
         save: vi.fn(async (_resource, id) => ({ id })),
         remove: vi.fn(async () => undefined),
     };
@@ -35,19 +37,18 @@ function fixture() {
         update: false,
         delete: false,
     };
-    const read = vi.fn(
-        async (url: string, _params?: Record<string, string>): Promise<unknown> =>
-            url.includes('/options/')
-                ? { data: [{ value: 'open', label: 'Open' }] }
-                : {
-                      data: {
-                          properties: {},
-                          savedViewsResource: 'untrusted-schema-value',
-                          savedViewsCan: { create: true, update: true, delete: true },
-                      },
-                      savedViewsResource: reference,
-                      savedViewsCan: permissions,
+    const read = vi.fn(async (url: string, _params?: Record<string, string>): Promise<unknown> =>
+        url.includes('/options/')
+            ? { data: [{ value: 'open', label: 'Open' }] }
+            : {
+                  data: {
+                      properties: {},
+                      savedViewsResource: 'untrusted-schema-value',
+                      savedViewsCan: { create: true, update: true, delete: true },
                   },
+                  savedViewsResource: reference,
+                  savedViewsCan: permissions,
+              },
     );
     const transport = createResourceTransport(crud, {
         resourceUrl: (resource) => `/realm/resources/${resource}`,
@@ -74,7 +75,12 @@ describe('resource behavior composition', () => {
         const variants = {
             resource: 'papers',
             variants: [
-                { key: 'papers', resource: 'papers', canonical: true, sameAsCanonical: true },
+                {
+                    key: 'papers',
+                    resource: 'papers',
+                    canonical: true,
+                    sameAsCanonical: true,
+                },
                 {
                     key: 'recent/papers',
                     resource: 'papers',
@@ -121,12 +127,12 @@ describe('resource behavior composition', () => {
         expect(crud.list).toHaveBeenNthCalledWith(1, 'team-views', {
             'filter[resource]': 'articles',
             page: '1',
-            perPage: '25',
+            per_page: '25',
         });
         expect(crud.list).toHaveBeenNthCalledWith(2, 'team-views', {
             'filter[resource]': 'articles',
             page: '2',
-            perPage: '25',
+            per_page: '25',
         });
     });
 
@@ -143,7 +149,7 @@ describe('resource behavior composition', () => {
             'filter[resource]': 'articles',
             filterVariant: 'recent',
             page: '1',
-            perPage: '25',
+            per_page: '25',
         });
     });
 
@@ -205,3 +211,81 @@ describe('resource behavior composition', () => {
         await expect(transport.getSavedFilters('articles')).rejects.toThrow('pagination');
     });
 });
+
+it('collects honest cursor pages and preserves target/variant on every request', async () => {
+    const { transport, crud, records } = fixture();
+    vi.mocked(crud.list)
+        .mockResolvedValueOnce({
+            data: records.slice(0, 25),
+            perPage: 25,
+            nextCursor: 'next+/=',
+        })
+        .mockResolvedValueOnce({
+            data: records.slice(25),
+            perPage: 25,
+            nextCursor: null,
+        });
+    expect(await transport.getSavedFilters('articles', 'recent')).toEqual(records);
+    expect(crud.list).toHaveBeenLastCalledWith('team-views', {
+        'filter[resource]': 'articles',
+        filterVariant: 'recent',
+        cursor: 'next+/=',
+        per_page: '25',
+    });
+});
+
+it.each(['cycle', 'empty', 'mode', 'offset-empty'] as const)(
+    'rejects %s pagination instead of silently losing saved views',
+    async (failure) => {
+        const { transport, crud, records } = fixture();
+        if (failure === 'offset-empty') {
+            vi.mocked(crud.list).mockResolvedValueOnce({
+                data: [],
+                total: 40,
+                page: 1,
+                perPage: 25,
+            });
+        } else {
+            vi.mocked(crud.list)
+                .mockResolvedValueOnce({
+                    data: records.slice(0, 25),
+                    perPage: 25,
+                    nextCursor: 'next',
+                })
+                .mockResolvedValueOnce(
+                    failure === 'mode'
+                        ? { data: records.slice(25), total: 31, page: 2, perPage: 25 }
+                        : {
+                              data: failure === 'empty' ? [] : records.slice(25),
+                              perPage: 25,
+                              nextCursor: failure === 'cycle' ? 'next' : 'another',
+                          },
+                );
+        }
+        await expect(transport.getSavedFilters('articles')).rejects.toThrow(
+            /pagination|incomplete/,
+        );
+        expect(vi.mocked(crud.list).mock.calls.length).toBeLessThanOrEqual(2);
+    },
+);
+
+it.each([5, 7])(
+    'rejects a terminal offset page whose rows disagree with the declared total (%s rows)',
+    async (count) => {
+        const { transport, crud, records } = fixture();
+        vi.mocked(crud.list)
+            .mockResolvedValueOnce({
+                data: records.slice(0, 25),
+                perPage: 25,
+                page: 1,
+                total: 31,
+            })
+            .mockResolvedValueOnce({
+                data: Array.from({ length: count }, () => records[0]),
+                perPage: 25,
+                page: 2,
+                total: 31,
+            });
+        await expect(transport.getSavedFilters('articles')).rejects.toThrow('incomplete');
+    },
+);

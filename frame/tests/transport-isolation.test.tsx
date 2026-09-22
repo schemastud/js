@@ -54,7 +54,12 @@ function makeTransport(authority: string, gate?: Promise<void>): FrameTransport 
             result({
                 resource: 'things',
                 variants: [
-                    { key: authority, resource: 'things', canonical: true, sameAsCanonical: true },
+                    {
+                        key: authority,
+                        resource: 'things',
+                        canonical: true,
+                        sameAsCanonical: true,
+                    },
                 ],
             }),
         ),
@@ -73,7 +78,11 @@ function fixture(first: FrameTransport, retry = false) {
     let transport = first;
     const client = new QueryClient({
         defaultOptions: {
-            queries: { retry: false, staleTime: Infinity, placeholderData: keepPreviousData },
+            queries: {
+                retry: false,
+                staleTime: Infinity,
+                placeholderData: keepPreviousData,
+            },
             mutations: { retry: retry ? 1 : false, retryDelay: 0 },
         },
     });
@@ -113,17 +122,41 @@ function fixture(first: FrameTransport, retry = false) {
 }
 
 const reads = [
-    { name: 'list', useRead: () => useResourceList('things', {}), method: 'list' },
-    { name: 'record', useRead: () => useResourceRecord('things', '1'), method: 'get' },
-    { name: 'form', useRead: () => useFormSchema('things', 'enriched'), method: 'getFormSchema' },
-    { name: 'filter schema', useRead: () => useFilterSchema('things'), method: 'getFilterSchema' },
-    { name: 'variants', useRead: () => useFilterVariants('things'), method: 'getFilterVariants' },
+    {
+        name: 'list',
+        useRead: () => useResourceList('things', {}),
+        method: 'list',
+    },
+    {
+        name: 'record',
+        useRead: () => useResourceRecord('things', '1'),
+        method: 'get',
+    },
+    {
+        name: 'form',
+        useRead: () => useFormSchema('things', 'enriched'),
+        method: 'getFormSchema',
+    },
+    {
+        name: 'filter schema',
+        useRead: () => useFilterSchema('things'),
+        method: 'getFilterSchema',
+    },
+    {
+        name: 'variants',
+        useRead: () => useFilterVariants('things'),
+        method: 'getFilterVariants',
+    },
     {
         name: 'options',
         useRead: () => useFilterOptions('tags', '', 'things'),
         method: 'getFilterOptions',
     },
-    { name: 'saved views', useRead: () => useSavedFilters('things'), method: 'getSavedFilters' },
+    {
+        name: 'saved views',
+        useRead: () => useSavedFilters('things'),
+        method: 'getSavedFilters',
+    },
 ] as const;
 
 describe('shared QueryClient, distinct Frame transports', () => {
@@ -322,7 +355,10 @@ describe('pending mutations retain their transport', () => {
             expect(second.getSavedFilters).toHaveBeenCalledTimes(1);
             f.switchTo(first);
             hook.rerender();
-            const read = method === 'create' || method === 'save' || method === 'remove' ? 'list' : 'getSavedFilters';
+            const read =
+                method === 'create' || method === 'save' || method === 'remove'
+                    ? 'list'
+                    : 'getSavedFilters';
             await waitFor(() => expect(first[read]).toHaveBeenCalledTimes(2));
             hook.unmount();
             f.client.clear();
@@ -358,4 +394,43 @@ describe('pending mutations retain their transport', () => {
             f.client.clear();
         },
     );
+});
+
+it('retains honest cursor metadata and isolates it across transport authorities', async () => {
+    const first = makeTransport('first');
+    vi.mocked(first.list).mockResolvedValue({
+        data: [{ id: '1' }],
+        perPage: 50,
+        nextCursor: 'private-first-cursor',
+    });
+    const second = makeTransport('second');
+    const gate = deferred();
+    vi.mocked(second.list).mockImplementation(async () => {
+        await gate.promise;
+        return { data: [{ id: '2' }], perPage: 50, nextCursor: null };
+    });
+    const f = fixture(first);
+    const hook = renderHook(() => useResourceList('events', { per_page: '50' }), {
+        wrapper: f.wrapper,
+    });
+    await waitFor(() =>
+        expect(hook.result.current.data).toEqual({
+            data: [{ id: '1' }],
+            perPage: 50,
+            nextCursor: 'private-first-cursor',
+        }),
+    );
+    f.switchTo(second);
+    hook.rerender();
+    expect(hook.result.current.data).toBeUndefined();
+    await act(async () => gate.resolve());
+    await waitFor(() =>
+        expect(hook.result.current.data).toEqual({
+            data: [{ id: '2' }],
+            perPage: 50,
+            nextCursor: null,
+        }),
+    );
+    hook.unmount();
+    f.client.clear();
 });
