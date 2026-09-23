@@ -157,17 +157,23 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FrameTran
 
     return {
         // CRUD
-        list: (resource, params): Promise<ResourcePage<Row>> => {
+        list: <Result,>(
+            resource: string,
+            params: Record<string, string>,
+        ): Promise<ResourcePage<Result>> => {
             if (fixtures.loading) return NEVER;
             if (fixtures.cursorPages)
-                return Promise.resolve(fixtures.cursorPages[params.cursor ?? '']);
+                return Response.json(fixtures.cursorPages[params.cursor ?? '']).json();
             const data = rowsFor(resource);
-            return Promise.resolve({
+            return Response.json({
                 data,
                 total: data.length,
                 page: 1,
                 perPage: 25,
-            });
+            }).json();
+        },
+        summary: async () => {
+            throw new Error('No summary fixture was configured.');
         },
         get: (resource, id) => {
             if (fixtures.loading) return NEVER;

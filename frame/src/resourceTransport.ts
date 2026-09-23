@@ -7,6 +7,7 @@ import type {
 } from '@schemastud/facets';
 import type { FrameTransport } from './types';
 import { parseResourcePage } from './resourcePage';
+import type { SummaryPayload } from './cards/types';
 
 export type FrameCrudTransport = Pick<
     FrameTransport,
@@ -54,6 +55,8 @@ export function createResourceTransport(
 
     return {
         ...crud,
+        summary: (resource, params): Promise<SummaryPayload> =>
+            http.read<SummaryPayload>(`${http.resourceUrl(resource)}/summary`, params),
         getFilterSchema,
         async getFilterVariants(resource): Promise<FilterVariants> {
             const response = await http.read<{ data: FilterVariants }>(
@@ -78,7 +81,7 @@ export function createResourceTransport(
             const seen = new Set<string>();
             for (;;) {
                 const result = parseResourcePage(
-                    await crud.list(schema.savedViewsResource, {
+                    await crud.list<SavedFilter>(schema.savedViewsResource, {
                         'filter[resource]': resource,
                         ...(variant ? { filterVariant: variant } : {}),
                         ...(cursor ? { cursor } : { page: String(page) }),
@@ -89,7 +92,7 @@ export function createResourceTransport(
                 if (mode && mode !== currentMode)
                     throw new Error('Saved views changed pagination mode.');
                 mode = currentMode;
-                rows.push(...(result.data as unknown as SavedFilter[]));
+                rows.push(...result.data);
                 if ('nextCursor' in result) {
                     if (result.nextCursor === null) return rows;
                     if (seen.has(result.nextCursor))

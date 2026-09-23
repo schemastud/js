@@ -5,6 +5,8 @@ function isRow(value: unknown): value is Row {
 }
 
 /** Validate the two declared HTTP envelopes; never synthesize pagination metadata. */
+export function parseResourcePage<Result>(value: ResourcePage<Result>): ResourcePage<Result>;
+export function parseResourcePage(value: unknown): ResourcePage<Row>;
 export function parseResourcePage(value: unknown): ResourcePage<Row> {
     const invalid = () => new Error('Resource returned invalid pagination.');
     if (!isRow(value) || !Array.isArray(value.data) || !value.data.every(isRow)) throw invalid();

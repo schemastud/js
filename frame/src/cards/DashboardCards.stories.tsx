@@ -207,7 +207,16 @@ const primitives: FramePrimitives = {
 
 function makeTransport(rows: Row[]): FrameTransport {
     return {
-        list: (): Promise<Paginated<Row>> => Promise.resolve({ data: rows, total: rows.length, page: 1, perPage: 25 }),
+        list: async <Result,>(): Promise<Paginated<Result>> =>
+            Response.json({
+                data: rows,
+                total: rows.length,
+                page: 1,
+                perPage: 25,
+            }).json(),
+        summary: async () => {
+            throw new Error('No summary fixture was configured.');
+        },
         get: () => Promise.resolve({}),
         getFormSchema: () => Promise.resolve({ type: 'object' } as SchemaNode),
         create: async (_resource: string, data: unknown) => Response.json({ id: 'new', ...(data as object) }).json(),

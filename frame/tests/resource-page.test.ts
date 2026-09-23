@@ -31,3 +31,21 @@ describe('declared resource page envelope', () => {
         expect(() => parseResourcePage(page)).toThrow('pagination');
     });
 });
+
+it('validates declared input envelopes without changing their row payload', () => {
+    type DeclaredRow = { id: string; payload: { answer: number } };
+    const cursor: import('../src/types').ResourcePage<DeclaredRow> = {
+        data: [{ id: 'receipt', payload: { answer: 42 } }],
+        perPage: 1,
+        nextCursor: null,
+    };
+    const offset: import('../src/types').ResourcePage<DeclaredRow> = {
+        data: cursor.data,
+        perPage: 1,
+        page: 1,
+        total: 1,
+    };
+    expect(parseResourcePage(cursor)).toEqual(cursor);
+    expect(parseResourcePage(offset)).toEqual(offset);
+    expect(() => parseResourcePage({ ...cursor, perPage: 0 })).toThrow('invalid pagination');
+});

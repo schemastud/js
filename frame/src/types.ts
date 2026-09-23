@@ -2,10 +2,10 @@ import type { FormIntentBus, SchemaFetcher, SchemaNode, WidgetRegistry } from '@
 import type { FacetsPrimitives, FacetsTransport, UseUrlState } from '@schemastud/facets';
 import type { ComponentType, ReactNode } from 'react';
 import type { FrameHooks } from './hooks';
+import type { SummaryPayload } from './cards/types';
 
 // =============================================================================
-// frame v1 — shell + slot contract (ADR-0081). Every type generalizes something
-// already proven; frame is CONSOLIDATION, not greenfield.
+// Resource-blind shells and slots consume declared resources through one injected contract.
 // =============================================================================
 
 export type Row = Record<string, unknown>;
@@ -42,7 +42,11 @@ export type FrameCan = (action: FrameAction, resource: string, record?: unknown)
 // persist strategy and JsonSchemaGenerator->forRequest() sit BELOW this seam.
 // -----------------------------------------------------------------------------
 export interface FrameTransport extends FacetsTransport {
-    list(resource: string, params: Record<string, string>): Promise<ResourcePage<Row>>;
+    list<Result = Row>(
+        resource: string,
+        params: Record<string, string>,
+    ): Promise<ResourcePage<Result>>;
+    summary(resource: string, params: Record<string, string>): Promise<SummaryPayload>;
     get(resource: string, id: string): Promise<Row>;
     getFormSchema(resource: string, form: FormMode): Promise<SchemaNode>;
     /** Create returns the resource's declared createResultData, or its ordinary row by default. */

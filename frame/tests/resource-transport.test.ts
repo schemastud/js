@@ -289,3 +289,27 @@ it.each([5, 7])(
         await expect(transport.getSavedFilters('articles')).rejects.toThrow('incomplete');
     },
 );
+
+it('reads the raw declared summary through the same resource prefix and filter client', async () => {
+    const { transport, read } = fixture();
+    const summary = {
+        key: 'articles',
+        label: 'Articles',
+        figures: [{ key: 'total-items', label: 'Pending', value: 41 }],
+        overview: null,
+    };
+    read.mockResolvedValueOnce(summary);
+    await expect(transport.summary('articles', { 'filter[status]': 'open' })).resolves.toEqual(
+        summary,
+    );
+    expect(read).toHaveBeenCalledWith('/realm/resources/articles/summary', {
+        'filter[status]': 'open',
+    });
+});
+
+it('propagates summary denials instead of reporting zero', async () => {
+    const { transport, read } = fixture();
+    const denied = new Error('403 Forbidden');
+    read.mockRejectedValueOnce(denied);
+    await expect(transport.summary('articles', {})).rejects.toBe(denied);
+});

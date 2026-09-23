@@ -34,7 +34,8 @@
         "build": "tsup",
         "dev": "tsup --watch",
         "test": "vitest run",
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test:types": "tsc --project tsconfig.typecheck.json"
     },
     "peerDependencies": {
         "@rjsf/core": "^6.0.0",
