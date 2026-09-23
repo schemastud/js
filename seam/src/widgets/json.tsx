@@ -1,5 +1,6 @@
 import type { FieldProps } from '@rjsf/utils';
 import { useEffect, useRef, useState } from 'react';
+import { FIELD_BORDER, FIELD_INK, FIELD_SURFACE } from './field-tokens';
 
 const invalidObjectMessage = 'Enter a valid JSON object.';
 
@@ -55,10 +56,10 @@ export function JsonField({
                 style={{
                     width: '100%',
                     padding: 10,
-                    border: '1px solid var(--stud-line-strong)',
+                    border: `1px solid ${FIELD_BORDER}`,
                     borderRadius: 8,
-                    background: 'var(--stud-surface)',
-                    color: 'var(--stud-ink)',
+                    background: FIELD_SURFACE,
+                    color: FIELD_INK,
                     fontFamily: 'monospace',
                 }}
                 onChange={(event) => {

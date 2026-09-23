@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { SchemaNode } from '../types';
+import { FIELD_BORDER, FIELD_INK, FIELD_SURFACE } from './field-tokens';
 
 // A generic RJSF widget: a plain text input backed by a <datalist> of suggestions —
 // pick one or type your own, never hard-restricted to the list (unlike an enum
@@ -20,9 +21,9 @@ const INPUT_STYLE: CSSProperties = {
     width: '100%',
     padding: '8px 10px',
     borderRadius: 8,
-    border: '1px solid var(--stud-line-strong)',
-    background: 'var(--stud-surface)',
-    color: 'var(--stud-ink)',
+    border: `1px solid ${FIELD_BORDER}`,
+    background: FIELD_SURFACE,
+    color: FIELD_INK,
     fontSize: 13,
 };
 
