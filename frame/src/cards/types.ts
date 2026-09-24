@@ -44,20 +44,44 @@ export interface OverviewPayload {
     note?: string | null;
 }
 
+/** One next step on a {@link WelcomePayload}: a host-routed destination, addressed by `key`. */
+export interface WelcomeAction {
+    key: string;
+    label: string;
+    href: string;
+}
+
+/**
+ * The panel a dashboard draws when it has nothing else for the viewer — the PHP
+ * `DashboardWelcomeData`. `first-run`: the viewer is on no team; `empty`: nothing to show yet.
+ * The copy is the server's; `actions` are only destinations the host routes, and `hint` is a
+ * line with no destination of its own (null when it would promise a flow the host lacks).
+ */
+export interface WelcomePayload {
+    state: 'first-run' | 'empty';
+    heading: string;
+    body: string;
+    actions: WelcomeAction[];
+    hint?: string | null;
+}
+
 /**
  * A row of a `{realm}-dashboard` resource. `context` says which rendering of the TARGET
  * resource this card is (`overview` when the target declares one, else `summary`); a
  * jump-to tile appended from the realm's nav contribution carries `'nav'` and no summary.
+ * A `'welcome'` row is the dashboard's ONLY row when it has no card and no tile for the
+ * viewer: no `resource`, no `summary`, its panel in `welcome`.
  */
 export interface DashboardRow {
-    resource: string;
-    context: Extract<FrameContext, 'summary' | 'overview'> | 'nav';
+    resource?: string | null;
+    context: Extract<FrameContext, 'summary' | 'overview'> | 'nav' | 'welcome';
     navOrder?: number | null;
     label: string;
     icon?: string | null;
     href: string;
     description?: string | null;
     summary?: SummaryPayload | null;
+    welcome?: WelcomePayload | null;
 }
 
 /** What `nav-tile` draws — a nav leaf. */

@@ -204,6 +204,31 @@ describe('ListShell — the cards path', () => {
         expect(container.querySelector('[data-frame-card="stat-row"]')).toBeTruthy();
     });
 
+    it("a dashboard's welcome row draws the panel, full-width, in place of the Empty slot", async () => {
+        const welcome: DashboardRow = {
+            resource: null,
+            context: 'welcome',
+            label: 'Welcome, Probe User',
+            href: '',
+            welcome: {
+                state: 'first-run',
+                heading: 'Welcome, Probe User',
+                body: "You aren't on a team yet, so there's nothing to show here.",
+                actions: [{ key: 'settings', label: 'Account settings', href: '/settings/profile' }],
+                hint: null,
+            },
+        };
+        const { container } = render(<ListShell resource="tenant-dashboard" columns={[]} manifest={DASHBOARD} />, {
+            wrapper: wrap(makeInjection([{ id: 'welcome', ...welcome } as Row])),
+        });
+
+        await waitFor(() => expect(cards(container)).toHaveLength(1));
+        expect(screen.getByRole('heading', { name: 'Welcome, Probe User' })).toBeTruthy();
+        expect(screen.queryByText('No records.')).toBeNull();
+        // One panel across every track, not an 18rem card cell.
+        expect((cards(container)[0] as HTMLElement).style.gridColumn).toBe('1 / -1');
+    });
+
     it('the Empty slot still answers zero rows on the cards path', async () => {
         const { container } = render(<ListShell resource="operator-dashboard" columns={[]} manifest={DASHBOARD} />, {
             wrapper: wrap(makeInjection([])),

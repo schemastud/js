@@ -14,12 +14,15 @@ export { FigureCard } from './FigureCard';
 export { RecentList } from './RecentList';
 export { RecordLine, formatRecordTime } from './RecordLine';
 export { NavTile } from './NavTile';
+export { WelcomePanel } from './WelcomePanel';
 export { DashboardCard, dashboardRowRenders, resolveDashboardCard } from './DashboardCard';
 export type {
     SummaryFigure,
     SummaryPayload,
     OverviewPayload,
     DashboardRow,
+    WelcomePayload,
+    WelcomeAction,
     NavTilePayload,
     IconResolver,
     CardLinkRenderer,

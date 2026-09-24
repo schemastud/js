@@ -350,7 +350,13 @@ export function DefaultCards({ rows, onOpen, Card }: CardsSlotProps) {
                     key={(row.id as string) ?? i}
                     data-frame-card-cell
                     onClick={onOpen ? () => onOpen(row) : undefined}
-                    style={{ minWidth: 0, cursor: onOpen ? 'pointer' : undefined }}
+                    style={{
+                        minWidth: 0,
+                        cursor: onOpen ? 'pointer' : undefined,
+                        // A dashboard's welcome panel is its only row and reads as a page, not a card:
+                        // it spans every track instead of sitting in one 18rem cell.
+                        gridColumn: row.context === 'welcome' ? '1 / -1' : undefined,
+                    }}
                 >
                     <Card record={row} />
                 </div>

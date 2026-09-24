@@ -6,6 +6,7 @@ import { isWidgetComponent, resolveWidgetFor, type ResolvedForContext } from '..
 import { UnboundWidget, widgetMountProps } from '../SchemaView';
 import { OverviewFrame, ROOT_NODE } from './chrome';
 import { NavTile } from './NavTile';
+import { WelcomePanel } from './WelcomePanel';
 import type { ManifestLookup, Row } from '../types';
 import type { CardWidgetOptions, CardWidgetProps, DashboardRow, SummaryPayload } from './types';
 
@@ -94,6 +95,9 @@ export function dashboardRowRenders(
     registry: WidgetRegistry,
 ): boolean {
     const row = record as Partial<DashboardRow>;
+    // A welcome row draws exactly when it carries its panel — checked BEFORE the resource test,
+    // because it has no resource and that test would otherwise wave it through as "not ours".
+    if (row.context === 'welcome') return typeof row.welcome === 'object' && row.welcome !== null;
     if (typeof row.context !== 'string' || typeof row.resource !== 'string') return true;
     if (row.context === 'nav') return true;
 
@@ -134,12 +138,18 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
         );
     }
 
-    const manifest = row.resource ? manifestFor?.(row.resource) : undefined;
-    if (!manifest) return null;
+    // The dashboard's only row when it has nothing else for the viewer: no target, no lookup.
+    if (row.context === 'welcome') {
+        return row.welcome ? <WelcomePanel value={row.welcome} options={options} /> : null;
+    }
+
+    const resource = row.resource;
+    const manifest = resource ? manifestFor?.(resource) : undefined;
+    if (!manifest || !resource) return null;
 
     const resolved = resolveDashboardCard(row, manifest, registry);
     const cell = (body: ReactNode) => (
-        <div data-frame-card="dashboard-card" data-frame-card-resource={row.resource} data-frame-card-context={row.context}>
+        <div data-frame-card="dashboard-card" data-frame-card-resource={resource} data-frame-card-context={row.context}>
             {body}
         </div>
     );
@@ -151,7 +161,7 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
     const Widget = resolved.widget;
 
     const payload: SummaryPayload = row.summary ?? {
-        key: row.resource,
+        key: resource,
         label: row.label,
         icon: row.icon,
         figures: [],

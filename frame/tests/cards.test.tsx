@@ -8,6 +8,7 @@ import { FRAME_CONTEXT_KEYWORD } from '../src/resolveWidgetFor';
 import {
     CARD_WIDGETS,
     DashboardCard,
+    dashboardRowRenders,
     FigureCard,
     NavTile,
     RecentList,
@@ -314,6 +315,92 @@ describe('DashboardCard', () => {
         const { container } = render(<DashboardCard value={row()} />, { wrapper: wrap(injection) });
 
         expect(container.innerHTML).toBe('');
+    });
+
+    describe('a welcome row', () => {
+        const firstRun = (over: Partial<DashboardRow['welcome'] & object> = {}): DashboardRow => ({
+            resource: null,
+            context: 'welcome',
+            label: 'Welcome, Probe User',
+            href: '',
+            summary: null,
+            welcome: {
+                state: 'first-run',
+                heading: 'Welcome, Probe User',
+                body: "You aren't on a team yet, so there's nothing to show here.",
+                actions: [
+                    { key: 'create-team', label: 'Create a team', href: '/teams/create' },
+                    { key: 'settings', label: 'Account settings', href: '/settings/profile' },
+                ],
+                hint: 'Have an invitation? Open the link from your email.',
+                ...over,
+            },
+        });
+
+        it('draws the first-run panel from the payload — heading, sentence, every action, the hint — with no manifest lookup', () => {
+            const manifestFor = vi.fn(() => undefined);
+            const registry = createWidgetRegistry();
+            registerCardWidgets(registry);
+            const { container } = render(<DashboardCard value={firstRun()} />, {
+                wrapper: wrap({ ...makeInjection(registry, {}), manifestFor }),
+            });
+
+            const panel = container.querySelector('[data-frame-card="welcome"]');
+            expect(panel?.getAttribute('data-frame-welcome-state')).toBe('first-run');
+            expect(screen.getByRole('heading', { name: 'Welcome, Probe User' })).toBeTruthy();
+            expect(screen.getByText("You aren't on a team yet, so there's nothing to show here.")).toBeTruthy();
+            expect(screen.getByText('Have an invitation? Open the link from your email.')).toBeTruthy();
+            expect(screen.getByRole('link', { name: 'Create a team' }).getAttribute('href')).toBe('/teams/create');
+            expect(screen.getByRole('link', { name: 'Account settings' }).getAttribute('href')).toBe('/settings/profile');
+            expect(manifestFor).not.toHaveBeenCalled();
+        });
+
+        it('draws only the actions the payload carries, and no hint when there is none', () => {
+            const registry = createWidgetRegistry();
+            registerCardWidgets(registry);
+            render(
+                <DashboardCard
+                    value={firstRun({
+                        state: 'empty',
+                        heading: 'Nothing here yet',
+                        body: 'Summaries of your work will appear here as soon as there is something to show.',
+                        actions: [],
+                        hint: null,
+                    })}
+                />,
+                { wrapper: wrap(makeInjection(registry, {})) },
+            );
+
+            expect(screen.getByRole('heading', { name: 'Nothing here yet' })).toBeTruthy();
+            expect(screen.queryAllByRole('link')).toHaveLength(0);
+            expect(screen.queryByText(/invitation/i)).toBeNull();
+        });
+
+        it("routes every action through the host's renderLink", () => {
+            const renderLink: CardLinkRenderer = ({ href, children, className }) => (
+                <a href={href} className={className} data-host-link="">
+                    {children}
+                </a>
+            );
+            const registry = createWidgetRegistry();
+            registerCardWidgets(registry);
+            const { container } = render(<DashboardCard value={firstRun()} options={{ renderLink }} />, {
+                wrapper: wrap(makeInjection(registry, {})),
+            });
+
+            expect(container.querySelectorAll('a[data-host-link]')).toHaveLength(2);
+        });
+
+        it('draws nothing, and is not counted as drawable, without its panel', () => {
+            const registry = createWidgetRegistry();
+            registerCardWidgets(registry);
+            const bare = { ...firstRun(), welcome: null };
+            const { container } = render(<DashboardCard value={bare} />, { wrapper: wrap(makeInjection(registry, {})) });
+
+            expect(container.innerHTML).toBe('');
+            expect(dashboardRowRenders(bare as never, () => undefined, registry)).toBe(false);
+            expect(dashboardRowRenders(firstRun() as never, () => undefined, registry)).toBe(true);
+        });
     });
 
     it('a nav row draws a NavTile without any manifest lookup', () => {

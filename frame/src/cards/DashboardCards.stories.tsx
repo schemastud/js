@@ -314,6 +314,90 @@ export const Empty: Story = {
     },
 };
 
+/**
+ * The welcome row the backing answers when a dashboard has no card and no tile for the viewer
+ * (ux-demo-convergence replay 9) — shaped exactly as `DashboardWelcome` emits it at a beam starter:
+ * settings is the one next step the host routes, and no invitation hint.
+ */
+const FIRST_RUN_ROWS: DashboardRow[] = [
+    {
+        resource: null,
+        context: 'welcome',
+        label: 'Welcome, Probe User',
+        href: '',
+        welcome: {
+            state: 'first-run',
+            heading: 'Welcome, Probe User',
+            body: "You aren't on a team yet, so there's nothing to show here.",
+            actions: [{ key: 'settings', label: 'Account settings', href: '/settings/profile' }],
+            hint: null,
+        },
+    },
+];
+
+/** First run, at a host that also routes team creation and invitation links — every next step drawn. */
+const FIRST_RUN_ALL_STEPS: DashboardRow[] = [
+    {
+        ...FIRST_RUN_ROWS[0],
+        welcome: {
+            ...FIRST_RUN_ROWS[0].welcome!,
+            actions: [
+                { key: 'create-team', label: 'Create a team', href: '/teams/create' },
+                { key: 'settings', label: 'Account settings', href: '/settings/profile' },
+            ],
+            hint: 'Have an invitation? Open the link from your email.',
+        },
+    },
+];
+
+/** On a team, nothing to show yet — the softer panel, no claim about teams. */
+const NOTHING_YET_ROWS: DashboardRow[] = [
+    {
+        resource: null,
+        context: 'welcome',
+        label: 'Nothing here yet',
+        href: '',
+        welcome: {
+            state: 'empty',
+            heading: 'Nothing here yet',
+            body: 'Summaries of your work will appear here as soon as there is something to show.',
+            actions: [{ key: 'settings', label: 'Account settings', href: '/settings/profile' }],
+            hint: null,
+        },
+    },
+];
+
+/** Welcome, first run — a signed-in viewer on no team: the panel greets them by name in place of "No records.". */
+export const WelcomeFirstRun: Story = {
+    render: () => <DashboardHarness rows={FIRST_RUN_ROWS} manifests={DECLARED} />,
+    play: async ({ canvasElement }) => {
+        await within(canvasElement).findByRole('heading', { name: 'Welcome, Probe User' });
+    },
+};
+
+/** Welcome, first run, every step — a host that routes team creation and redeems invitation links. */
+export const WelcomeFirstRunAllSteps: Story = {
+    render: () => <DashboardHarness rows={FIRST_RUN_ALL_STEPS} manifests={DECLARED} />,
+    play: async ({ canvasElement }) => {
+        await within(canvasElement).findByRole('link', { name: 'Create a team' });
+    },
+};
+
+/** Welcome, nothing yet — on a team, with no card and no tile to show. */
+export const WelcomeNothingYet: Story = {
+    render: () => <DashboardHarness rows={NOTHING_YET_ROWS} manifests={DECLARED} />,
+    play: async ({ canvasElement }) => {
+        await within(canvasElement).findByRole('heading', { name: 'Nothing here yet' });
+    },
+};
+
+/** Welcome, first run on a phone — the panel stacks its glyph above the copy. */
+export const WelcomeFirstRunMobile: Story = {
+    parameters: { viewport: { defaultViewport: 'mobile1' } },
+    render: () => <DashboardHarness rows={FIRST_RUN_ALL_STEPS} manifests={DECLARED} />,
+    play: WelcomeFirstRunAllSteps.play,
+};
+
 /** All derived — no target declares a summary or overview: every card is its context default (stat-row / figure-card); the recent list falls to `record-line`, which for these items (no text field) shows the id. */
 export const AllDerived: Story = {
     render: () => <DashboardHarness rows={ROWS} manifests={DERIVED} />,
