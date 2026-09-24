@@ -37,6 +37,22 @@ export const Link: Story = { args: { variant: 'link' } };
 /** states axis — disabled. */
 export const Disabled: Story = { args: { disabled: true } };
 
+/** states axis — disabled across the variants that carry their own disabled treatment. */
+export const DisabledVariants: Story = {
+    render: () => (
+        <div className="flex flex-wrap items-center gap-3">
+            <Button disabled>Default</Button>
+            <Button variant="secondary" disabled>
+                Secondary
+            </Button>
+            <Button variant="outline" disabled>
+                Outline
+            </Button>
+            <Button variant="outline">Outline (enabled)</Button>
+        </div>
+    ),
+};
+
 /** variant axis — the full enum in one matrix (the pilot precedent every wave copies). */
 export const AllVariants: Story = {
     render: () => (

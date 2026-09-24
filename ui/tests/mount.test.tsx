@@ -133,9 +133,26 @@ describe('Button — a disabled primary stays readable in both schemes', () => {
         expect(button.className).toContain('disabled:opacity-100');
     });
 
-    it('leaves the other variants on the base opacity dimming', () => {
+    it('keeps a disabled outline framed by a foreground hairline with a dimmed label', () => {
         render(<Button variant="outline" disabled>Dismiss draft</Button>);
         const button = screen.getByRole('button', { name: 'Dismiss draft' });
+        expect(button.className).toContain('disabled:border-foreground/15');
+        expect(button.className).toContain('disabled:text-foreground/55');
+        expect(button.className).toContain('disabled:opacity-100');
+        expect(button.className).not.toContain('disabled:opacity-50');
+    });
+
+    it('gives a disabled secondary the primary tint instead of half opacity', () => {
+        render(<Button variant="secondary" disabled>Save as draft</Button>);
+        const button = screen.getByRole('button', { name: 'Save as draft' });
+        expect(button.className).toContain('disabled:bg-foreground/10');
+        expect(button.className).toContain('disabled:text-foreground/55');
+        expect(button.className).not.toContain('disabled:opacity-50');
+    });
+
+    it('leaves ghost, link and destructive on the base opacity dimming', () => {
+        render(<Button variant="ghost" disabled>Skip</Button>);
+        const button = screen.getByRole('button', { name: 'Skip' });
         expect(button.className).toContain('disabled:opacity-50');
         expect(button.className).not.toContain('disabled:bg-foreground/10');
     });

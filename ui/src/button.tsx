@@ -16,9 +16,14 @@ const buttonVariants = cva(
                     'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none',
                 destructive:
                     'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
+                // Outline and secondary follow the same rule, adapted: a disabled outline keeps its
+                // frame as a faint foreground hairline with a dimmed label (half opacity greyed the
+                // hairline into the page), and a disabled secondary takes the primary's tint so the
+                // pair reads as one disabled treatment in both schemes.
                 outline:
-                    'border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground',
-                secondary: 'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80',
+                    'border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground disabled:opacity-100 disabled:border-foreground/15 disabled:text-foreground/55 disabled:shadow-none',
+                secondary:
+                    'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none',
                 ghost: 'hover:bg-accent hover:text-accent-foreground',
                 link: 'text-primary underline-offset-4 hover:underline',
             },
