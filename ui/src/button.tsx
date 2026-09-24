@@ -7,11 +7,13 @@ const buttonVariants = cva(
     {
         variants: {
             variant: {
-                // Disabled takes the muted surface and ink instead of the base `opacity-50`: halving
-                // a bright dark-scheme primary AND its dark label over a dark canvas left dark text on
-                // muted green, unreadable (beam VR pass 2: Save / Connect / Install while pending).
+                // Disabled takes a foreground tint of whatever it sits on, not the base `opacity-50`:
+                // halving a bright dark-scheme primary AND its dark label over a dark canvas left dark
+                // text on muted green, unreadable (beam VR pass 2: Save / Connect / Install while
+                // pending). A tint rather than `bg-muted`, which matched the light page and lost the
+                // button's shape there.
                 default:
-                    'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-100 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none',
+                    'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none',
                 destructive:
                     'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
                 outline:

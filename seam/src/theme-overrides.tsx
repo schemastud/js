@@ -12,13 +12,14 @@ import type { ComponentType } from 'react';
  *    markup, focus ring room above and below, and behaviour untouched.
  * 2. READABLE DISABLED SUBMIT. The theme's Button dims a disabled button with `opacity-50`. On a dark
  *    canvas that blends the bright primary AND its dark label into the backdrop: dark text on muted
- *    green, unreadable (intake `disabled` / `loading`). A disabled Submit instead takes the muted
- *    surface and ink, which read in both schemes — the same treatment `@schemastud/ui`'s Button uses.
+ *    green, unreadable (intake `disabled` / `loading`). A disabled Submit instead takes a foreground
+ *    tint of its surface and a dimmed foreground label, which read in both schemes and on page or
+ *    card alike — the same treatment `@schemastud/ui`'s Button uses.
  */
 
 /** Classes a disabled primary action takes instead of fading to half opacity. */
 export const DISABLED_PRIMARY =
-    'disabled:opacity-100 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none';
+    'disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none';
 
 /** Cancels the theme's 2px horizontal field inset so a field shares its label's left edge. */
 export const FLUSH_FIELD = '-mx-0.5';

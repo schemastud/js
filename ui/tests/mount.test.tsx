@@ -125,11 +125,11 @@ describe('@schemastud/ui primitives mount in isolation', () => {
 });
 
 describe('Button — a disabled primary stays readable in both schemes', () => {
-    it('takes the muted surface and ink instead of fading to half opacity', () => {
+    it('takes a foreground tint and dimmed label instead of fading to half opacity', () => {
         render(<Button disabled>Publish draft</Button>);
         const button = screen.getByRole('button', { name: 'Publish draft' });
-        expect(button.className).toContain('disabled:bg-muted');
-        expect(button.className).toContain('disabled:text-muted-foreground');
+        expect(button.className).toContain('disabled:bg-foreground/10');
+        expect(button.className).toContain('disabled:text-foreground/55');
         expect(button.className).toContain('disabled:opacity-100');
     });
 
@@ -137,6 +137,6 @@ describe('Button — a disabled primary stays readable in both schemes', () => {
         render(<Button variant="outline" disabled>Dismiss draft</Button>);
         const button = screen.getByRole('button', { name: 'Dismiss draft' });
         expect(button.className).toContain('disabled:opacity-50');
-        expect(button.className).not.toContain('disabled:bg-muted');
+        expect(button.className).not.toContain('disabled:bg-foreground/10');
     });
 });

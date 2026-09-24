@@ -41,7 +41,7 @@ describe('SchemaForm theme overrides', () => {
         expect(document.querySelectorAll('[data-seam-flush]').length).toBe(3);
     });
 
-    it('gives a disabled Submit the muted treatment instead of half opacity', () => {
+    it('gives a disabled Submit the foreground-tint treatment instead of half opacity', () => {
         render(<SchemaForm schema={schema} disabled registry={createWidgetRegistry()} />);
         const submit = screen.getByRole('button', { name: 'Submit' }) as HTMLButtonElement;
 
@@ -61,6 +61,6 @@ describe('SchemaForm theme overrides', () => {
         const submit = screen.getByRole('button', { name: 'Submit' });
 
         expect(submit.className).toContain('w-full');
-        expect(submit.className).toContain('disabled:bg-muted');
+        expect(submit.className).toContain('disabled:bg-foreground/10');
     });
 });
