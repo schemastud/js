@@ -368,3 +368,15 @@ describe('listItemRendersCards — the gate, as a pure function', () => {
         expect(listItemRendersCards(PARTICIPATES_UNBOUND, schema, withDefault)).toBe(true);
     });
 });
+
+describe('ListShell — the controls row', () => {
+    it('keeps a gap between the filters/saved-views row and the content beneath it', async () => {
+        const { container } = render(<ListShell resource="things" columns={[]} manifest={TABLE} />, {
+            wrapper: wrap(makeInjection(TABLE_ROWS)),
+        });
+
+        const controls = container.querySelector<HTMLElement>('[data-frame-list-controls]');
+        expect(controls).not.toBeNull();
+        expect(controls!.style.marginBottom).toBe('0.75rem');
+    });
+});

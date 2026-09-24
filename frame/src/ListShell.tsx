@@ -146,7 +146,12 @@ export function ListShell({
 
     return (
         <div data-frame-shell="list">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+            {/* `marginBottom`: the filters row (facets bar, saved views, Toolbar) sat flush on the
+                table or the empty-state box beneath it (beam VR pass 2, frame console). */}
+            <div
+                data-frame-list-controls=""
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.75rem' }}
+            >
                 {/* The facets bar fills the row (flex:1) so it spans full-width like
                     the bespoke list surfaces; any Toolbar (e.g. a New button) sits at
                     the right edge. `minWidth:0` lets the bar's chips wrap instead of
