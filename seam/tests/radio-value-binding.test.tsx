@@ -42,6 +42,15 @@ describe('enum radio value binding', () => {
         expect(screen.getByRole('radio', { name: 'theme' }).getAttribute('aria-checked')).toBe('true');
     });
 
+    it('follows an outside change back to a value it once emitted', () => {
+        const { rerender } = render(<SchemaForm schema={schema} uiSchema={uiSchema} formData={{}} />);
+        fireEvent.click(screen.getByRole('radio', { name: 'page' }));
+        rerender(<SchemaForm schema={schema} uiSchema={uiSchema} formData={{ type: 'page' }} />);
+        rerender(<SchemaForm schema={schema} uiSchema={uiSchema} formData={{ type: 'component' }} />);
+        rerender(<SchemaForm schema={schema} uiSchema={uiSchema} formData={{ type: 'page' }} />);
+        expect(screen.getByRole('radio', { name: 'page' }).getAttribute('aria-checked')).toBe('true');
+    });
+
     it('still reports the real enum value when a radio is chosen', () => {
         const onChange = vi.fn();
         render(<SchemaForm schema={schema} uiSchema={uiSchema} formData={{}} onChange={onChange} />);

@@ -4,6 +4,9 @@ import { useRef, type ComponentType } from 'react';
 
 const ThemeRadioWidget = ShadcnTheme.widgets?.RadioWidget as ComponentType<WidgetProps>;
 
+// "Nothing emitted yet", distinct from every value the widget can hold (undefined included).
+const NOT_EMITTED = Symbol('not-emitted');
+
 /**
  * @rjsf/shadcn's RadioWidget, made to show the value it holds.
  *
@@ -19,7 +22,7 @@ const ThemeRadioWidget = ShadcnTheme.widgets?.RadioWidget as ComponentType<Widge
  *   the widget itself just emitted does not remount it, so keyboard focus survives a click.
  */
 export function RadioWidget(props: WidgetProps) {
-    const emitted = useRef<unknown>(undefined);
+    const emitted = useRef<unknown>(NOT_EMITTED);
     const seen = useRef<unknown>(props.value);
     const generation = useRef(0);
 
@@ -28,6 +31,8 @@ export function RadioWidget(props: WidgetProps) {
         if (!Object.is(props.value, emitted.current)) {
             generation.current += 1;
         }
+        // Handled either way: a later outside change back to this value must remount too.
+        emitted.current = NOT_EMITTED;
     }
 
     return (
