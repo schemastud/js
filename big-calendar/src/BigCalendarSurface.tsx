@@ -42,12 +42,24 @@ interface LaneResource {
     title: string;
 }
 
-/** Solid = a filled bar (resident); virtual = dashed/ghost, read-only (PRD §4.2). */
-function eventStyle(colorToken: string, resident: boolean): CSSProperties {
+/**
+ * Solid = a filled bar (resident); virtual = dashed/ghost, read-only (PRD §4.2).
+ *
+ * A virtual event has no fill, so its LABEL sits straight on the surface. The hue ramp is one
+ * mid-lightness set tuned for white text on a filled bar; used bare as text it read at ~2.5:1 on a
+ * dark surface (violet `Recurring: Weekly Digest` in the dark agenda, beam VR pass 2). The label
+ * therefore mixes the hue toward the surface ink (`--rbc-fg`): darker on a light surface, lighter on
+ * a dark one, still recognisably the hue. The dashed border keeps the pure hue.
+ */
+export function eventStyle(colorToken: string, resident: boolean): CSSProperties {
     const color = `var(--stud-hue-${colorToken}, var(--stud-hue-default))`;
     return resident
         ? { backgroundColor: color, borderColor: color, color: 'var(--rbc-on-hue, var(--stud-on-hue))' }
-        : { backgroundColor: 'transparent', border: `1.5px dashed ${color}`, color };
+        : {
+              backgroundColor: 'transparent',
+              border: `1.5px dashed ${color}`,
+              color: `color-mix(in oklab, ${color} 60%, var(--rbc-fg))`,
+          };
 }
 
 export function BigCalendarSurface<E extends FoundationCalendarEvent = FoundationCalendarEvent>({
