@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 afterEach(cleanup);
 import { FrameProvider } from '../src/context';
 import { ListShell } from '../src/ListShell';
+import { DefaultLoading } from '../src/slots/defaults';
 import { EditShell } from '../src/EditShell';
 import { resolveColumns } from '../src/resolveColumns';
 import type {
@@ -83,7 +84,7 @@ const primitives: FramePrimitives = {
     SimpleSelect: (p: any) => <select data-injected="SimpleSelect" {...p} />,
     Badge: ({ children }: any) => <span>{children}</span>,
     Table: ({ children }: any) => <div data-injected="Table">{children}</div>,
-    Skeleton: () => <div data-injected="Skeleton" />,
+    Skeleton: (p: any) => <div data-injected="Skeleton" {...p} />,
     SidePanel: ({ children }: any) => <aside data-injected="SidePanel">{children}</aside>,
 };
 
@@ -153,6 +154,20 @@ function MockFormBody({
         </form>
     );
 }
+
+describe('DefaultLoading', () => {
+    // A list's loading state rendered an unsized Skeleton (no height), so a loading page looked EMPTY, and
+    // nothing marked it busy for a waiting reader or capture (launch ticket 00, overnight-ui2 02).
+    it('is a visible, busy placeholder', () => {
+        const Wrapper = wrap(makeInjection({} as FrameTransport));
+        const { container } = render(<DefaultLoading />, { wrapper: Wrapper });
+
+        const slot = container.querySelector('[data-frame-slot="Loading"]');
+        expect(slot?.getAttribute('aria-busy')).toBe('true');
+        const skeleton = container.querySelector('[data-injected="Skeleton"]');
+        expect(skeleton?.className ?? '').toMatch(/\bh-\d/);
+    });
+});
 
 describe('ListShell', () => {
     it('renders a resource end-to-end from a mock transport + mock primitives', async () => {

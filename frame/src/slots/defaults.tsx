@@ -194,8 +194,10 @@ export function DefaultLoading() {
     const { primitives } = useFrameInjection();
     const { Skeleton } = primitives;
     return (
-        <div data-frame-slot="Loading">
-            <Skeleton />
+        // Sized and busy: an unsized Skeleton has no height, so a loading list looked EMPTY, and nothing
+        // told a waiting reader (or a settle-before-capture helper) that it was still loading.
+        <div data-frame-slot="Loading" aria-busy="true">
+            <Skeleton className="h-24 w-full" />
         </div>
     );
 }
