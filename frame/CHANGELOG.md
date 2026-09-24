@@ -1,5 +1,13 @@
 # @schemastud/frame
 
+## 0.2.2
+
+### Patch Changes
+
+- 13d0a50: Render the rows of a `recent-list` whose target binds no `list-item` widget through a new
+  `record-line` default (text · event/status badge · short time, never a bare id), and hide the
+  list pager when the response is a single page.
+
 ## 0.2.1
 
 ### Patch Changes
