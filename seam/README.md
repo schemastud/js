@@ -82,7 +82,10 @@ of hand-maintaining it: Tailwind v4 ignores symlinked `node_modules`, so a utili
 - `familySources({ root? })` — a Vite plugin (`enforce: 'pre'`) that injects one `@source` block per
   resolved family `dist` directly after a stylesheet's `@import 'tailwindcss';` line.
 - `familyDistSources(root)` — the resolved family `dist` directories under `<root>/node_modules`,
-  skipping packages without a `dist` and packages whose realpath sits inside the host's own source.
+  skipping packages without a `dist` and packages whose realpath sits inside the host's own source,
+  plus the `lib` of the component theme `SchemaForm` renders through (`@rjsf/shadcn`), resolved from
+  the host and from each family package's real location. Without it the theme's own classes that no
+  family `dist` repeats are never generated (a checked checkbox drew as an empty outline in dark).
 - `familySourceBlock(dist)` — the block for one dist: `@source '<dist>';` plus `@source not` for
   `**/*.d.ts` and `**/*.map`.
 

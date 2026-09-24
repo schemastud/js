@@ -95,3 +95,62 @@ describe('familySources() — the scan surface is runtime code, not the dist dir
         expect(transform.call({}, '.x { color: red; }', path.join(root, 'app.css'))).toBeNull();
     });
 });
+
+describe('familyDistSources() — the component theme a family package renders through', () => {
+    let root: string;
+
+    /** A minimal resolvable `@rjsf/shadcn` at `dir`, with its runtime ESM under `lib/`. */
+    function theme(dir: string): string {
+        fs.mkdirSync(path.join(dir, 'lib'), { recursive: true });
+        fs.writeFileSync(
+            path.join(dir, 'package.json'),
+            JSON.stringify({ name: '@rjsf/shadcn', main: 'lib/index.js' }),
+        );
+        fs.writeFileSync(
+            path.join(dir, 'lib', 'index.js'),
+            'export const c = "dark:data-[state=checked]:bg-primary";',
+        );
+        return path.join(dir, 'lib');
+    }
+
+    function family(dir: string): string {
+        fs.mkdirSync(path.join(dir, 'dist'), { recursive: true });
+        fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify({ name: '@schemastud/seam' }));
+        fs.writeFileSync(path.join(dir, 'dist', 'index.js'), 'export {};');
+        return path.join(dir, 'dist');
+    }
+
+    beforeEach(() => {
+        root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'seam-family-themes-')));
+    });
+
+    afterEach(() => {
+        fs.rmSync(root, { recursive: true, force: true });
+    });
+
+    it('scans a hoisted @rjsf/shadcn lib once, beside the family dist (npm layout)', () => {
+        const dist = family(path.join(root, 'node_modules', '@schemastud', 'seam'));
+        const lib = theme(path.join(root, 'node_modules', '@rjsf', 'shadcn'));
+
+        expect(familyDistSources(root)).toEqual([dist, lib]);
+    });
+
+    it('finds the theme from the family package real location when it is not hoisted (pnpm layout)', () => {
+        const store = path.join(root, 'node_modules', '.pnpm', 'seam@0', 'node_modules');
+        family(path.join(store, '@schemastud', 'seam'));
+        const lib = theme(path.join(store, '@rjsf', 'shadcn'));
+        fs.mkdirSync(path.join(root, 'node_modules', '@schemastud'), { recursive: true });
+        fs.symlinkSync(path.join(store, '@schemastud', 'seam'), path.join(root, 'node_modules', '@schemastud', 'seam'));
+
+        const sources = familyDistSources(root);
+
+        expect(sources).toContain(lib);
+        expect(sources).toHaveLength(2);
+    });
+
+    it('emits no theme source when no family package or host resolves one', () => {
+        const dist = family(path.join(root, 'node_modules', '@schemastud', 'seam'));
+
+        expect(familyDistSources(root)).toEqual([dist]);
+    });
+});

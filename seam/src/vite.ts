@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { Plugin } from 'vite';
 
@@ -91,7 +92,64 @@ export function familyDistSources(root: string): string[] {
         }
     }
 
+    // The third-party component themes family packages render THROUGH. `SchemaForm` renders RJSF's
+    // shadcn theme, whose Tailwind classes live in `@rjsf/shadcn`, not in any family `dist`: every
+    // class that theme uses and no scanned file repeats is never generated. Measured 2026-09-24: the
+    // checked checkbox's `dark:data-[state=checked]:bg-primary` was absent, so in dark the theme's own
+    // `dark:bg-input/30` won and a checked box drew as an empty green outline (beam VR pass 2,
+    // regioninspector / structurepanel / uxbuilder). Resolved from each family package's REAL location
+    // as Node does, because under pnpm the theme is never hoisted to the host's top level.
+    const origins = [
+        path.join(root, 'package.json'),
+        ...sources.map((dist) => path.join(path.dirname(dist), 'package.json')),
+    ];
+
+    for (const { name, dir } of RENDERED_THEMES) {
+        for (const origin of origins) {
+            const themeDir = resolvePackageDir(name, origin);
+
+            if (themeDir === null) {
+                continue;
+            }
+
+            const scanned = path.join(themeDir, dir);
+
+            if (!fs.existsSync(scanned)) {
+                continue;
+            }
+
+            const realScanned = fs.realpathSync(scanned);
+
+            if (seen.has(realScanned)) {
+                continue;
+            }
+
+            seen.add(realScanned);
+            sources.push(scanned);
+        }
+    }
+
     return sources;
+}
+
+/**
+ * Component themes a family package renders through, and the directory holding their runtime ESM.
+ * `lib` rather than `dist`: `@rjsf/shadcn`'s `dist` also carries `.cjs` duplicates and theme `.css`.
+ */
+const RENDERED_THEMES = [{ name: '@rjsf/shadcn', dir: 'lib' }] as const;
+
+/** The directory of package `name` as Node resolves it from `fromPackageJson`'s location, or null. */
+function resolvePackageDir(name: string, fromPackageJson: string): string | null {
+    try {
+        const from = fs.existsSync(fromPackageJson) ? fs.realpathSync(fromPackageJson) : fromPackageJson;
+        const entry = createRequire(from).resolve(name);
+        const marker = `${path.sep}node_modules${path.sep}${name.split('/').join(path.sep)}${path.sep}`;
+        const at = entry.lastIndexOf(marker);
+
+        return at === -1 ? null : entry.slice(0, at + marker.length - 1);
+    } catch {
+        return null;
+    }
 }
 
 /**
