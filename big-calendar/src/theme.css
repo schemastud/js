@@ -75,7 +75,10 @@
 }
 .rbc-surface .rbc-btn-group > button.rbc-active,
 .rbc-surface .rbc-btn-group > button.rbc-active:hover {
-    color: var(--rbc-on-hue);
+    /* Inverted chrome: the pill fills with the ink and its label takes the surface tone. NOT
+       `--rbc-on-hue` (text on an event hue, always light) — in a dark scheme the ink is light
+       too, which left the active view label white-on-pale. */
+    color: var(--rbc-bg);
     background: var(--rbc-fg);
     border-color: var(--rbc-fg);
 }
