@@ -3,6 +3,7 @@ import { Theme as ShadcnTheme } from '@rjsf/shadcn';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { defaultRegistry } from './registry';
+import { RadioWidget } from './widgets/radio';
 import { resolveExternalRefs } from './refs';
 import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
@@ -42,6 +43,7 @@ export function SchemaForm({
     formData,
     formContext,
     templates,
+    widgets,
     ...rest
 }: SchemaFormProps) {
     const contextRegistry = useContext(WidgetRegistryContext);
@@ -100,6 +102,8 @@ export function SchemaForm({
             // Partition `x-group` properties into titled sections; degrades to the
             // theme default for ungrouped objects. Caller-supplied templates win.
             templates={{ ObjectFieldTemplate: GroupedObjectFieldTemplate, ...templates }}
+            // The theme's RadioWidget never shows a stored value; see widgets/radio.tsx. Caller widgets win.
+            widgets={{ RadioWidget, ...widgets }}
             formData={safeFormData}
             // The injected fetcher rides formContext so fields that resolve
             // their own refs (rich-content manifests among them) share the

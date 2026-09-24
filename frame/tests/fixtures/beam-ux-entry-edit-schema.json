@@ -1,0 +1,74 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "type": "object",
+ "title": "Entry",
+ "properties": {
+ "type": {
+ "type": "string",
+ "title": "Type",
+ "enum": [
+ "page",
+ "component",
+ "theme"
+ ],
+ "examples": [
+ "page"
+ ]
+ },
+ "title": {
+ "type": "string",
+ "title": "Title"
+ },
+ "slug": {
+ "type": "string",
+ "title": "Slug"
+ },
+ "realm": {
+ "type": "string",
+ "title": "Realm",
+ "x-stud-widget": "combobox",
+ "x-stud-widget-options": {
+ "suggestions": [
+ "site",
+ "operator",
+ "tenant",
+ "user"
+ ]
+ }
+ },
+ "parent_id": {
+ "type": [
+ "string",
+ "null"
+ ],
+ "title": "Parent",
+ "x-stud-resource-ref": {
+ "resource": "beam-ux-entry",
+ "value": "id",
+ "label": "title",
+ "multiple": false
+ }
+ },
+ "segment": {
+ "type": [
+ "string",
+ "null"
+ ],
+ "title": "Segment"
+ },
+ "nav_order": {
+ "type": [
+ "integer",
+ "null"
+ ],
+ "title": "Nav order"
+ }
+ },
+ "required": [
+ "type",
+ "title",
+ "slug",
+ "realm"
+ ],
+ "$id": "BeamUxEntryInputData"
+}
