@@ -194,9 +194,11 @@ export type ResolveColumns = (
 // The manifest entry shape frame's shells consume — the frontend projection of the
 // backend `ResourceDefinition`, plus the one frontend overlay (`columns`).
 //
-// There is deliberately no `model` here (schemastud/laravel-frame ADR-0002): a resource is
-// backed, not modelled, and the manifest never names an Eloquent class. The PHP definition still
-// carries one server-side for the write gate; it is hidden from the wire and from this type.
+// The manifest carries no PHP class-string (schemastud/laravel-frame ADR-0002, ADR-0004). There is
+// deliberately no `model`, `query` or `policy` here: the PHP definition carries all three as
+// SERVER-SIDE inputs (the write gate's subject, the declared filter capability, the gate the server
+// resolves) and hides them from the wire and from this type. The client's authority is the injected
+// `can` and the per-actor `can` on the ContextManifest, never a gate name read off the manifest.
 export interface AdminResourceDefinition {
     key: string;
     /**
@@ -206,11 +208,14 @@ export interface AdminResourceDefinition {
      * interface these rows are.
      */
     data: string;
-    query: string | null;
+    /**
+     * The generated type of the declared edit/create DTO, in the same dot form as `data`; null means
+     * the edit shape is the read projection. Informational like `data` — the form's schema comes from
+     * `GET /frame/resources/{key}/schema`, and a host need not emit every write DTO as a type.
+     */
     editData: string | null;
-    /** Generated create-result type identity; null means the ordinary read projection. */
+    /** Generated create-result type identity, dot form; null means the ordinary read projection. */
     createResultData: string | null;
-    policy: string | null;
     form: FormMode;
     /**
      * The four capability gates the PHP `ResourceDefinition` has carried for some time and which
