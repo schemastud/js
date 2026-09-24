@@ -4,6 +4,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { defaultRegistry } from './registry';
 import { RadioWidget } from './widgets/radio';
+import { BaseInputTemplate, SelectWidget, SubmitButton, TextareaWidget } from './theme-overrides';
 import { resolveExternalRefs } from './refs';
 import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
@@ -101,9 +102,15 @@ export function SchemaForm({
             validator={validator ?? defaultValidator}
             // Partition `x-group` properties into titled sections; degrades to the
             // theme default for ungrouped objects. Caller-supplied templates win.
-            templates={{ ObjectFieldTemplate: GroupedObjectFieldTemplate, ...templates }}
+            // Flush fields and a readable disabled Submit: see theme-overrides.tsx. Caller templates win.
+            templates={{
+                ObjectFieldTemplate: GroupedObjectFieldTemplate,
+                BaseInputTemplate,
+                ...templates,
+                ButtonTemplates: { SubmitButton, ...templates?.ButtonTemplates },
+            }}
             // The theme's RadioWidget never shows a stored value; see widgets/radio.tsx. Caller widgets win.
-            widgets={{ RadioWidget, ...widgets }}
+            widgets={{ RadioWidget, SelectWidget, TextareaWidget, ...widgets }}
             formData={safeFormData}
             // The injected fetcher rides formContext so fields that resolve
             // their own refs (rich-content manifests among them) share the
