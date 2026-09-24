@@ -1,4 +1,4 @@
-import { useMemo, type ComponentType } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import { ListFilters, useListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
@@ -66,7 +66,10 @@ export function ListShell({
     // inherits the host's `Cell`/`Empty`/`Pagination` instead of dropping back to bare HTML
     // for every key it did not restate.
     const Toolbar = slots?.Toolbar ?? listSlots?.Toolbar ?? DefaultToolbar;
-    const Filters = slots?.Filters ?? listSlots?.Filters ?? (() => <ListFilters {...filters} />);
+    // The default is rendered INLINE, not wrapped in a component: an inline `() => <ListFilters/>`
+    // was a new component type on every shell render, so each re-render remounted the whole filters
+    // row (facets bar, saved views) and dropped its local state mid-interaction.
+    const FiltersSlot = slots?.Filters ?? listSlots?.Filters;
     // The Table slot contract is `ComponentType<any>` (ListSlots.Table); type the
     // resolved component as such so the shell can thread sort state to slots that
     // render sortable headers (the plain default simply ignores it).
@@ -132,6 +135,23 @@ export function ListShell({
     const Loading = slots?.Loading ?? listSlots?.Loading ?? DefaultLoading;
     const Pagination = slots?.Pagination ?? listSlots?.Pagination ?? DefaultPagination;
 
+    // The controls row (filters, saved views, Toolbar) keeps a gap above the content only while it
+    // renders something: every slot in it may render nothing (a resource with no filter vocabulary,
+    // no saved views and no create verb), and an empty row must not push the table down. Measured,
+    // because a slot returning null leaves no trace the shell can read before layout.
+    const controlsRef = useRef<HTMLDivElement>(null);
+    const [controlsShown, setControlsShown] = useState(true);
+    useLayoutEffect(() => {
+        const el = controlsRef.current;
+        if (!el) return;
+        const measure = () => setControlsShown(el.offsetHeight > 0);
+        measure();
+        if (typeof ResizeObserver === 'undefined') return;
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
+
     const rows: Row[] = query.data?.data ?? [];
     const pagination = useListPagination(
         resource,
@@ -149,15 +169,21 @@ export function ListShell({
             {/* `marginBottom`: the filters row (facets bar, saved views, Toolbar) sat flush on the
                 table or the empty-state box beneath it (beam VR pass 2, frame console). */}
             <div
+                ref={controlsRef}
                 data-frame-list-controls=""
-                style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '0.75rem' }}
+                style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '1rem',
+                    marginBottom: controlsShown ? '0.75rem' : 0,
+                }}
             >
                 {/* The facets bar fills the row (flex:1) so it spans full-width like
                     the bespoke list surfaces; any Toolbar (e.g. a New button) sits at
                     the right edge. `minWidth:0` lets the bar's chips wrap instead of
                     forcing the row wider. */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <Filters />
+                    {FiltersSlot ? <FiltersSlot /> : <ListFilters {...filters} />}
                 </div>
                 <Toolbar
                     resource={resource}

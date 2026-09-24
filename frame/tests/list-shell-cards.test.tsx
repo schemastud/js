@@ -370,13 +370,67 @@ describe('listItemRendersCards — the gate, as a pure function', () => {
 });
 
 describe('ListShell — the controls row', () => {
-    it('keeps a gap between the filters/saved-views row and the content beneath it', async () => {
-        const { container } = render(<ListShell resource="things" columns={[]} manifest={TABLE} />, {
-            wrapper: wrap(makeInjection(TABLE_ROWS)),
-        });
+    // jsdom lays nothing out, so the row's rendered height is stubbed: 0 is a row whose every slot
+    // rendered nothing, anything else is a row with filters, saved views or a Toolbar in it.
+    function withRowHeight(height: number) {
+        const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetHeight');
+        Object.defineProperty(HTMLElement.prototype, 'offsetHeight', { configurable: true, get: () => height });
+        return () => {
+            if (original) Object.defineProperty(HTMLElement.prototype, 'offsetHeight', original);
+        };
+    }
 
-        const controls = container.querySelector<HTMLElement>('[data-frame-list-controls]');
-        expect(controls).not.toBeNull();
-        expect(controls!.style.marginBottom).toBe('0.75rem');
+    it('keeps a gap between a populated filters/saved-views row and the content beneath it', async () => {
+        const restore = withRowHeight(32);
+        try {
+            const { container } = render(<ListShell resource="things" columns={[]} manifest={TABLE} />, {
+                wrapper: wrap(makeInjection(TABLE_ROWS)),
+            });
+
+            const controls = container.querySelector<HTMLElement>('[data-frame-list-controls]');
+            expect(controls).not.toBeNull();
+            expect(controls!.style.marginBottom).toBe('0.75rem');
+        } finally {
+            restore();
+        }
+    });
+
+    it('keeps the default filters row mounted across shell re-renders', async () => {
+        const injection = makeInjection(TABLE_ROWS);
+        (injection.transport.getFilterSchema as ReturnType<typeof vi.fn>).mockImplementation(async () => ({
+            properties: {},
+            savedViewsResource: 'saved-views',
+        }));
+        const Wrapper = wrap(injection);
+        const view = render(
+            <Wrapper>
+                <ListShell resource="things" columns={[]} manifest={TABLE} />
+            </Wrapper>,
+        );
+        const label = await screen.findByText('Saved views');
+
+        view.rerender(
+            <Wrapper>
+                <ListShell resource="things" columns={[]} manifest={TABLE} />
+            </Wrapper>,
+        );
+
+        // The same node, still attached: a remount would have replaced it.
+        expect(screen.getByText('Saved views')).toBe(label);
+        expect(label.isConnected).toBe(true);
+    });
+
+    it('adds no gap when every slot in the row rendered nothing', async () => {
+        const restore = withRowHeight(0);
+        try {
+            const { container } = render(<ListShell resource="things" columns={[]} manifest={TABLE} />, {
+                wrapper: wrap(makeInjection(TABLE_ROWS)),
+            });
+
+            const controls = container.querySelector<HTMLElement>('[data-frame-list-controls]');
+            expect(controls!.style.marginBottom).toBe('0px');
+        } finally {
+            restore();
+        }
     });
 });
