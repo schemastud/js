@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { within, userEvent, expect } from 'storybook/test';
+import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 import { BigCalendarSurface } from './BigCalendarSurface';
 import {
     ANCHOR,
@@ -79,8 +79,10 @@ export const AgendaView: Story = {
         const canvas = within(canvasElement);
         await canvas.findByText('Launch: Summer Drop');
         await userEvent.click(await canvas.findByRole('button', { name: /agenda/i }));
-        // The agenda table renders the event rows; await one settled row.
-        await canvas.findAllByText('Launch: Summer Drop');
+        // The agenda lists the 30 days from the anchor (07/15 – 08/14): await a row inside that
+        // window, and the month grid's 07/03 event gone, so the baseline is the settled agenda.
+        await canvas.findAllByText('Feature: Creator Spotlight');
+        await waitFor(() => expect(canvas.queryByText('Launch: Summer Drop')).toBeNull());
     },
 };
 
@@ -154,9 +156,15 @@ export const CreateOnEmptyCell: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         await canvas.findByText(/July 2026/i);
-        // Click a day-background cell to select a slot → the create panel opens.
-        const cell = canvasElement.querySelector('.rbc-day-bg');
-        if (cell) await userEvent.click(cell as HTMLElement);
+        // Click an in-month day cell to select a slot → the create panel opens. RBC's slot
+        // selection hit-tests the press's coordinates (`elementFromPoint`) and wants the release
+        // inside the calendar, so press and release both carry the cell's centre.
+        const cell = canvasElement.querySelector<HTMLElement>('.rbc-day-bg:not(.rbc-off-range-bg)');
+        await expect(cell).not.toBeNull();
+        const rect = cell!.getBoundingClientRect();
+        const at = { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, button: 0 };
+        fireEvent.mouseDown(cell!, at);
+        fireEvent.mouseUp(cell!, at);
         await within(canvasElement).findByRole('dialog', { name: /event detail/i });
     },
 };

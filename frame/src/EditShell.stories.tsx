@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { FrameProvider, useFrameInjection } from './context';
@@ -28,9 +28,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-const awaitForm: Story['play'] = async ({ canvasElement }) => {
-    await within(canvasElement).findByText('Name');
-};
+/**
+ * Await the settled form: the `Name` field (labelled `Name*` — the harness schema lists it in
+ * `required`) holding the record's value, so the baseline is the loaded record, not a blank form.
+ */
+const awaitForm =
+    (name: string): Story['play'] =>
+    async ({ canvasElement }) => {
+        const field = await within(canvasElement).findByRole('textbox', { name: /^Name\*?$/ });
+        await waitFor(() => expect(field).toHaveValue(name));
+    };
 
 /** Edit — an existing record seeded into the form (id set), panel container. */
 export const Edit: Story = {
@@ -39,7 +46,7 @@ export const Edit: Story = {
             <EditShell resource="members" id="2" onCancel={() => {}} />
         </MockFrameProvider>
     ),
-    play: awaitForm,
+    play: awaitForm('Grace Hopper'),
 };
 
 /** Create — id === null: the same shell, empty form, no record fetch. */
@@ -49,7 +56,7 @@ export const Create: Story = {
             <EditShell resource="members" id={null} onCancel={() => {}} />
         </MockFrameProvider>
     ),
-    play: awaitForm,
+    play: awaitForm(''),
 };
 
 /** Read-only detail — `readOnly` suppresses the SaveBar; the form is disabled. */
@@ -59,7 +66,7 @@ export const Detail: Story = {
             <EditShell resource="members" id="1" readOnly />
         </MockFrameProvider>
     ),
-    play: awaitForm,
+    play: awaitForm('Ada Lovelace'),
 };
 
 /** With the dev mode-toggle (`enriched | bare`) surfaced above the form. */
@@ -69,7 +76,7 @@ export const WithModeToggle: Story = {
             <EditShell resource="members" id="2" showModeToggle onCancel={() => {}} />
         </MockFrameProvider>
     ),
-    play: awaitForm,
+    play: awaitForm('Grace Hopper'),
 };
 
 /** container = page — the PageContainer (Dialog primitive) rather than the docked panel. */
@@ -79,7 +86,7 @@ export const PageContainer: Story = {
             <EditShell resource="members" id="2" container="page" onCancel={() => {}} />
         </MockFrameProvider>
     ),
-    play: awaitForm,
+    play: awaitForm('Grace Hopper'),
 };
 
 function ReadFailureSurface({ kind }: { kind: 'record' | 'schema' | 'background' }) {

@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { expect, waitFor, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { useMemo } from 'react';
 import type { DocJson } from '../react/commit-controller';
 import { createNodeViewRegistry } from '../react/node-views';
-import { EMPTY_DOC, PROFILE_MANIFEST, RICH_DOC } from '../react/story-fixtures';
+import { BASE_MANIFEST, EMPTY_DOC, PROFILE_MANIFEST, RICH_DOC } from '../react/story-fixtures';
 import { createRichContentWidget } from './create-rich-content-widget';
 import type { FormIntentBusLike } from './create-rich-content-widget';
 
@@ -36,14 +36,18 @@ import type { FormIntentBusLike } from './create-rich-content-widget';
 // default (typed blocks fall to the generic node-view + seam skin fallback).
 const registry = createNodeViewRegistry();
 
-// One component instance the whole catalog mounts (the factory result).
-const RichContentWidget = createRichContentWidget(registry, { baseManifest: undefined });
+// One component instance the whole catalog mounts (the factory result). The base prose
+// manifest is composed under the inline profile manifest, as a host does: the profile's
+// `admitsChildCategories: ['prose', …]` names categories only the base manifest declares.
+const RichContentWidget = createRichContentWidget(registry, { baseManifest: BASE_MANIFEST });
 
-/** A doc schema the advisory validator can fail against (requires a non-empty doc). */
+/** A doc schema the advisory validator can fail against: it requires at least two blocks.
+ *  (One block is not enough to fail — the editor normalizes an empty doc to a single empty
+ *  paragraph, so every committed doc already holds one.) */
 const REQUIRING_SCHEMA = {
     type: 'object',
     required: ['type', 'content'],
-    properties: { type: { const: 'doc' }, content: { type: 'array', minItems: 1 } },
+    properties: { type: { const: 'doc' }, content: { type: 'array', minItems: 2 } },
 } as Record<string, unknown>;
 
 interface MountArgs {
@@ -142,17 +146,22 @@ export const WithReviseChrome: Story = {
     },
 };
 
-/** data state — advisory errors. A required-content schema over an empty doc surfaces
- *  the (non-blocking) advisory error list at the first commit boundary. */
+/** data state — advisory errors. A two-block schema over a one-paragraph doc surfaces the
+ *  (non-blocking) advisory error list at the first commit boundary. */
 export const AdvisoryErrors: Story = {
     render: () => <Mount formData={EMPTY_DOC} schema={REQUIRING_SCHEMA} />,
     play: async ({ canvasElement }) => {
         await awaitWidget(canvasElement);
-        // Errors surface on a commit; nudge a commit by focusing + inserting nothing is
-        // not reliable, so assert the surface exists and the schema wired (the list
-        // renders on the first onChange the host drives in a real form).
-        await waitFor(() =>
-            expect(canvasElement.querySelector('[data-blockdoc-rich-content]')).toBeTruthy(),
-        );
+        // Errors surface on a commit: type one paragraph, then blur (blur commits at once).
+        const editor = canvasElement.querySelector<HTMLElement>('[data-blockdoc-rich-content] .ProseMirror')!;
+        await userEvent.click(editor);
+        await userEvent.keyboard('A single paragraph.');
+        editor.blur();
+        const errors = await waitFor(() => {
+            const list = canvasElement.querySelector('[data-blockdoc-advisory-errors]');
+            expect(list).toBeTruthy();
+            return list as HTMLElement;
+        });
+        await expect(within(errors).getByText(/must NOT have fewer than 2 items/)).toBeInTheDocument();
     },
 };

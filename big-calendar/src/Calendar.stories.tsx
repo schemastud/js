@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { within, userEvent } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { DndCalendar, localizer, Views } from './Calendar';
 import { ANCHOR, DEMO_EVENTS } from './story-harness';
 import type { FoundationCalendarEvent } from './types';
@@ -78,7 +78,10 @@ export const Agenda: Story = {
         const canvas = within(canvasElement);
         await canvas.findByText('Launch: Summer Drop');
         await userEvent.click(await canvas.findByRole('button', { name: /agenda/i }));
-        await canvas.findAllByText('Launch: Summer Drop');
+        // The agenda lists the 30 days from the anchor (07/15 – 08/14): await a row inside that
+        // window, and the month grid's 07/03 event gone, so the baseline is the settled agenda.
+        await canvas.findAllByText('Feature: Creator Spotlight');
+        await waitFor(() => expect(canvas.queryByText('Launch: Summer Drop')).toBeNull());
     },
 };
 

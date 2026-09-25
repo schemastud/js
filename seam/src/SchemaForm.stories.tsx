@@ -31,10 +31,16 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+/**
+ * A field's label, with the `*` the theme appends when the schema lists the field in
+ * `required` (FIELD_KINDS_SCHEMA requires `name` and `email`, so its label reads `Name*`).
+ */
+const fieldLabel = (label: string): RegExp => new RegExp(`^${label}\\*?$`);
+
 const awaitField =
     (label: string): Story['play'] =>
     async ({ canvasElement }) => {
-        await within(canvasElement).findByText(label);
+        await within(canvasElement).findByText(fieldLabel(label));
     };
 
 /**
@@ -69,7 +75,9 @@ export const Empty: Story = {
 export const ValidationErrors: Story = {
     render: () => (
         <div style={{ maxWidth: 520 }}>
-            <SchemaForm schema={FIELD_KINDS_SCHEMA} formData={{ name: 'A' }}>
+            {/* noHtml5Validate: the browser's constraint check (the empty `required` email)
+                would otherwise block the submit before AJV runs, and its bubble is not DOM. */}
+            <SchemaForm schema={FIELD_KINDS_SCHEMA} formData={{ name: 'A' }} noHtml5Validate>
                 <button type="submit" data-testid="submit">
                     Submit
                 </button>
@@ -78,11 +86,11 @@ export const ValidationErrors: Story = {
     ),
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
-        await canvas.findByText('Name');
+        await canvas.findByText(fieldLabel('Name'));
         await userEvent.click(await canvas.findByTestId('submit'));
-        // AJV surfaces the required-email + minLength(name) messages; await one so the
-        // snapshot is the settled error state.
-        await canvas.findByText(/must NOT have fewer than|is a required property|required/i);
+        // AJV surfaces the required-email + minLength(name) messages (inline and in the error
+        // list); await them so the snapshot is the settled error state.
+        await canvas.findAllByText(/must NOT have fewer than|is a required property|required/i);
     },
 };
 

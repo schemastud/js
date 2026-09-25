@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { waitFor, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { ChatView } from './chat-view';
 import { Composer } from './composer';
 import { support, viewport } from './presets';
@@ -122,32 +122,25 @@ export const StreamingLive: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         // Type into the real composer and send — the scripted transport streams the reply.
-        const input = canvas.getByRole('textbox');
-        const send = canvas.getByText('Send');
-        (input as HTMLTextAreaElement).focus();
-        // Fire a send by filling the value + clicking (the composer sends non-empty content).
-        // Use fireEvent-style via userEvent-free path to keep it deterministic.
-        (input as HTMLTextAreaElement).value = 'How do I provision a tenant?';
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        // React controls the value; set via the native setter so React sees the change.
-        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
-        setter?.call(input, 'How do I provision a tenant?');
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        send.click();
+        // Send is disabled until React has committed the typed value, so the send waits for it
+        // to enable rather than clicking in the same tick as the input event.
+        await userEvent.type(canvas.getByRole('textbox'), 'How do I provision a tenant?');
+        const send = canvas.getByRole('button', { name: 'Send' });
+        await waitFor(() => expect(send).toBeEnabled());
+        await userEvent.click(send);
         // Await the SETTLED turn: the full streamed sentence has arrived and streaming ended.
         await waitFor(
             () => {
-                if (!canvasElement.textContent?.includes('Verify at the subdomain.')) {
-                    throw new Error('not settled yet');
-                }
+                expect(canvasElement.textContent).toContain('Verify at the subdomain.');
+                expect(
+                    canvasElement.querySelector('[data-chat-composer-standard]')?.getAttribute('data-streaming'),
+                ).toBe('false');
             },
             { timeout: 3000 },
         );
     },
 };
 
-/** The composer in situ inside the `support` preset — proves the api wiring end to end
- *  (roster + banner-less, escalation-ready), a settled render for the catalog. */
 export const InSupportView: Story = {
     render: () => (
         <ChatChrome>
