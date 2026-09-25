@@ -120,7 +120,22 @@ export interface ContextManifest {
      * Absent (an older server, a hand-built fixture) ⇒ a host's `can` falls back to whatever it did
      * before, so nothing that exists today changes shape.
      */
-    can?: { create?: boolean; update?: boolean; delete?: boolean };
+    can?: {
+        create?: boolean;
+        update?: boolean;
+        delete?: boolean;
+        /**
+         * Per declared action key: may THIS ACTOR press it (ADR-0005). Answered server-side by the
+         * producer with the rule the action's own URL enforces. A shell draws an action only where
+         * this is `true` — absent or `false` hides it — and the URL still refuses a wrong answer.
+         */
+        actions?: Record<string, boolean>;
+    };
+    /**
+     * The resource's declared ACTIONS (ADR-0005), riding this block for the reason `layout` does: a
+     * shell is handed its manifest, never the definition. Absent for a resource that declares none.
+     */
+    actions?: import('./types').ResourceActionDefinition[];
 }
 
 /** The full context vocabulary, in wire order. */

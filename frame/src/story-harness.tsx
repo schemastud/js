@@ -61,13 +61,29 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 /** A bordered inline panel so EditShell's DefaultContainer reads as a docked side-panel in the catalog. */
-function InlinePanel({ children, ...rest }: { children?: ReactNode }) {
+function InlinePanel({
+    children,
+    open: _open,
+    onOpenChange: _onOpenChange,
+    title,
+    ...rest
+}: {
+    children?: ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    title?: string;
+}) {
+    // A Dialog-shaped call (an action's form, ADR-0005) hands `open`/`onOpenChange`/`title`; an inline
+    // panel is always open, and the title reads as the panel's heading.
     return (
         <div
             {...rest}
+            role={title ? 'dialog' : undefined}
+            aria-label={title}
             className="rounded-lg border bg-card p-4 text-card-foreground shadow-sm"
             style={{ maxWidth: 480 }}
         >
+            {title ? <div className="mb-3 text-sm font-semibold">{title}</div> : null}
             {children}
         </div>
     );
@@ -104,6 +120,12 @@ export interface TransportFixtures {
     /** Deterministic cursor pages, keyed by the request token (empty string is the first page). */
     cursorPages?: Record<string, { data: Row[]; perPage: number; nextCursor: string | null }>;
     initialQuery?: string;
+    /** A declared action's form schema, keyed by action key (ADR-0005). */
+    actionSchema?: Record<string, SchemaNode>;
+    /** The message an action's request answers with. */
+    actionMessage?: string;
+    /** Make every action's request fail with this message. */
+    actionRefusal?: string;
 }
 
 const DEMO_MEMBERS: Row[] = [
@@ -203,8 +225,33 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FrameTran
                 is_default: false,
             }),
         deleteSavedFilter: () => Promise.resolve(),
+        // Declared actions (ADR-0005): a form schema per action key, and an invoke that answers with the
+        // fixture's message — or refuses, when the fixture says so.
+        getActionSchema: (_resource, action) => {
+            if (fixtures.loading) return NEVER;
+            return Promise.resolve(fixtures.actionSchema?.[action] ?? DEMO_ACTION_SCHEMA);
+        },
+        invoke: (action) => {
+            if (fixtures.actionRefusal) return Promise.reject(new Error(fixtures.actionRefusal));
+            return Promise.resolve({ message: fixtures.actionMessage ?? `${action.label} done.`, data: null });
+        },
     };
 }
+
+const DEMO_ACTION_SCHEMA: SchemaNode = {
+    type: 'object',
+    title: 'Reload credits',
+    required: ['amount_usd'],
+    properties: {
+        amount_usd: {
+            type: 'number',
+            title: 'Amount (USD)',
+            description: 'How much credit to buy, in USD.',
+            minimum: 1,
+            maximum: 10000,
+        },
+    },
+} as SchemaNode;
 
 // A fresh QueryClient per story tree — no retry/refetch so fixture data is deterministic.
 function makeQueryClient(): QueryClient {
@@ -247,6 +294,8 @@ export interface MockFrameProviderProps {
     registerWidgets?: (registry: WidgetRegistry) => void;
     /** Optional canonical form resolver — for stories exercising the FormBody form-resolution seam. */
     formResolver?: FormResolver;
+    /** Optional host notice sink (a toast); absent, the shells render an inline status region. */
+    notify?: FrameInjection['notify'];
 }
 
 /**
@@ -260,6 +309,7 @@ export function MockFrameProvider({
     can = () => true,
     registerWidgets,
     formResolver,
+    notify,
 }: MockFrameProviderProps) {
     const queryClient = useMemo(makeQueryClient, []);
     const injection = useMemo<FrameInjection>(() => {
@@ -273,6 +323,7 @@ export function MockFrameProvider({
             schemaFetcher: async (ref: string): Promise<SchemaNode> => ({ $id: ref }) as SchemaNode,
             can,
             formResolver,
+            ...(notify ? { notify } : {}),
         };
         // fixtures is a per-story literal; identity-stable across a story's life.
         // eslint-disable-next-line react-hooks/exhaustive-deps

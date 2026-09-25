@@ -5,6 +5,7 @@ import { useFrameInjection } from './context';
 import { DefaultContainer, DefaultFormBody, DefaultSaveBar, DefaultToggle } from './slots/defaults';
 import { useFormSchema, useResourceRecord, useSaveResource } from './data';
 import { bridgeHostWidgets, stripHostWidgets } from './raw-mode';
+import { RecordActionButtons, useInlineNotice } from './ResourceActions';
 import type { EditShellProps, FormMode, Row } from './types';
 
 /**
@@ -29,8 +30,14 @@ function EditShellRecord({
     onSaved,
     onCancel,
     slots,
+    manifest: manifestProp,
+    onNavigate,
 }: EditShellProps) {
-    const { can, hooks, editSlots, primitives } = useFrameInjection();
+    const { can, hooks, editSlots, primitives, manifestFor } = useFrameInjection();
+    // The record ACTIONS a detail page draws (ADR-0005) come from the resource's manifest — handed in,
+    // else looked up through the injection (a hook at a real host, so it is read during render).
+    const manifest = manifestProp ?? manifestFor?.(resource);
+    const notice = useInlineNotice();
     const [form, setForm] = useState<FormMode>(formProp);
     const [formData, setFormData] = useState<Row>({});
 
@@ -132,6 +139,18 @@ function EditShellRecord({
         <Container>
             <div data-frame-shell="edit">
                 {loadError}
+                {id !== null ? (
+                    <>
+                        {notice.element}
+                        <RecordActionButtons
+                            resource={resource}
+                            manifest={manifest}
+                            record={{ ...(recordQuery.data ?? {}), id }}
+                            onNavigate={onNavigate}
+                            onNotice={notice.onNotice}
+                        />
+                    </>
+                ) : null}
                 {showModeToggle && !effectiveReadOnly ? (
                     <Toggle value={form} onChange={setForm} />
                 ) : null}

@@ -5,7 +5,8 @@ import type {
     ResourceMutationPermissions,
     SavedFilter,
 } from '@schemastud/facets';
-import type { FrameTransport } from './types';
+import type { ActionResult, FrameTransport } from './types';
+import { actionUrl } from './actions';
 import { parseResourcePage } from './resourcePage';
 import type { SummaryPayload } from './cards/types';
 
@@ -18,6 +19,13 @@ export interface ResourceFilterHttp {
     /** The same resource root used by CRUD, including the host's realm/prefix. */
     resourceUrl(resource: string): string;
     read<T>(url: string, params?: Record<string, string>): Promise<T>;
+    /**
+     * Send a JSON request and resolve its parsed body — what a declared ACTION needs (ADR-0005), since
+     * an action's URL is the producer's own mount, outside the frame socket. Reject with a
+     * {@link FrameActionError} on a non-2xx answer. Optional: without it the composed transport has no
+     * `invoke`, and frame draws no action buttons.
+     */
+    write?<T>(method: string, url: string, body?: unknown): Promise<T>;
 }
 
 export interface FilterSchemaResponse {
@@ -53,8 +61,25 @@ export function createResourceTransport(
         return schema.savedViewsResource;
     }
 
+    const write = http.write;
+
     return {
         ...crud,
+        // An action's form schema rides the resource root like every other frame read.
+        getActionSchema: (resource, action) =>
+            http.read(`${http.resourceUrl(resource)}/actions/${encodeURIComponent(action)}/schema`),
+        ...(write
+            ? {
+                  async invoke(action, target): Promise<ActionResult> {
+                      const body = await write<{ message?: string | null; data?: unknown } | null>(
+                          action.method,
+                          actionUrl(action, target.id),
+                          action.input === null ? undefined : (target.data ?? {}),
+                      );
+                      return { message: body?.message ?? null, data: body?.data };
+                  },
+              }
+            : {}),
         summary: (resource, params): Promise<SummaryPayload> =>
             http.read<SummaryPayload>(`${http.resourceUrl(resource)}/summary`, params),
         getFilterSchema,

@@ -145,6 +145,14 @@ export {
     useRemoveResource,
 } from './data';
 export { resolveRowActions, KNOWN_ROW_ACTIONS, type RowAction } from './rowActions';
+export { resolveActions, actionUrl, navigateTarget, FrameActionError } from './actions';
+export {
+    ActionButton,
+    RecordActionButtons,
+    ResourceActionBar,
+    useInlineNotice,
+    type ActionHandlers,
+} from './ResourceActions';
 export {
     DefaultToolbar,
     DefaultRowActions,
@@ -195,6 +203,9 @@ export type {
     EditSlots,
     FormBodySlotProps,
     SaveBarSlotProps,
+    ResourceActionDefinition,
+    ActionResult,
+    FrameNotice,
 } from './types';
 
 // Re-export the seam + facets surface a frame host commonly needs, so a consumer

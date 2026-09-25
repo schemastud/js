@@ -53,6 +53,66 @@ export interface FrameTransport extends FacetsTransport {
     create<Result = Row>(resource: string, data: unknown): Promise<Result>;
     save(resource: string, id: string, data: unknown): Promise<Row>;
     remove(resource: string, id: string): Promise<void>;
+    /**
+     * Send a declared ACTION's request to its own URL (schemastud/laravel-frame ADR-0005). The action's
+     * URL is the producer's mount — frame does not route it through its socket — so the transport
+     * sends `method` to `url` (with a record action's `{id}` filled from `target.id`) and hands back the
+     * response's `message`/`data`. Reject with a {@link FrameActionError} on a non-2xx answer so the
+     * shell can show the server's message and a 422's field errors.
+     *
+     * Optional: a transport without it renders no action buttons at all — hidden, never broken.
+     * `createResourceTransport` supplies it when the host's HTTP adapter can `write`.
+     */
+    invoke?(
+        action: ResourceActionDefinition,
+        target: { id?: string | null; data?: unknown },
+    ): Promise<ActionResult>;
+    /**
+     * The form schema of an action with a declared `input` —
+     * `GET {prefix}/resources/{resource}/actions/{action}/schema`. Optional like `invoke`; an action
+     * with an input and no way to fetch its form renders no button.
+     */
+    getActionSchema?(resource: string, action: string): Promise<SchemaNode>;
+}
+
+/**
+ * One ACTION a resource offers beyond CRUD — the hand-written mirror of the PHP
+ * `Schemastud\Frame\Registry\ResourceActionDefinition` (ADR-0005). It names no producer and no
+ * operation system: a button, the request it sends, an optional form, and how the answer is shown.
+ */
+export interface ResourceActionDefinition {
+    /** Unique within the resource; the `can.actions` key and the schema endpoint's segment. */
+    key: string;
+    label: string;
+    /** `resource` renders beside the list's "New"; `record` on each row and on the detail page. */
+    scope: 'resource' | 'record';
+    method: string;
+    /** Host-relative URL; a `record` action's template carries `{id}`. */
+    url: string;
+    /**
+     * The generated type of the request body, dot form (never a PHP class) — or null for a
+     * CONFIRM-ONLY action that sends no body. The form's schema comes from `getActionSchema`.
+     */
+    input: string | null;
+    /** `toast` shows the response's message and refetches the resource; `navigate` opens the resulting record. */
+    result: 'toast' | 'navigate';
+    /** Reads as dangerous; a confirm-only press asks in those words. */
+    destructive: boolean;
+}
+
+/** What an action's response hands back — the `{ message, data }` of a producer's response envelope. */
+export interface ActionResult {
+    message?: string | null;
+    data?: unknown;
+}
+
+/**
+ * A notification frame asks the host to show — an action's result. A host binds its own toast
+ * (`FrameInjection.notify`); absent one, the shell renders the message inline in a status region.
+ */
+export interface FrameNotice {
+    tone: 'success' | 'error';
+    message: string;
 }
 
 // -----------------------------------------------------------------------------
@@ -135,6 +195,12 @@ export interface FrameInjection {
      */
     listSlots?: Partial<ListSlots>;
     editSlots?: Partial<EditSlots>;
+    /**
+     * Show a notice — an action's result (ADR-0005). A host binds its toast here. Optional: absent,
+     * the list and detail shells render the message in their own `role="status"` region, so an
+     * action's outcome is never silent.
+     */
+    notify?: (notice: FrameNotice) => void;
 }
 
 /**
@@ -238,6 +304,12 @@ export interface AdminResourceDefinition {
      * this is the raw declared slot.
      */
     createAffordance?: 'frame' | 'host';
+    /**
+     * The resource's declared ACTIONS beyond CRUD (ADR-0005). Also carried, with the per-actor
+     * `can.actions` beside them, on the resource's `ContextManifest` — which is what the shells read.
+     * Optional so an older server and a hand-built fixture still typecheck; absent means none.
+     */
+    actions?: ResourceActionDefinition[];
     nav: {
         label: string;
         group?: string | null;
@@ -548,6 +620,16 @@ export interface EditShellProps {
     resource: string;
     id: string | null;
     readOnly?: boolean;
+    /**
+     * The resource's ContextManifest, for the record ACTIONS a detail page draws (ADR-0005). Absent,
+     * the shell asks the injection's `manifestFor`; with neither, no action renders.
+     */
+    manifest?: import('./contexts').ContextManifest;
+    /**
+     * Where a `navigate`-result action goes: called with `{ id }` of the resulting record. Absent, a
+     * navigate action refreshes this record instead.
+     */
+    onNavigate?: (record: Row) => void;
     /**
      * The surface this shell renders INTO.
      *

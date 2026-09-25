@@ -19,6 +19,8 @@ import {
     DefaultToolbar,
 } from './slots/defaults';
 import { resolveRowActions } from './rowActions';
+import { resolveActions } from './actions';
+import { RecordActionButtons, ResourceActionBar, useInlineNotice } from './ResourceActions';
 import { useResourceList } from './data';
 import { useListPagination } from './useListPagination';
 import type { ContextManifest } from './contexts';
@@ -39,7 +41,7 @@ export function ListShell({
     onCellCommit,
     paginationPlacement = 'both',
 }: ListShellProps) {
-    const { can, registry, listSlots } = useFrameInjection();
+    const { can, registry, listSlots, transport } = useFrameInjection();
     const filters = useListFilters(resource);
 
     const query = useResourceList(resource, filters.requestParams);
@@ -112,13 +114,20 @@ export function ListShell({
         slots?.RowActions ??
         listSlots?.RowActions ??
         (declaredRowActions.length > 0 ? DefaultRowActions : undefined);
+    // The resource's declared RECORD actions this actor may press (ADR-0005). Rendered by frame BESIDE
+    // whatever row-actions slot resolved, never through it: an action is a declaration, and a host's
+    // own RowActions slot is presentation that knows nothing about it.
+    const recordActions = resolveActions(manifest, 'record', transport);
+    const notice = useInlineNotice();
+    const navigate = onOpen ? (record: Row) => onOpen(record) : undefined;
     // Bind the three resource-level props once. Memoized because the Table receives a COMPONENT
     // TYPE: a fresh closure every render remounts the button, which drops the delete mutation's
     // own `isPending` and flickers the control mid-request.
     const BoundRowActions = useMemo(
         () =>
-            RowActions
+            RowActions && recordActions.length === 0
                 ? ({ record }: { record: Row }) => (
+                      // Byte-identical to the pre-action row for a resource that declares none.
                       <RowActions
                           record={record}
                           resource={resource}
@@ -126,9 +135,41 @@ export function ListShell({
                           singularLabel={manifest?.singularLabel || undefined}
                       />
                   )
+                : recordActions.length > 0
+                ? ({ record }: { record: Row }) => (
+                      <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
+                          {recordActions.length > 0 ? (
+                              <RecordActionButtons
+                                  resource={resource}
+                                  manifest={manifest}
+                                  record={record}
+                                  compact
+                                  onNavigate={navigate}
+                                  onNotice={notice.onNotice}
+                              />
+                          ) : null}
+                          {RowActions ? (
+                              <RowActions
+                                  record={record}
+                                  resource={resource}
+                                  actions={declaredRowActions}
+                                  singularLabel={manifest?.singularLabel || undefined}
+                              />
+                          ) : null}
+                      </div>
+                  )
                 : undefined,
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [RowActions, resource, declaredRowActions.join(','), manifest?.singularLabel],
+        [
+            RowActions,
+            resource,
+            declaredRowActions.join(','),
+            manifest?.singularLabel,
+            recordActions.map((a) => a.key).join(','),
+            notice.onNotice,
+            onOpen,
+            manifest,
+        ],
     );
     const Empty = slots?.Empty ?? listSlots?.Empty ?? DefaultEmpty;
     const ErrorState = slots?.ErrorState ?? listSlots?.ErrorState ?? DefaultErrorState;
@@ -185,6 +226,12 @@ export function ListShell({
                 <div style={{ flex: 1, minWidth: 0 }}>
                     {FiltersSlot ? <FiltersSlot /> : <ListFilters {...filters} />}
                 </div>
+                <ResourceActionBar
+                    resource={resource}
+                    manifest={manifest}
+                    onNavigate={navigate}
+                    onNotice={notice.onNotice}
+                />
                 <Toolbar
                     resource={resource}
                     canCreate={canCreate}
@@ -194,6 +241,7 @@ export function ListShell({
                 />
             </div>
 
+            {notice.element}
             {query.isLoading ? (
                 <Loading />
             ) : query.isError ? (
