@@ -175,5 +175,8 @@ export const BackgroundReadFailed: Story = {
         await canvas.findByRole('alert');
         await expect(canvas.getByRole('textbox', { name: /Name/ })).toHaveValue('Unsaved draft');
         await expect(canvas.queryByRole('button', { name: 'Save' })).toBeNull();
+        // The trigger keeps focus after the click, and Chromium's native focus ring rasterizes its anti-aliased corner
+        // differently run to run (the 1-pixel VR flake, launch follow-ups s05). The ring is not what this story shows.
+        (canvasElement.ownerDocument.activeElement as HTMLElement | null)?.blur();
     },
 };

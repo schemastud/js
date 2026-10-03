@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
-import { expect, userEvent, within } from 'storybook/test';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { FacetsResourceProvider } from './context';
 import { MultiSelectFilter } from './MultiSelectFilter';
 import type { FilterDescriptor } from './types';
@@ -127,6 +127,10 @@ export const InlineOptions: Story = {
         await expect(canvas.getByRole('button', { name: 'Remove Published' })).toBeVisible();
         await userEvent.click(canvas.getByRole('button', { name: 'Remove Draft' }));
         await expect(canvas.queryByRole('button', { name: 'Remove Draft' })).not.toBeInTheDocument();
+        // Pressing Remove blurred the search, and the input closes its option list 150 ms after a blur. End on the
+        // closed list, or the VR shots race that timer: the light shot usually beat it and the later dark shot,
+        // under load, did not (launch follow-ups s05).
+        await waitFor(() => expect(canvas.queryByRole('list')).not.toBeInTheDocument());
     },
 };
 

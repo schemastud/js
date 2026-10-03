@@ -72,9 +72,39 @@ const config: TestRunnerConfig = {
                 { dark: scheme === 'dark', canvas, density },
             );
 
+        // SETTLE before every shot (launch follow-ups s05, the load-dependent flakes). A story is not done when its
+        // `play` resolves: an IntersectionObserver delivers its first entries a frame or two later (Nav/OnThisPage's
+        // scroll-spy highlight), and a state change re-renders after the assertion that triggered it (EditShell
+        // BackgroundReadFailed). So wait for webfonts, then for the DOM to stay unchanged for three consecutive animation
+        // frames (capped, so a story that never stops mutating still gets shot and fails visibly), and shoot with CSS
+        // animations and transitions finished (`animations: 'disabled'`): the `.dark` flip would otherwise catch any
+        // `transition-colors` element mid-fade. A timer-driven change is NOT covered by frame quiet; the story waits for it.
+        const settle = () =>
+            page.evaluate(async () => {
+                await document.fonts.ready;
+                await new Promise<void>((resolve) => {
+                    let quiet = 0;
+                    let frames = 0;
+                    const observer = new MutationObserver(() => {
+                        quiet = 0;
+                    });
+                    observer.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+                    const tick = () => {
+                        quiet += 1;
+                        frames += 1;
+                        if (quiet >= 3 || frames >= 120) {
+                            observer.disconnect();
+                            resolve();
+                        } else requestAnimationFrame(tick);
+                    };
+                    requestAnimationFrame(tick);
+                });
+            });
+
         const snapshot = async (scheme: Scheme, canvas?: string, density?: string) => {
             await applyRoot(scheme, canvas, density);
-            const image = await page.screenshot();
+            await settle();
+            const image = await page.screenshot({ animations: 'disabled' });
             const identifier = [scheme, canvas && `canvas-${canvas}`, density && `density-${density}`]
                 .filter(Boolean)
                 .join('--');
