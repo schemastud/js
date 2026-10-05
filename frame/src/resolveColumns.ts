@@ -1,6 +1,7 @@
 import type { FrameColumn, ResolveColumns } from './types';
 import type { ContextManifest, NodeParticipation } from './contexts';
 import { resolveDeclaredCell } from './columnKinds';
+import { displayLabel } from '@schemastud/seam';
 
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
@@ -80,7 +81,7 @@ export const resolveColumns: ResolveColumns = (
         // and its `cell` renderer wins (host-closure-wins-by-field).
         const column: FrameColumn = {
             field,
-            header: host?.header ?? cm.label ?? field,
+            header: host?.header ?? displayLabel({ title: cm.label }, field, { property: true }),
             ...(host?.sortField ? { sortField: host.sortField } : {}),
             ...(host?.cell ? { cell: host.cell, cellSource: 'host' as const } : {}),
             ...(declared ? { cell: declared, cellSource: 'declared' as const } : {}),

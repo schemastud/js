@@ -155,6 +155,15 @@ describe('resolveColumns — a manifest with ZERO host columns is a complete col
         ]);
     });
 
+    it('heads an unlabelled column with the humanized field, never the raw key (app-walkthrough APP-09)', () => {
+        const manifest: ContextManifest = {
+            byNode: { parent_tenant_id: { 'list-column': { participates: true } } },
+            inherits: {},
+            known: KNOWN_CONTEXTS,
+        };
+        expect(resolveColumns('widgets', null, [], manifest)).toEqual([{ field: 'parent_tenant_id', header: 'Parent tenant' }]);
+    });
+
     it('still passes host columns straight through when there is NO manifest — the other path', () => {
         const host = [{ field: 'title', header: 'Custom' }];
         expect(resolveColumns('widgets', null, host, undefined)).toBe(host);

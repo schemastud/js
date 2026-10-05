@@ -3,6 +3,7 @@ import { useFrameInjection } from './context';
 import { getPath } from './getPath';
 import type { NodeParticipation } from './contexts';
 import type { Row } from './types';
+import { displayLabel } from '@schemastud/seam';
 
 // =============================================================================
 // Declared column kinds — how a cell RENDERS, said once on the server.
@@ -228,7 +229,8 @@ function BadgeCell({ value, options }: { value: unknown; options: BadgeCellOptio
     }
 
     const key = String(value);
-    const label = options.labels?.[key] ?? key;
+    // A declared label wins; with none the value is humanized, never shown as its raw backing value (APP-09).
+    const label = displayLabel({ title: options.labels?.[key] }, key, { property: true });
     const variant = options.variants?.[key] ?? options.variant ?? 'outline';
 
     return (

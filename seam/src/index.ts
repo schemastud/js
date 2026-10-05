@@ -37,6 +37,7 @@ export type {
     WidgetResolution,
 } from './types';
 export { buildUiSchema, mergeUiSchema } from './ui-schema';
+export { displayLabel, humanizeKey } from './display-label';
 export { createFormValidator, defaultValidator } from './validator';
 export { SelectionChrome } from './selection-chrome';
 export type { RemoteSelection, SelectionChromeProps } from './selection-chrome';

@@ -1,6 +1,7 @@
 import { StatTile } from '@schemastud/ui';
 import { CardHeading, EmptyState } from './chrome';
 import type { CardWidgetProps, SummaryPayload } from './types';
+import { displayLabel } from '@schemastud/seam';
 
 /**
  * The `summary` context default: a resource compressed to its figures, one `StatTile` per
@@ -10,7 +11,7 @@ import type { CardWidgetProps, SummaryPayload } from './types';
  */
 export function StatRow({ value, options, row }: CardWidgetProps<SummaryPayload>) {
     const figures = value?.figures ?? [];
-    const label = value?.label ?? row?.label ?? value?.key ?? '';
+    const label = displayLabel({ title: value?.label ?? row?.label }, value?.key);
     const Icon = options?.iconFor?.(value?.icon ?? row?.icon);
 
     return (

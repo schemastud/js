@@ -279,6 +279,17 @@ describe('DashboardCard', () => {
         expect(container.querySelector('a[data-frame-card-heading]')?.getAttribute('href')).toBe('/operator/tenants');
     });
 
+    it('names no heading from a raw key when nothing declares a label (app-walkthrough APP-09)', () => {
+        const wrapper = setup({ tenants: manifest({ summary: { participates: true } }) });
+        const { container } = render(
+            <DashboardCard value={row({ label: undefined, summary: summary({ key: 'tenant-users', label: undefined }) })} />,
+            { wrapper },
+        );
+
+        expect(container.querySelector('[data-frame-card="stat-row"]')).toBeTruthy();
+        expect(container.textContent).not.toContain('tenant-users');
+    });
+
     it('draws a figure-card for an overview row whose target declares only an overview default', () => {
         const wrapper = setup({ bills: manifest(undefined) });
         const { container } = render(

@@ -68,7 +68,7 @@ describe('EditShell validated Save request', () => {
         'validates the actual served artifact schema in %s mode (shadcn=%s)',
         async (form, shadcn) => {
             const { save, findByLabelText, getByRole } = mount(form, shadcn);
-            const input = await findByLabelText('artifact');
+            const input = await findByLabelText('Artifact');
             fireEvent.change(input, { target: { value: '{broken' } });
             fireEvent.click(getByRole('button', { name: 'Save' }));
             await waitFor(() => expect(input.getAttribute('aria-invalid')).toBe('true'));
@@ -103,7 +103,7 @@ describe('EditShell validated Save request', () => {
             return <DefaultFormBody {...props} />;
         }
         const { save, findByLabelText, getByRole } = mount('bare', false, PendingBody);
-        await findByLabelText('artifact');
+        await findByLabelText('Artifact');
         fireEvent.click(getByRole('button', { name: 'Save' }));
         await waitFor(() => expect(save).toHaveBeenCalledTimes(1));
         expect(save).toHaveBeenLastCalledWith('schemas', { artifact });
@@ -136,7 +136,7 @@ describe('EditShell validated Save request', () => {
 
     it('clears submission registration when the mounted form changes', async () => {
         const { save, findByLabelText, getByRole, replaceBody } = mount('bare', false);
-        await findByLabelText('artifact');
+        await findByLabelText('Artifact');
         await waitFor(() =>
             expect((getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(
                 false,
@@ -147,7 +147,7 @@ describe('EditShell validated Save request', () => {
         fireEvent.click(getByRole('button', { name: 'Save' }));
         expect(save).not.toHaveBeenCalled();
         replaceBody();
-        await findByLabelText('artifact');
+        await findByLabelText('Artifact');
         await waitFor(() =>
             expect((getByRole('button', { name: 'Save' }) as HTMLButtonElement).disabled).toBe(
                 false,
@@ -158,7 +158,7 @@ describe('EditShell validated Save request', () => {
     it('announces a rejected save, preserves its draft and clears the error on corrected success', async () => {
         const { save, findByLabelText, getByRole, findByRole, queryByRole } = mount('bare', true);
         save.mockRejectedValueOnce(new Error('This schema version already exists.'));
-        const input = (await findByLabelText('artifact')) as HTMLTextAreaElement;
+        const input = (await findByLabelText('Artifact')) as HTMLTextAreaElement;
         const draft = { $id: 'https://example.test/retry/1', type: 'object' };
         fireEvent.change(input, { target: { value: JSON.stringify(draft) } });
         fireEvent.click(getByRole('button', { name: 'Save' }));
@@ -177,7 +177,7 @@ describe('EditShell validated Save request', () => {
 
     it('uses the same validation for the native form submit path', async () => {
         const { save, findByLabelText, container } = mount('bare', false);
-        const input = await findByLabelText('artifact');
+        const input = await findByLabelText('Artifact');
         fireEvent.change(input, { target: { value: '{broken' } });
         fireEvent.submit(container.querySelector('form')!);
         expect(save).not.toHaveBeenCalled();

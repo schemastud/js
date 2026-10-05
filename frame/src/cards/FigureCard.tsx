@@ -1,5 +1,6 @@
 import { EmptyState, OverviewFrame } from './chrome';
 import type { CardWidgetProps, SummaryPayload } from './types';
+import { displayLabel } from '@schemastud/seam';
 
 /**
  * The `overview` context default: a resource expanded to a card with a body — the overview's
@@ -20,7 +21,7 @@ export function FigureCard({ value, options, row }: CardWidgetProps<SummaryPaylo
     return (
         <OverviewFrame
             card="figure-card"
-            label={value?.label ?? row?.label ?? value?.key ?? ''}
+            label={displayLabel({ title: value?.label ?? row?.label }, value?.key)}
             Icon={options?.iconFor?.(value?.icon ?? row?.icon)}
             href={row?.href}
             period={value?.overview?.period ?? row?.description ?? undefined}

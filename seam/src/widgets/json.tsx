@@ -1,6 +1,7 @@
 import type { FieldProps } from '@rjsf/utils';
 import { useEffect, useRef, useState } from 'react';
 import { FIELD_BORDER, FIELD_INK, FIELD_SURFACE } from './field-tokens';
+import { displayLabel } from '../display-label';
 
 const invalidObjectMessage = 'Enter a valid JSON object.';
 
@@ -43,7 +44,7 @@ export function JsonField({
     const id = fieldPathId.$id;
     return (
         <div>
-            <label htmlFor={id}>{schema.title ?? name}</label>
+            <label htmlFor={id}>{displayLabel(schema, name, { property: true })}</label>
             <textarea
                 id={id}
                 data-widget="json"

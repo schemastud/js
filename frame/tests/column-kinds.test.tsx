@@ -194,7 +194,8 @@ describe('the kinds render what the 51 closures rendered', () => {
             },
         });
 
-        const badge = screen.getByText('substance');
+        // app-walkthrough APP-09: with no declared label the value is humanized, never shown as its raw backing value.
+        const badge = screen.getByText('Substance');
         expect(badge.getAttribute('data-variant')).toBe('secondary');
     });
 
