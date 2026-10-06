@@ -1,7 +1,8 @@
 import { Theme as ShadcnTheme } from '@rjsf/shadcn';
 import { getSubmitButtonOptions } from '@rjsf/utils';
-import type { BaseInputTemplateProps, SubmitButtonProps, WidgetProps } from '@rjsf/utils';
+import type { BaseInputTemplateProps, FieldTemplateProps, SubmitButtonProps, WidgetProps } from '@rjsf/utils';
 import type { ComponentType } from 'react';
+import { humanizeKey } from './display-label';
 
 /**
  * Two corrections to @rjsf/shadcn's chrome, applied by `SchemaForm` as caller-overridable defaults.
@@ -64,4 +65,21 @@ export function SubmitButton(props: SubmitButtonProps) {
             }}
         />
     );
+}
+
+/**
+ * A field's label by displayLabel's property rule (app-walkthrough APP-09b, APP-21; owner-36). RJSF resolves a label as
+ * `ui:title`, then `schema.title`, then the raw property key, so an untitled property was labelled "name", "model",
+ * "parent_tenant_id". A declared title still wins; the key fallback is humanized. Caller templates win over this one.
+ */
+const ThemeFieldTemplate = ShadcnTheme.templates?.FieldTemplate as ComponentType<FieldTemplateProps>;
+
+export function FieldTemplate(props: FieldTemplateProps) {
+    const ui = (props.uiSchema ?? {}) as Record<string, unknown>;
+    const declared = [ui['ui:title'], (ui['ui:options'] as Record<string, unknown> | undefined)?.title, props.schema?.title].find(
+        (t): t is string => typeof t === 'string' && t.trim() !== '',
+    );
+    const label = declared ?? (props.label ? humanizeKey(props.label) : props.label);
+
+    return <ThemeFieldTemplate {...props} label={label} />;
 }

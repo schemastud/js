@@ -4,7 +4,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { defaultRegistry } from './registry';
 import { RadioWidget } from './widgets/radio';
-import { BaseInputTemplate, SelectWidget, SubmitButton, TextareaWidget } from './theme-overrides';
+import { BaseInputTemplate, FieldTemplate, SelectWidget, SubmitButton, TextareaWidget } from './theme-overrides';
 import { resolveExternalRefs } from './refs';
 import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
@@ -105,6 +105,7 @@ export function SchemaForm({
             // Flush fields and a readable disabled Submit: see theme-overrides.tsx. Caller templates win.
             templates={{
                 ObjectFieldTemplate: GroupedObjectFieldTemplate,
+                FieldTemplate,
                 BaseInputTemplate,
                 ...templates,
                 ButtonTemplates: { SubmitButton, ...templates?.ButtonTemplates },
