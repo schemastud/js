@@ -4,7 +4,7 @@ import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { defaultRegistry } from './registry';
 import { RadioWidget } from './widgets/radio';
-import { BaseInputTemplate, FieldTemplate, SelectWidget, SubmitButton, TextareaWidget } from './theme-overrides';
+import { BaseInputTemplate, CheckboxWidget, FieldTemplate, SelectWidget, SubmitButton, TextareaWidget } from './theme-overrides';
 import { resolveExternalRefs } from './refs';
 import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
@@ -111,7 +111,7 @@ export function SchemaForm({
                 ButtonTemplates: { SubmitButton, ...templates?.ButtonTemplates },
             }}
             // The theme's RadioWidget never shows a stored value; see widgets/radio.tsx. Caller widgets win.
-            widgets={{ RadioWidget, SelectWidget, TextareaWidget, ...widgets }}
+            widgets={{ RadioWidget, SelectWidget, TextareaWidget, CheckboxWidget, ...widgets }}
             formData={safeFormData}
             // The injected fetcher rides formContext so fields that resolve
             // their own refs (rich-content manifests among them) share the

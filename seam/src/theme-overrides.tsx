@@ -74,12 +74,25 @@ export function SubmitButton(props: SubmitButtonProps) {
  */
 const ThemeFieldTemplate = ShadcnTheme.templates?.FieldTemplate as ComponentType<FieldTemplateProps>;
 
-export function FieldTemplate(props: FieldTemplateProps) {
-    const ui = (props.uiSchema ?? {}) as Record<string, unknown>;
-    const declared = [ui['ui:title'], (ui['ui:options'] as Record<string, unknown> | undefined)?.title, props.schema?.title].find(
+/** The label rule both a field template and a self-labelling widget apply: a declared title, else the key humanized. */
+function fieldLabel(label: string | undefined, schema: { title?: unknown } | undefined, uiSchema: unknown): string | undefined {
+    const ui = (uiSchema ?? {}) as Record<string, unknown>;
+    const declared = [ui['ui:title'], (ui['ui:options'] as Record<string, unknown> | undefined)?.title, schema?.title].find(
         (t): t is string => typeof t === 'string' && t.trim() !== '',
     );
-    const label = declared ?? (props.label ? humanizeKey(props.label) : props.label);
+    return declared ?? (label ? humanizeKey(label) : label);
+}
 
-    return <ThemeFieldTemplate {...props} label={label} />;
+export function FieldTemplate(props: FieldTemplateProps) {
+    return <ThemeFieldTemplate {...props} label={fieldLabel(props.label, props.schema, props.uiSchema) ?? ''} />;
+}
+
+/**
+ * The checkbox draws its OWN label from the raw key RJSF hands a widget (build.qa), so an untitled boolean read
+ * "is_active" past the field template. Same rule, applied where the checkbox reads it.
+ */
+const ThemeCheckboxWidget = ShadcnTheme.widgets?.CheckboxWidget as ComponentType<WidgetProps>;
+
+export function CheckboxWidget(props: WidgetProps) {
+    return <ThemeCheckboxWidget {...props} label={fieldLabel(props.label, props.schema, props.uiSchema) ?? ''} />;
 }

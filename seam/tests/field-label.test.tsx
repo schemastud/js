@@ -10,6 +10,13 @@ const labels = (container: HTMLElement) => [...container.querySelectorAll('label
 
 afterEach(cleanup);
 
+// Radix's checkbox measures itself; jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+} as unknown as typeof ResizeObserver;
+
 describe('form field labels', () => {
     it('humanizes an untitled property and keeps a declared title', () => {
         const { container } = render(
@@ -25,5 +32,13 @@ describe('form field labels', () => {
     it('lets a ui:title win', () => {
         const { container } = render(<SchemaForm schema={{ type: 'object', properties: { name: { type: 'string' } } }} uiSchema={{ name: { 'ui:title': 'Agent name' } }} />);
         expect(labels(container)).toContain('Agent name');
+    });
+
+    it('humanizes an untitled boolean, whose checkbox draws its own label', () => {
+        const { container } = render(<SchemaForm schema={{ type: 'object', properties: { is_active: { type: 'boolean' }, notify: { type: 'boolean', title: 'Email me' } } }} />);
+        const text = container.textContent ?? '';
+        expect(text).toContain('Is active');
+        expect(text).toContain('Email me');
+        expect(text).not.toContain('is_active');
     });
 });
