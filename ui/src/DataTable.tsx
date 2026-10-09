@@ -183,7 +183,9 @@ export function DataTable<TData>({
 
     return (
         <div className={cn('space-y-2', className)}>
-            <div className="overflow-x-auto rounded-md border bg-card">
+            {/* `relative`: the scroller must be the containing block of absolutely positioned descendants (an
+                `sr-only` header label), or they escape the overflow clip and widen the page (TOWER-05: 587px → 390px). */}
+            <div className="relative overflow-x-auto rounded-md border bg-card">
                 <table className="w-full text-sm">
                     <thead className="border-b bg-muted/40">
                         {table.getHeaderGroups().map((headerGroup) => (
