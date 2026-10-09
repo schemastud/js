@@ -100,9 +100,9 @@ export interface SavedFilter {
     id: string;
     name: string;
     resource: string;
-    query_parameters: SavedFilterQueryParameters;
+    queryParameters: SavedFilterQueryParameters;
     visibility: string;
-    is_default: boolean;
+    isDefault: boolean;
     /** Server-authorized mutations for this record, including ownership checks. */
     can?: ResourceMutationPermissions;
 }
@@ -131,7 +131,7 @@ export interface FacetsTransport {
     getSavedFilters(resource: string, variant?: string): Promise<SavedFilter[]>;
     saveFilter(
         resource: string,
-        payload: { name: string; query_parameters: SavedFilterQueryParameters },
+        payload: { name: string; queryParameters: SavedFilterQueryParameters },
     ): Promise<SavedFilter>;
     deleteSavedFilter(resource: string, id: string, variant?: string): Promise<void>;
 }

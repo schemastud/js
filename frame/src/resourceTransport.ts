@@ -142,7 +142,7 @@ export function createResourceTransport(
         },
         async saveFilter(resource, payload): Promise<SavedFilter> {
             return crud.create<SavedFilter>(
-                await savedResource(resource, payload.query_parameters.filterVariant),
+                await savedResource(resource, payload.queryParameters.filterVariant),
                 {
                     ...payload,
                     resource,

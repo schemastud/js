@@ -6,9 +6,9 @@ function fixture() {
         id: String(index),
         name: `View ${index}`,
         resource: 'articles',
-        query_parameters: { filter: { status: 'open' } },
+        queryParameters: { filter: { status: 'open' } },
         visibility: 'private',
-        is_default: false,
+        isDefault: false,
     }));
     const crud: FrameCrudTransport = {
         list: vi.fn(async (_resource, params) => {
@@ -157,7 +157,7 @@ describe('resource behavior composition', () => {
         const { transport, crud, support } = fixture();
         const payload = {
             name: 'Open',
-            query_parameters: { filter: { status: 'open' } },
+            queryParameters: { filter: { status: 'open' } },
         };
         expect(await transport.saveFilter('articles', payload)).toEqual({
             id: 'new',

@@ -55,7 +55,7 @@ export function SavedViews({
         if (!canCreate) return;
         setError(null);
         try {
-            await save.mutateAsync({ name, query_parameters: current });
+            await save.mutateAsync({ name, queryParameters: current });
             setName('');
             setNaming(false);
         } catch (e) {
@@ -88,7 +88,7 @@ export function SavedViews({
                     <button
                         type="button"
                         className="font-medium hover:underline"
-                        onClick={() => void apply(view.query_parameters ?? {})}
+                        onClick={() => void apply(view.queryParameters ?? {})}
                     >
                         {view.name}
                     </button>

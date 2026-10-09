@@ -231,9 +231,9 @@ function makeTransport(rows: Row[]): FrameTransport {
                 id: 'saved-1',
                 name: payload.name,
                 resource,
-                query_parameters: payload.query_parameters,
+                queryParameters: payload.queryParameters,
                 visibility: 'private',
-                is_default: false,
+                isDefault: false,
             }),
         deleteSavedFilter: () => Promise.resolve(),
     } as FrameTransport;

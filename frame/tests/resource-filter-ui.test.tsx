@@ -65,7 +65,7 @@ function fixture(initial = '', can: FrameCan = () => true) {
                 id: 'view-1',
                 can: allowed,
                 visibility: 'private',
-                is_default: false,
+                isDefault: false,
             };
             saved.push(row);
             return Response.json(row).json();
@@ -181,7 +181,7 @@ describe('declared filter variants in the generic Frame list', () => {
         expect(crud.create).toHaveBeenCalledWith('team-views', {
             resource: 'papers',
             name: 'Recent ecology',
-            query_parameters: {
+            queryParameters: {
                 filterVariant: 'recent',
                 filter: { query: 'ecology' },
                 sort: '-score',
@@ -263,7 +263,7 @@ describe('declared filter variants in the generic Frame list', () => {
             id: 'old',
             name: 'Older saved view',
             resource: 'papers',
-            query_parameters: {
+            queryParameters: {
                 filterVariant: 'recent',
                 filter: { query: 'biology', retired: 'stale' },
                 sort: 'score,-retired',
@@ -291,7 +291,7 @@ describe('declared filter variants in the generic Frame list', () => {
             id: 'denied',
             name: 'Denied saved variant',
             resource: 'papers',
-            query_parameters: {
+            queryParameters: {
                 filterVariant: 'recent',
                 filter: { query: 'private' },
             },
@@ -312,7 +312,7 @@ describe('declared filter variants in the generic Frame list', () => {
             id: 'owned',
             name: 'Owned',
             can: allowed,
-            query_parameters: {},
+            queryParameters: {},
             resource: 'papers',
         };
         saved.push(owned);

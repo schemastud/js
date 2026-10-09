@@ -37,9 +37,9 @@ function makeTransport(authority: string, gate?: Promise<void>): FrameTransport 
         id: '1',
         name: authority,
         resource: 'things',
-        query_parameters: {},
+        queryParameters: {},
         visibility: 'private',
-        is_default: false,
+        isDefault: false,
     };
     const result = async <T,>(value: T) => {
         await gate;
@@ -293,7 +293,7 @@ const writes = [
         method: 'saveFilter',
         useWrite: () => {
             const mutation = useSaveFilter('things');
-            return () => mutation.mutateAsync({ name: 'saved', query_parameters: {} });
+            return () => mutation.mutateAsync({ name: 'saved', queryParameters: {} });
         },
     },
     {

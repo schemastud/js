@@ -17,7 +17,7 @@ const rows: SavedFilter[] = [
     { id: 'other-shared', name: 'Shared by a colleague', visibility: 'shared', can: denied },
     { id: 'other-public', name: 'Public view', visibility: 'public', can: denied },
     { id: 'historical', name: 'View without permissions', visibility: 'private' },
-].map((row) => ({ ...row, resource: 'papers', query_parameters: {}, is_default: false }));
+].map((row) => ({ ...row, resource: 'papers', queryParameters: {}, isDefault: false }));
 
 const primitives: FacetsPrimitives = {
     Button: ({ children, size: _size, variant: _variant, ...props }) => (

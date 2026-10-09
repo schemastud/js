@@ -44,9 +44,9 @@ function makeTransport(schema: FilterSchema): FacetsTransport {
             id: '1',
             name: 'v',
             resource: 'thing',
-            query_parameters: {},
+            queryParameters: {},
             visibility: 'private',
-            is_default: false,
+            isDefault: false,
         })),
         deleteSavedFilter: vi.fn(async () => undefined),
     };

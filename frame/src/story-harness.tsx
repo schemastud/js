@@ -220,9 +220,9 @@ export function createMockTransport(fixtures: TransportFixtures = {}): FrameTran
                 id: 'saved-1',
                 name: payload.name,
                 resource,
-                query_parameters: payload.query_parameters,
+                queryParameters: payload.queryParameters,
                 visibility: 'private',
-                is_default: false,
+                isDefault: false,
             }),
         deleteSavedFilter: () => Promise.resolve(),
         // Declared actions (ADR-0005): a form schema per action key, and an invoke that answers with the

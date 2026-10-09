@@ -86,7 +86,7 @@ export function useSaveFilter(resource: string) {
     const queryClient = useQueryClient();
     return useMutation({
         mutationKey: ['saved-filters', resource, transportScope(transport), 'save'],
-        mutationFn: (payload: { name: string; query_parameters: SavedFilterQueryParameters }) =>
+        mutationFn: (payload: { name: string; queryParameters: SavedFilterQueryParameters }) =>
             transport.saveFilter(resource, payload),
         onSuccess: () =>
             queryClient.invalidateQueries({

@@ -65,9 +65,9 @@ function makeTransport(): FrameTransport {
             id: '1',
             name: 'v',
             resource: 'scaffold-packs',
-            query_parameters: {},
+            queryParameters: {},
             visibility: 'private',
-            is_default: false,
+            isDefault: false,
         })),
         deleteSavedFilter: vi.fn(async () => undefined),
         list: vi.fn(
