@@ -9,6 +9,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'l
 import { useMemo, useState, type MouseEvent } from 'react';
 import { Button } from './button';
 import { cn } from './cn';
+import { useIsMobile } from './use-mobile';
 import { parseSort, serializeSort, sortStateFor, toggleSortKey } from './sort';
 
 // Let a column declare which `x-sort` field it sorts on. Only columns whose
@@ -109,6 +110,13 @@ export interface DataTableSort {
  * that resolve against the host's `@theme` vars — zero hard-coded colors. The
  * `list-cross-fade` class is a host-owned motion utility (see the beam token-var
  * convention); the host defines its transition, the table only opts in by name.
+ *
+ * `stackOnMobile` (opt-in): below the foundation's 768px breakpoint ({@link useIsMobile}) every row becomes a stacked
+ * card that renders the SAME column cells, so a row's status and its actions stay on screen instead of being clipped or
+ * parked past the right edge of a sideways scroller. The first column is the card's heading, a column whose id is
+ * `actions` is the card's footer, and every other column is a labelled field (its string header is the label). Loading,
+ * empty, row-click, re-fetch dimming and pagination behave exactly as in the table. (Promoted from beam-accounts'
+ * ResponsiveRoster: X shot-review follow-up (b), orch-lead 15:26Z.)
  */
 export function DataTable<TData>({
     columns,
@@ -123,6 +131,7 @@ export function DataTable<TData>({
     sorting,
     clientSort,
     clientPageSize,
+    stackOnMobile = false,
 }: {
     columns: ColumnDef<TData, unknown>[];
     data: TData[];
@@ -140,7 +149,11 @@ export function DataTable<TData>({
     clientSort?: DataTableSort;
     /** When set, paginate the (client-sorted) rows in-memory at this page size. */
     clientPageSize?: number;
+    /** Below 768px, render each row as a stacked card instead of a table row (see above). */
+    stackOnMobile?: boolean;
 }) {
+    const isMobile = useIsMobile();
+    const stacked = stackOnMobile && isMobile;
     // Headers share one sort model whether the order is resolved server- or client-side.
     const headerSort = sorting ?? clientSort;
 
@@ -179,7 +192,104 @@ export function DataTable<TData>({
         columns,
         getCoreRowModel: getCoreRowModel(),
         manualPagination: true,
+        // A row's own `id` (when it has one) keys it, so a stacked card is `stacked-row-<id>` as ResponsiveRoster's was.
+        getRowId: (row, index) => {
+            const id = (row as { id?: unknown } | null)?.id;
+            return typeof id === 'string' || typeof id === 'number' ? String(id) : String(index);
+        },
     });
+
+    const footer = (
+        <>
+            {effectivePagination && effectivePagination.lastPage > 1 && (
+                <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
+                    <span>
+                        Page {effectivePagination.page} of {effectivePagination.lastPage}
+                    </span>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={effectivePagination.page <= 1}
+                        onClick={() =>
+                            effectivePagination.onPageChange(effectivePagination.page - 1)
+                        }
+                    >
+                        <ChevronLeft />
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="icon"
+                        disabled={effectivePagination.page >= effectivePagination.lastPage}
+                        onClick={() =>
+                            effectivePagination.onPageChange(effectivePagination.page + 1)
+                        }
+                    >
+                        <ChevronRight />
+                    </Button>
+                </div>
+            )}
+        </>
+    );
+
+    if (stacked) {
+        const rows = table.getRowModel().rows;
+        return (
+            <div className={cn('space-y-2', className)}>
+                {showSkeleton ? (
+                    <div className="space-y-2" aria-busy="true">
+                        {Array.from({ length: Math.min(skeletonRows, 3) }).map((_, i) => (
+                            <div key={i} data-testid="skeleton-row" className="h-24 animate-pulse rounded-lg border bg-muted/40" />
+                        ))}
+                    </div>
+                ) : rows.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted-foreground">{emptyMessage}</p>
+                ) : (
+                    <ul className={cn('list-cross-fade space-y-2', refetching && 'opacity-40')} aria-busy={loading || undefined}>
+                        {rows.map((row) => {
+                            const [heading, ...rest] = row.getVisibleCells();
+                            const actions = rest.find((cell) => cell.column.id === 'actions');
+                            const fields = rest.filter((cell) => cell.column.id !== 'actions');
+                            return (
+                                <li
+                                    key={row.id}
+                                    data-testid={`stacked-row-${row.id}`}
+                                    className={cn(
+                                        'min-w-0 space-y-2.5 rounded-lg border bg-card p-3',
+                                        onRowClick && 'cursor-pointer transition-colors hover:bg-accent/50',
+                                        rowClassName?.(row.original),
+                                    )}
+                                    onClick={() => onRowClick?.(row.original)}
+                                >
+                                    {heading && (
+                                        <div className="min-w-0">{flexRender(heading.column.columnDef.cell, heading.getContext())}</div>
+                                    )}
+                                    {fields.length > 0 && (
+                                        <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 text-[12.5px]">
+                                            {fields.map((cell) => {
+                                                const header = cell.column.columnDef.header;
+                                                return (
+                                                    <div key={cell.id} className="contents">
+                                                        <dt className="text-muted-foreground">{typeof header === 'string' ? header : cell.column.id}</dt>
+                                                        <dd className="min-w-0">{flexRender(cell.column.columnDef.cell, cell.getContext())}</dd>
+                                                    </div>
+                                                );
+                                            })}
+                                        </dl>
+                                    )}
+                                    {actions && (
+                                        <div className="flex flex-wrap items-center justify-end gap-1.5 border-t pt-2">
+                                            {flexRender(actions.column.columnDef.cell, actions.getContext())}
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+                {footer}
+            </div>
+        );
+    }
 
     return (
         <div className={cn('space-y-2', className)}>
@@ -263,33 +373,7 @@ export function DataTable<TData>({
                 </table>
             </div>
 
-            {effectivePagination && effectivePagination.lastPage > 1 && (
-                <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
-                    <span>
-                        Page {effectivePagination.page} of {effectivePagination.lastPage}
-                    </span>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={effectivePagination.page <= 1}
-                        onClick={() =>
-                            effectivePagination.onPageChange(effectivePagination.page - 1)
-                        }
-                    >
-                        <ChevronLeft />
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="icon"
-                        disabled={effectivePagination.page >= effectivePagination.lastPage}
-                        onClick={() =>
-                            effectivePagination.onPageChange(effectivePagination.page + 1)
-                        }
-                    >
-                        <ChevronRight />
-                    </Button>
-                </div>
-            )}
+            {footer}
         </div>
     );
 }

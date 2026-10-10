@@ -1,6 +1,7 @@
 import type { ComponentType, MouseEvent } from 'react';
 import { parseSort, serializeSort, sortStateFor, toggleSortKey } from '@schemastud/facets';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
+import { useIsMobile } from '@schemastud/ui';
 import { useFrameInjection } from '../context';
 import { createNoun } from '../slots/defaults';
 import { getPath } from '../getPath';
@@ -47,10 +48,54 @@ export function ShadcnTable(props: {
     sort?: TableSort;
 }) {
     const { columns, rows, onOpen, Cell, RowActions, sort } = props;
+    // X shot-review follow-up (b): below 768px a wide list never clips. Each record is a stacked card carrying the same
+    // cells (the first column is its heading, the others labelled fields, RowActions its footer); at desktop width the
+    // table scrolls sideways instead of hiding its right edge behind overflow-hidden.
+    const isMobile = useIsMobile();
+    if (isMobile) {
+        const [first, ...rest] = columns;
+        return (
+            <ul data-frame-slot="Table" data-frame-stacked className="space-y-2">
+                {rows.map((row, i) => (
+                    <li
+                        key={(row.id as string) ?? i}
+                        data-frame-row
+                        onClick={() => onOpen?.(row)}
+                        className={`min-w-0 space-y-2.5 rounded-lg border border-border bg-card p-3 text-sm ${
+                            onOpen ? 'cursor-pointer hover:bg-muted/40' : ''
+                        }`}
+                    >
+                        {first ? (
+                            <div className="min-w-0 font-medium text-foreground">
+                                <Cell column={first} record={row} />
+                            </div>
+                        ) : null}
+                        {rest.length > 0 ? (
+                            <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 text-[12.5px]">
+                                {rest.map((c) => (
+                                    <div key={c.field} className="contents">
+                                        <dt className="text-muted-foreground">{c.header ?? c.field}</dt>
+                                        <dd className="min-w-0 text-foreground/90">
+                                            <Cell column={c} record={row} />
+                                        </dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        ) : null}
+                        {RowActions ? (
+                            <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border pt-2" onClick={(e) => e.stopPropagation()}>
+                                <RowActions record={row} />
+                            </div>
+                        ) : null}
+                    </li>
+                ))}
+            </ul>
+        );
+    }
     return (
         <div
             data-frame-slot="Table"
-            className="overflow-hidden rounded-lg border border-border bg-card"
+            className="overflow-x-auto rounded-lg border border-border bg-card"
         >
             <table className="w-full border-collapse text-left text-sm">
                 <thead>
