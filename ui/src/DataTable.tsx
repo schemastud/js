@@ -15,12 +15,14 @@ import { parseSort, serializeSort, sortStateFor, toggleSortKey } from './sort';
 // Let a column declare which `x-sort` field it sorts on. Only columns whose
 // `sortField` is in the resource's `x-sort` set get a header affordance, so an
 // unknown sort can never be emitted (UI-06). `sortAccessor` supplies the value a
-// column sorts on under `clientSort` (in-memory sort); it is ignored by server sort.
+// column sorts on under `clientSort` (in-memory sort); it is ignored by server sort. `label` names a column whose header
+// is a component, where a plain-text name is needed (the stacked card's field label).
 declare module '@tanstack/react-table' {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     interface ColumnMeta<TData extends unknown, TValue> {
         sortField?: string;
         sortAccessor?: (row: TData) => string | number | Date | null | undefined;
+        label?: string;
     }
 }
 
@@ -297,7 +299,10 @@ export function DataTable<TData>({
                                                 const header = cell.column.columnDef.header;
                                                 return (
                                                     <div key={cell.id} className="contents">
-                                                        <dt className="text-muted-foreground">{typeof header === 'string' ? header : cell.column.id}</dt>
+                                                        <dt className="text-muted-foreground">
+                                                            {cell.column.columnDef.meta?.label ??
+                                                                (typeof header === 'string' ? header : cell.column.id)}
+                                                        </dt>
                                                         <dd className="min-w-0">{flexRender(cell.column.columnDef.cell, cell.getContext())}</dd>
                                                     </div>
                                                 );

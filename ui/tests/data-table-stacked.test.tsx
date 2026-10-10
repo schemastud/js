@@ -142,3 +142,21 @@ it('desktop: the sort state stays on the column header (aria-sort on the th, not
     expect(header.getAttribute('aria-sort')).toBe('descending');
     expect(within(header).getByRole('button').hasAttribute('aria-sort')).toBe(false);
 });
+
+// orch-peer 19:53Z (combined replay): a column whose header is a component labels its stacked field from meta.label
+// (Beam's team roster: id 'role', meta.label 'Team role'), before falling back to a string header, then the column id.
+it('stacked: a field label resolves meta.label, then a string header, then the column id', () => {
+    viewport.narrow = true;
+    const labelled: ColumnDef<Row, unknown>[] = [
+        { id: 'name', header: 'Name', cell: ({ row }) => row.original.name },
+        { id: 'role', header: () => <span>Role</span>, meta: { label: 'Team role' }, cell: () => 'Owner' },
+        { id: 'status', header: 'Status', cell: ({ row }) => row.original.status },
+        { id: 'tier', header: () => <span>Tier</span>, cell: () => 'Gold' },
+    ];
+    render(<DataTable columns={labelled} data={ROWS} stackOnMobile />);
+    const card = within(screen.getByTestId('stacked-row-a'));
+    expect(card.getByText('Team role').tagName).toBe('DT');
+    expect(card.queryByText('role')).toBeNull();
+    expect(card.getByText('Status').tagName).toBe('DT');
+    expect(card.getByText('tier').tagName).toBe('DT');
+});
