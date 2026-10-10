@@ -101,17 +101,59 @@ describe('SchemaView fallback presentation (C03)', () => {
         expect(JSON.parse(json)).toEqual(structuredRecord.profile);
     });
 
-    it('renders a visible unavailable-field state in production, retaining diagnostic identity', () => {
+    it('renders a visible unavailable-field state in production, with diagnostic identity only in a data attribute (no user-visible leak)', () => {
         // UnboundWidget is the production render path (the dev path throws before reaching it).
-        render(<UnboundWidget label="Risk score" widget="risk-gauge" />);
+        const { container } = render(<UnboundWidget label="Risk score" widget="risk-gauge" />);
 
         // The end user sees a plain unavailable state, never the raw marker.
         expect(screen.getByText('Unable to display this field')).toBeTruthy();
         expect(screen.queryByText(/\[unbound widget:/)).toBeNull();
 
-        // The widget that failed to resolve is retained for diagnostics, not shown raw.
-        const marker = document.querySelector('[data-frame-view-error]') as HTMLElement;
-        expect(marker.getAttribute('title') ?? '').toContain('risk-gauge');
+        // The failed widget identity is retained for devtools on a data attribute …
+        expect(
+            container.querySelector('[data-frame-view-widget]')?.getAttribute('data-frame-view-widget'),
+        ).toBe('risk-gauge');
+        // … and NOT leaked into any user-visible tooltip or a11y copy.
+        expect(container.querySelector('[title]')).toBeNull();
+        expect(container.querySelector('[aria-label]')).toBeNull();
+        expect(container.innerHTML).not.toContain('unbound widget');
+    });
+
+    it('honors a declared schema title for a fallback object key — declared wins over humanized (incl list-item)', () => {
+        // The declaration owns the contextual wording: role.title = "Team role" must beat the
+        // humanized key "Role"; an undeclared key still humanizes; values + source JSON unchanged.
+        const declaredSchema: SchemaNode = {
+            type: 'object',
+            properties: {
+                role: { type: 'string', title: 'Team role' },
+                retryCount: { type: 'number' },
+            },
+        };
+        const rec = { role: 'owner', retryCount: 2 };
+        const listManifest: ContextManifest = {
+            byNode: { '': { 'list-item': { participates: false } } },
+            inherits: {},
+            known: ['list-item'],
+        };
+
+        const { container } = render(
+            <SchemaView
+                schema={declaredSchema}
+                record={rec}
+                manifest={listManifest}
+                context="list-item"
+                registry={createWidgetRegistry()}
+            />,
+        );
+
+        expect(screen.getByText('Team role')).toBeTruthy();
+        expect(screen.queryByText('Role')).toBeNull();
+        expect(screen.getByText('Retry Count')).toBeTruthy();
+        expect(screen.getByText('owner')).toBeTruthy();
+        expect(screen.getByText('2')).toBeTruthy();
+
+        const json = container.querySelector('[data-frame-view-json]')?.textContent ?? '';
+        expect(JSON.parse(json)).toEqual(rec);
     });
 
     it('keeps an unbound heavyweight widget a hard, loud error in dev', () => {

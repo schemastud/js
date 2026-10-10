@@ -58,10 +58,10 @@ export function widgetMountProps(value: unknown, schema: SchemaNode, options?: R
  *
  * This is the PRODUCTION path (the dev path throws loudly at the call site before ever reaching
  * it). The user sees a plain unavailable-field state rather than the raw `[unbound widget: …]`
- * marker; the widget that failed to resolve is retained for diagnostics on the element (a
- * `data-*` attribute + `title`), so support/devtools can still name it without leaking a wiring
- * identifier into the rendered surface. The binding is still repaired at its declaration, not
- * here. (C03)
+ * marker; the widget that failed to resolve is retained for diagnostics ONLY on a `data-*`
+ * attribute (inspectable in devtools), never a native `title`/tooltip or other user-visible copy —
+ * a tooltip would just relocate the wiring-identifier leak. The binding is still repaired at its
+ * declaration, not here. (C03)
  */
 export function UnboundWidget({
     label,
@@ -75,9 +75,7 @@ export function UnboundWidget({
     return (
         <div data-frame-view={kind} data-frame-view-widget={String(widget)}>
             <span data-frame-view-label>{label}</span>
-            <span data-frame-view-error title={`unbound widget: ${String(widget)}`}>
-                Unable to display this field
-            </span>
+            <span data-frame-view-error>Unable to display this field</span>
         </div>
     );
 }
@@ -89,17 +87,25 @@ export function UnboundWidget({
  * JSON verbatim so it round-trips unchanged. Arrays and nested objects stay in the value column
  * as their exact JSON — every authored value is preserved, nothing is silently dropped. (C03)
  */
-function FallbackValue({ value }: { value: unknown }): ReactNode {
+function FallbackValue({ value, node }: { value: unknown; node?: SchemaNode }): ReactNode {
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
         return <span data-frame-view-value>{scalar(value)}</span>;
     }
+    // Each key labels itself from its DECLARED schema title when present — the declaration owns the
+    // contextual wording (e.g. a `role` property titled "Team role"), so an explicit title wins and
+    // humanizing the key is only the fallback. (C03 — declared/humanized labels.)
+    const properties = (node?.properties ?? {}) as Record<string, SchemaNode>;
+    const declaredOr = (key: string): string => {
+        const title = properties[key]?.title;
+        return typeof title === 'string' && title.trim() ? title : labelize(key);
+    };
     const entries = Object.entries(value as Record<string, unknown>);
     return (
         <div data-frame-view-structured>
             <dl>
                 {entries.map(([key, entry]) => (
                     <div key={key}>
-                        <dt data-frame-view-label>{labelize(key)}</dt>
+                        <dt data-frame-view-label>{declaredOr(key)}</dt>
                         <dd data-frame-view-value>{scalar(entry)}</dd>
                     </div>
                 ))}
@@ -155,7 +161,7 @@ function ViewNode({
             {Widget ? (
                 <Widget {...widgetMountProps(value, node, resolved.config)} />
             ) : (
-                <FallbackValue value={value} />
+                <FallbackValue value={value} node={node} />
             )}
         </div>
     );
