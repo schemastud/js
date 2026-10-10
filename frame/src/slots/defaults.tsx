@@ -190,6 +190,23 @@ export function DefaultErrorState({ error, retry }: ErrorSlotProps) {
     );
 }
 
+/**
+ * A record read answered 404 — a DISTINCT terminal state from a failed read (api-surface-coherence /
+ * C17). "Not found" is final: retrying a 404 just 404s again, so unlike `DefaultErrorState` it offers
+ * no retry. The host detail sheet imports this so a 404 there renders the SAME not-found state.
+ */
+export function DefaultNotFound({ message }: { message?: string }) {
+    return (
+        <div
+            data-frame-slot="NotFound"
+            role="alert"
+            style={{ padding: '2rem', textAlign: 'center', opacity: 0.7 }}
+        >
+            {message ?? 'This record was not found.'}
+        </div>
+    );
+}
+
 export function DefaultLoading() {
     const { primitives } = useFrameInjection();
     const { Skeleton } = primitives;
@@ -465,7 +482,23 @@ export function DefaultSaveBar({
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     return (
-        <div data-frame-slot="SaveBar" style={{ display: 'flex', gap: '0.5rem' }}>
+        <div
+            data-frame-slot="SaveBar"
+            data-frame-sticky="save"
+            style={{
+                // C17 create-chrome: the Save control sticks to the bottom of the scroll area so it
+                // stays reachable on a long form; EditShell pairs this with a bottom spacer so the
+                // sticky bar cannot cover the last field (UX13/UX14).
+                position: 'sticky',
+                bottom: 0,
+                display: 'flex',
+                gap: '0.5rem',
+                background: 'var(--background, #fff)',
+                borderTop: '1px solid var(--border, rgba(0,0,0,0.1))',
+                paddingTop: '0.75rem',
+                marginTop: '0.5rem',
+            }}
+        >
             {onCancel ? (
                 <Button type="button" onClick={onCancel} data-frame-action="cancel">
                     Cancel

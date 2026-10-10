@@ -2,8 +2,9 @@ import { createFormIntentBus } from '@schemastud/seam';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { useFrameInjection } from './context';
-import { DefaultContainer, DefaultFormBody, DefaultSaveBar, DefaultToggle } from './slots/defaults';
+import { DefaultContainer, DefaultFormBody, DefaultNotFound, DefaultSaveBar, DefaultToggle } from './slots/defaults';
 import { useFormSchema, useResourceRecord, useSaveResource } from './data';
+import { isNotFound } from './errors';
 import { bridgeHostWidgets, stripHostWidgets } from './raw-mode';
 import { RecordActionButtons, useInlineNotice } from './ResourceActions';
 import type { EditShellProps, FormMode, Row } from './types';
@@ -92,6 +93,12 @@ function EditShellRecord({
 
     const readFailed = schemaQuery.isError || (id !== null && recordQuery.isError);
     const ready = schemaQuery.data !== undefined && (id === null || recordQuery.data !== undefined);
+    // C17 create-chrome + terminal states. A 404 record read is a DISTINCT not-found state; the
+    // heading reads from the resource's singularLabel ("New <noun>" when creating), which create
+    // mode previously lacked entirely.
+    const recordNotFound = id !== null && recordQuery.isError && isNotFound(recordQuery.error);
+    const singularLabel = manifest?.singularLabel ?? resource;
+    const heading = id === null ? `New ${singularLabel}` : singularLabel;
     const submit = (data: Row) => {
         if (effectiveReadOnly || readFailed || !ready) return;
         saveMutation.mutate(
@@ -117,7 +124,11 @@ function EditShellRecord({
     }
 
     const RetryButton = primitives.Button;
-    const loadError = readFailed ? (
+    // A 404 record read is a DISTINCT terminal state — not-found, no retry (the record is gone).
+    // Any other read failure keeps the retryable generic error. (C17)
+    const terminal = recordNotFound ? (
+        <DefaultNotFound message={`This ${singularLabel.toLowerCase()} was not found.`} />
+    ) : readFailed ? (
         <div role="alert" data-frame-shell="edit-error">
             <p>
                 {schemaQuery.isError ? 'Could not load this form.' : 'Could not load this record.'}
@@ -133,12 +144,13 @@ function EditShellRecord({
             </RetryButton>
         </div>
     ) : null;
-    if (!ready) return <Container>{loadError}</Container>;
+    if (!ready) return <Container>{terminal}</Container>;
 
     return (
         <Container>
             <div data-frame-shell="edit">
-                {loadError}
+                <h1 data-frame-shell="edit-heading">{heading}</h1>
+                {terminal}
                 {id !== null ? (
                     <>
                         {notice.element}
@@ -172,6 +184,13 @@ function EditShellRecord({
                         {saveMutation.error?.message || 'Could not save changes.'}
                     </div>
                 )}
+                {/* C17: scroll space between the last field and the sticky Save bar, so the bar
+                    cannot cover the last field at desktop (UX13/UX14). */}
+                <div
+                    data-frame-shell="edit-bottom-spacer"
+                    aria-hidden="true"
+                    style={{ height: '4rem', flex: 'none' }}
+                />
                 <SaveBar
                     saving={saveMutation.isPending}
                     canSubmit={canSubmit}

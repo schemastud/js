@@ -251,8 +251,13 @@ export function ListShell({
                 <ErrorState error={query.error} retry={() => void query.refetch()} />
             ) : (
                 <>
-                    {/* Top bar gets breathing room below it before the table header. */}
-                    {showTopPagination && <div className="mb-3">{paginationBar}</div>}
+                    {/* Top bar gets breathing room below it before the table header. When the page is
+                        EMPTY, this renders the single pagination boundary (C17: one empty state with one
+                        boundary, never the top+bottom pair that sandwiched "No records."), including the
+                        bottom-only placement so an emptied high page can always page back. */}
+                    {(showTopPagination || (rows.length === 0 && showBottomPagination)) && (
+                        <div className="mb-3">{paginationBar}</div>
+                    )}
                     {rows.length === 0 ? (
                         <Empty />
                     ) : cardsPath && manifest ? (
@@ -281,7 +286,7 @@ export function ListShell({
                             }}
                         />
                     )}
-                    {showBottomPagination && paginationBar}
+                    {showBottomPagination && rows.length > 0 && paginationBar}
                 </>
             )}
         </div>

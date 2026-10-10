@@ -62,6 +62,7 @@ export {
     type NumberCellOptions,
     type DateCellOptions,
 } from './columnKinds';
+export { isNotFound } from './errors';
 export { getPath } from './getPath';
 export { createFormResolver, kindOfSchema } from './FormResolver';
 export {
@@ -161,6 +162,7 @@ export {
     DefaultCell,
     DefaultEmpty,
     DefaultErrorState,
+    DefaultNotFound,
     DefaultLoading,
     DefaultPagination,
     DefaultTable,
