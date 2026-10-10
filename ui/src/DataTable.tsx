@@ -6,7 +6,7 @@ import {
     type Header,
 } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
-import { useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { useId, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { Button } from './button';
 import { cn } from './cn';
 import { useIsMobile } from './use-mobile';
@@ -153,6 +153,7 @@ export function DataTable<TData>({
     stackOnMobile?: boolean;
 }) {
     const isMobile = useIsMobile();
+    const uid = useId();
     const stacked = stackOnMobile && isMobile;
     // Headers share one sort model whether the order is resolved server- or client-side.
     const headerSort = sorting ?? clientSort;
@@ -241,14 +242,19 @@ export function DataTable<TData>({
         return (
             <div className={cn('space-y-2', className)}>
                 {headerSort && sortHeaders.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground" aria-label="Sort">
-                        <span>Sort</span>
+                    <div
+                        role="group"
+                        aria-labelledby={`${uid}-sort`}
+                        className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+                    >
+                        <span id={`${uid}-sort`}>Sort</span>
                         {sortHeaders.map((header) => (
                             <SortButton
                                 key={header.id}
                                 label={flexRender(header.column.columnDef.header, header.getContext())}
                                 sortField={sortFieldOf(header, headerSort)!}
                                 sorting={headerSort}
+                                stacked
                             />
                         ))}
                     </div>
@@ -273,27 +279,17 @@ export function DataTable<TData>({
                                     data-testid={`stacked-row-${row.id}`}
                                     className={cn(
                                         'min-w-0 space-y-2.5 rounded-lg border bg-card p-3',
-                                        onRowClick &&
-                                            'cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                        onRowClick && 'cursor-pointer transition-colors hover:bg-accent/50',
                                         rowClassName?.(row.original),
                                     )}
+                                    // A pointer may open the row from anywhere on the card; the accessible way in is the
+                                    // labelled Open button below, never the <li> itself.
                                     onClick={() => onRowClick?.(row.original)}
-                                    // A clickable card is a tab stop opened by Enter or Space, as a button would be. A key
-                                    // pressed on a control inside the card belongs to that control.
-                                    tabIndex={onRowClick ? 0 : undefined}
-                                    onKeyDown={
-                                        onRowClick
-                                            ? (event: KeyboardEvent<HTMLLIElement>) => {
-                                                  if (event.target !== event.currentTarget) return;
-                                                  if (event.key !== 'Enter' && event.key !== ' ') return;
-                                                  event.preventDefault();
-                                                  onRowClick(row.original);
-                                              }
-                                            : undefined
-                                    }
                                 >
                                     {heading && (
-                                        <div className="min-w-0">{flexRender(heading.column.columnDef.cell, heading.getContext())}</div>
+                                        <div id={`${uid}-row-${row.id}`} className="min-w-0">
+                                            {flexRender(heading.column.columnDef.cell, heading.getContext())}
+                                        </div>
                                     )}
                                     {fields.length > 0 && (
                                         <dl className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5 text-[12.5px]">
@@ -308,13 +304,35 @@ export function DataTable<TData>({
                                             })}
                                         </dl>
                                     )}
-                                    {actions && (
-                                        // The row's actions act on their own: a click here never also opens the row.
-                                        <div
-                                            className="flex flex-wrap items-center justify-end gap-1.5 border-t pt-2"
-                                            onClick={(event) => event.stopPropagation()}
-                                        >
-                                            {flexRender(actions.column.columnDef.cell, actions.getContext())}
+                                    {(onRowClick || actions) && (
+                                        <div className="flex flex-wrap items-center justify-end gap-1.5 border-t pt-2">
+                                            {onRowClick && (
+                                                // The row's own open control: a native button named "Open <heading>", a
+                                                // sibling of the row's actions, never wrapping them.
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="mr-auto"
+                                                    id={`${uid}-open-${row.id}`}
+                                                    aria-labelledby={`${uid}-open-${row.id} ${uid}-row-${row.id}`}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        onRowClick(row.original);
+                                                    }}
+                                                >
+                                                    Open
+                                                </Button>
+                                            )}
+                                            {actions && (
+                                                // The row's actions act on their own: a click here never also opens the row.
+                                                <div
+                                                    className="flex flex-wrap items-center gap-1.5"
+                                                    onClick={(event) => event.stopPropagation()}
+                                                >
+                                                    {flexRender(actions.column.columnDef.cell, actions.getContext())}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </li>
@@ -438,8 +456,14 @@ function SortableHeaderCell<TData>({
         return <th className="px-3 py-2 text-left font-medium text-muted-foreground">{label}</th>;
     }
 
+    // The sort state lives on the column header, where `aria-sort` is supported, not on the button inside it.
+    const state = sortStateFor(parseSort(sorting.sort), sortField);
+
     return (
-        <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+        <th
+            className="px-3 py-2 text-left font-medium text-muted-foreground"
+            aria-sort={state.active ? (state.desc ? 'descending' : 'ascending') : 'none'}
+        >
             <SortButton label={label} sortField={sortField} sorting={sorting} />
         </th>
     );
@@ -460,10 +484,14 @@ function SortButton({
     label,
     sortField,
     sorting,
+    stacked = false,
 }: {
     label: ReactNode;
     sortField: string;
     sorting: DataTableSort;
+    /** In the stacked Sort group there is no column header to carry `aria-sort`: the button is a toggle (`aria-pressed`)
+     * whose accessible name says the direction. */
+    stacked?: boolean;
 }) {
     const keys = parseSort(sorting.sort);
     const state = sortStateFor(keys, sortField);
@@ -478,14 +506,17 @@ function SortButton({
         <button
             type="button"
             onClick={onClick}
-            aria-sort={state.active ? (state.desc ? 'descending' : 'ascending') : 'none'}
+            aria-pressed={stacked ? state.active : undefined}
             className={cn(
                 'group -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-accent',
                 state.active && 'text-foreground',
             )}
             title="Click to sort; shift-click to add a secondary sort"
         >
-            <span>{label}</span>
+            <span>
+                {label}
+                {stacked && state.active && <span className="sr-only">, sorted {state.desc ? 'descending' : 'ascending'}</span>}
+            </span>
             {state.active ? (
                 state.desc ? (
                     <ArrowDown className="size-3.5" />

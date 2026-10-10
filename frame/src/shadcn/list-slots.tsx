@@ -1,4 +1,4 @@
-import type { ComponentType, MouseEvent } from 'react';
+import { useId, type ComponentType, type MouseEvent } from 'react';
 import { parseSort, serializeSort, sortStateFor, toggleSortKey } from '@schemastud/facets';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
 import { useIsMobile } from '@schemastud/ui';
@@ -52,6 +52,7 @@ export function ShadcnTable(props: {
     // cells (the first column is its heading, the others labelled fields, RowActions its footer); at desktop width the
     // table scrolls sideways instead of hiding its right edge behind overflow-hidden.
     const isMobile = useIsMobile();
+    const uid = useId();
     if (isMobile) {
         const [first, ...rest] = columns;
         return (
@@ -66,7 +67,7 @@ export function ShadcnTable(props: {
                         }`}
                     >
                         {first ? (
-                            <div className="min-w-0 font-medium text-foreground">
+                            <div id={`${uid}-row-${i}`} className="min-w-0 font-medium text-foreground">
                                 <Cell column={first} record={row} />
                             </div>
                         ) : null}
@@ -82,9 +83,29 @@ export function ShadcnTable(props: {
                                 ))}
                             </dl>
                         ) : null}
-                        {RowActions ? (
-                            <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border pt-2" onClick={(e) => e.stopPropagation()}>
-                                <RowActions record={row} />
+                        {onOpen || RowActions ? (
+                            <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border pt-2">
+                                {onOpen ? (
+                                    // The record's own open control (review-r1 recheck): a native button named "Open
+                                    // <heading>", a sibling of the row actions. A pointer may still open from anywhere.
+                                    <button
+                                        type="button"
+                                        id={`${uid}-open-${i}`}
+                                        aria-labelledby={`${uid}-open-${i} ${uid}-row-${i}`}
+                                        className="mr-auto rounded px-2 py-1 text-xs font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onOpen(row);
+                                        }}
+                                    >
+                                        Open
+                                    </button>
+                                ) : null}
+                                {RowActions ? (
+                                    <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                        <RowActions record={row} />
+                                    </div>
+                                ) : null}
                             </div>
                         ) : null}
                     </li>

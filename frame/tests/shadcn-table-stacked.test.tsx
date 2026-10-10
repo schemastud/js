@@ -58,6 +58,26 @@ it('below 768px every record is a stacked card: heading, labelled fields and its
     expect(onOpen).toHaveBeenCalledWith(ROWS[1]);
 });
 
+it('below 768px a card with onOpen has its own labelled Open button, a sibling of the row actions (review-r1 recheck)', () => {
+    viewport.narrow = true;
+    const onOpen = vi.fn();
+    const { container } = render(<ShadcnTable columns={COLUMNS} rows={ROWS} onOpen={onOpen} Cell={ShadcnCell} RowActions={Archive} />);
+    const card = within(container.querySelectorAll('[data-frame-row]')[0] as HTMLElement);
+    const open = card.getByRole('button', { name: 'Open Alpha scope' });
+    const archive = card.getByRole('button', { name: 'Archive 1' });
+    expect(open.contains(archive) || archive.contains(open)).toBe(false);
+    expect((container.querySelectorAll('[data-frame-row]')[0] as HTMLElement).hasAttribute('tabindex')).toBe(false);
+    fireEvent.click(open);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledWith(ROWS[0]);
+});
+
+it('below 768px a card without onOpen offers no Open button', () => {
+    viewport.narrow = true;
+    const { container } = render(<ShadcnTable columns={COLUMNS} rows={ROWS} Cell={ShadcnCell} />);
+    expect(within(container).queryByRole('button', { name: /^Open / })).toBeNull();
+});
+
 it('at desktop width it is the table, and its wrapper scrolls sideways instead of clipping', () => {
     viewport.narrow = false;
     const { container } = render(<ShadcnTable columns={COLUMNS} rows={ROWS} Cell={ShadcnCell} />);

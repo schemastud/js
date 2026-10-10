@@ -81,28 +81,32 @@ it('stacked: an action in the card footer does not also open the row', () => {
     expect(onRowClick).not.toHaveBeenCalled();
 });
 
-it('stacked: a clickable card is reachable and opened from the keyboard (Enter and Space)', () => {
+it('stacked: a clickable card has its own labelled Open button, a sibling of the row actions', () => {
     viewport.narrow = true;
     const onRowClick = vi.fn();
     render(<DataTable columns={columns} data={ROWS} stackOnMobile onRowClick={onRowClick} />);
     const card = screen.getByTestId('stacked-row-a');
-    expect(card.tabIndex).toBe(0);
-    fireEvent.keyDown(card, { key: 'Enter' });
-    fireEvent.keyDown(card, { key: ' ' });
-    expect(onRowClick).toHaveBeenCalledTimes(2);
+    // A native button named for the row (review-r1 recheck): discoverable by role and name, not a focusable <li>.
+    const open = within(card).getByRole('button', { name: 'Open Alpha scope' });
+    expect(card.hasAttribute('tabindex')).toBe(false);
+    expect(card.getAttribute('role')).toBeNull();
+    // It is not inside the independent actions, and they are not inside it.
+    const archive = within(card).getByRole('button', { name: 'Archive a' });
+    expect(open.contains(archive)).toBe(false);
+    expect(archive.contains(open)).toBe(false);
+    fireEvent.click(open);
+    expect(onRowClick).toHaveBeenCalledTimes(1);
     expect(onRowClick).toHaveBeenCalledWith(ROWS[0]);
-    // A key pressed on a control inside the card is that control's, not the card's.
-    fireEvent.keyDown(within(card).getByRole('button', { name: 'Archive a' }), { key: 'Enter' });
-    expect(onRowClick).toHaveBeenCalledTimes(2);
 });
 
-it('stacked: a card without onRowClick is not a tab stop', () => {
+it('stacked: a card without onRowClick offers no Open button', () => {
     viewport.narrow = true;
     render(<DataTable columns={columns} data={ROWS} stackOnMobile />);
+    expect(screen.queryByRole('button', { name: /^Open / })).toBeNull();
     expect(screen.getByTestId('stacked-row-a').hasAttribute('tabindex')).toBe(false);
 });
 
-it('stacked: the sortable columns keep a sort control that writes the shared sort state', () => {
+it('stacked: a labelled Sort group whose buttons expose their state as a pressed button and an accessible name', () => {
     viewport.narrow = true;
     const onSortChange = vi.fn();
     const sortable: ColumnDef<Row, unknown>[] = [
@@ -112,12 +116,29 @@ it('stacked: the sortable columns keep a sort control that writes the shared sor
     const { rerender } = render(
         <DataTable columns={sortable} data={ROWS} stackOnMobile sorting={{ sortableFields: new Set(['name']), sort: null, onSortChange }} />,
     );
+    const group = screen.getByRole('group', { name: 'Sort' });
     // Only a declared x-sort field gets a control, exactly as in the table header.
-    expect(screen.queryByRole('button', { name: /status/i })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /name/i }));
+    expect(within(group).queryByRole('button', { name: /status/i })).toBeNull();
+    const name = within(group).getByRole('button', { name: 'Name' });
+    expect(name.getAttribute('aria-pressed')).toBe('false');
+    expect(name.hasAttribute('aria-sort')).toBe(false);
+    fireEvent.click(name);
     expect(onSortChange).toHaveBeenCalledWith('name');
     rerender(
         <DataTable columns={sortable} data={ROWS} stackOnMobile sorting={{ sortableFields: new Set(['name']), sort: 'name', onSortChange }} />,
     );
-    expect(screen.getByRole('button', { name: /name/i }).getAttribute('aria-sort')).toBe('ascending');
+    // jsdom's name computation puts a space before the comma; a browser joins the inline text as 'Name, sorted ascending'.
+    const active = within(screen.getByRole('group', { name: 'Sort' })).getByRole('button', { name: /^Name\s*, sorted ascending$/ });
+    expect(active.getAttribute('aria-pressed')).toBe('true');
+});
+
+it('desktop: the sort state stays on the column header (aria-sort on the th, not the button)', () => {
+    viewport.narrow = false;
+    const sortable: ColumnDef<Row, unknown>[] = [
+        { id: 'name', header: 'Name', meta: { sortField: 'name' }, cell: ({ row }) => row.original.name },
+    ];
+    render(<DataTable columns={sortable} data={ROWS} stackOnMobile sorting={{ sortableFields: new Set(['name']), sort: '-name', onSortChange: vi.fn() }} />);
+    const header = screen.getByRole('columnheader', { name: /name/i });
+    expect(header.getAttribute('aria-sort')).toBe('descending');
+    expect(within(header).getByRole('button').hasAttribute('aria-sort')).toBe(false);
 });
