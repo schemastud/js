@@ -55,6 +55,13 @@ export function widgetMountProps(value: unknown, schema: SchemaNode, options?: R
  * How frame shows a binding that NAMED a widget the registry could not resolve — the honest
  * marker, never a plausible-looking default standing in for a typo. `SchemaView` draws it for
  * an unbound heavyweight field; `dashboard-card` draws it for an unbound summary/overview tier.
+ *
+ * This is the PRODUCTION path (the dev path throws loudly at the call site before ever reaching
+ * it). The user sees a plain unavailable-field state rather than the raw `[unbound widget: …]`
+ * marker; the widget that failed to resolve is retained for diagnostics on the element (a
+ * `data-*` attribute + `title`), so support/devtools can still name it without leaking a wiring
+ * identifier into the rendered surface. The binding is still repaired at its declaration, not
+ * here. (C03)
  */
 export function UnboundWidget({
     label,
@@ -66,9 +73,41 @@ export function UnboundWidget({
     kind?: string;
 }): ReactNode {
     return (
-        <div data-frame-view={kind}>
+        <div data-frame-view={kind} data-frame-view-widget={String(widget)}>
             <span data-frame-view-label>{label}</span>
-            <span data-frame-view-error>[unbound widget: {String(widget)}]</span>
+            <span data-frame-view-error title={`unbound widget: ${String(widget)}`}>
+                Unable to display this field
+            </span>
+        </div>
+    );
+}
+
+/**
+ * The read-only fallback for a node with no resolved component. A scalar renders as its string
+ * value (unchanged). A machine-field OBJECT renders its entries with humanized labels and
+ * unchanged values instead of collapsing to one opaque JSON blob, and keeps the authored source
+ * JSON verbatim so it round-trips unchanged. Arrays and nested objects stay in the value column
+ * as their exact JSON — every authored value is preserved, nothing is silently dropped. (C03)
+ */
+function FallbackValue({ value }: { value: unknown }): ReactNode {
+    if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+        return <span data-frame-view-value>{scalar(value)}</span>;
+    }
+    const entries = Object.entries(value as Record<string, unknown>);
+    return (
+        <div data-frame-view-structured>
+            <dl>
+                {entries.map(([key, entry]) => (
+                    <div key={key}>
+                        <dt data-frame-view-label>{labelize(key)}</dt>
+                        <dd data-frame-view-value>{scalar(entry)}</dd>
+                    </div>
+                ))}
+            </dl>
+            <details>
+                <summary>Source JSON</summary>
+                <pre data-frame-view-json>{JSON.stringify(value, null, 2)}</pre>
+            </details>
         </div>
     );
 }
@@ -76,7 +115,7 @@ export function UnboundWidget({
 /**
  * Mount a single resolved node read-only. A resolved COMPONENT gets the value +
  * read-only hints; everything else (miss, string widget name, non-participating)
- * renders the read-only scalar default.
+ * renders the read-only labeled structured/scalar fallback.
  */
 function ViewNode({
     node,
@@ -116,7 +155,7 @@ function ViewNode({
             {Widget ? (
                 <Widget {...widgetMountProps(value, node, resolved.config)} />
             ) : (
-                <span data-frame-view-value>{scalar(value)}</span>
+                <FallbackValue value={value} />
             )}
         </div>
     );
