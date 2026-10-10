@@ -41,6 +41,7 @@ const ROWS: Row[] = [
         declaredAt: '2026-08-27T12:00:00Z',
         tier: 3,
         tags: [{ name: 'alpha' }, { name: 'beta' }, { name: 'gamma' }, { name: 'delta' }],
+        statuses: ['awaiting_approval'],
         name: null,
     },
 ];
@@ -213,6 +214,50 @@ describe('the kinds render what the 51 closures rendered', () => {
 
         expect(screen.queryByText('Verified')).not.toBeNull();
         expect(screen.queryByText('3')).toBeNull();
+    });
+
+    it('badges: a SCALAR array value humanizes exactly like the single badge (C02)', async () => {
+        await renderList({
+            conceptId: { 'list-column': { participates: true, widget: 'text' } },
+            statuses: { 'list-column': { participates: true, widget: 'badges' } },
+        });
+
+        // Parity with the single `badge` (APP-09): the raw enum value is humanized, never shown raw.
+        expect(screen.queryByText('Awaiting approval')).not.toBeNull();
+        expect(screen.queryByText('awaiting_approval')).toBeNull();
+    });
+
+    it('badges: an explicit per-value label still wins over humanization (C02)', async () => {
+        await renderList({
+            conceptId: { 'list-column': { participates: true, widget: 'text' } },
+            statuses: {
+                'list-column': {
+                    participates: true,
+                    widget: 'badges',
+                    options: { labels: { awaiting_approval: 'Pending review' } },
+                },
+            },
+        });
+
+        expect(screen.queryByText('Pending review')).not.toBeNull();
+        expect(screen.queryByText('Awaiting approval')).toBeNull();
+    });
+
+    it('badges: user-authored object names are preserved, never humanized (C02)', async () => {
+        await renderList({
+            conceptId: { 'list-column': { participates: true, widget: 'text' } },
+            tags: {
+                'list-column': {
+                    participates: true,
+                    widget: 'badges',
+                    options: { labelKey: 'name' },
+                },
+            },
+        });
+
+        // An authored name is carried verbatim — not run through key humanization.
+        expect(screen.queryByText('alpha')).not.toBeNull();
+        expect(screen.queryByText('Alpha')).toBeNull();
     });
 
     it('date: an ISO string through toLocaleDateString, the census’s most verbatim repeat', async () => {

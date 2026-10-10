@@ -271,15 +271,24 @@ function BadgesCell({ value, options }: { value: unknown; options: BadgesCellOpt
             style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', alignItems: 'center' }}
         >
             {shown.map((item, index) => {
-                const label = badgeLabel(item, options);
+                const raw = badgeLabel(item, options);
+                // A SCALAR enum value humanizes exactly like the single `badge` (APP-09): a declared
+                // per-value label wins, else the value is humanized (`awaiting_approval` → "Awaiting
+                // approval"), never shown as its raw backing value. An OBJECT item's label is a
+                // user-authored name (via labelKey) and is preserved as-is — an explicit per-value
+                // override may still win. (C02 declaration-first labels.)
+                const text =
+                    typeof item === 'object' && item !== null
+                        ? (options.labels?.[raw] ?? raw)
+                        : displayLabel({ title: options.labels?.[raw] }, raw, { property: true });
 
                 return (
                     <Badge
-                        key={`${label}-${index}`}
-                        variant={options.variants?.[label] ?? variant}
+                        key={`${raw}-${index}`}
+                        variant={options.variants?.[raw] ?? variant}
                         {...(options.mono ? { style: { fontFamily: MONO } } : {})}
                     >
-                        {options.labels?.[label] ?? label}
+                        {text}
                     </Badge>
                 );
             })}
