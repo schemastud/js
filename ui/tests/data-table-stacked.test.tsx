@@ -72,3 +72,52 @@ it('stacked: the empty message shows, and a row click reaches onRowClick with th
     fireEvent.click(screen.getByTestId('stacked-row-b'));
     expect(onRowClick).toHaveBeenCalledWith(ROWS[1]);
 });
+
+it('stacked: an action in the card footer does not also open the row', () => {
+    viewport.narrow = true;
+    const onRowClick = vi.fn();
+    render(<DataTable columns={columns} data={ROWS} stackOnMobile onRowClick={onRowClick} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Archive a' }));
+    expect(onRowClick).not.toHaveBeenCalled();
+});
+
+it('stacked: a clickable card is reachable and opened from the keyboard (Enter and Space)', () => {
+    viewport.narrow = true;
+    const onRowClick = vi.fn();
+    render(<DataTable columns={columns} data={ROWS} stackOnMobile onRowClick={onRowClick} />);
+    const card = screen.getByTestId('stacked-row-a');
+    expect(card.tabIndex).toBe(0);
+    fireEvent.keyDown(card, { key: 'Enter' });
+    fireEvent.keyDown(card, { key: ' ' });
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+    expect(onRowClick).toHaveBeenCalledWith(ROWS[0]);
+    // A key pressed on a control inside the card is that control's, not the card's.
+    fireEvent.keyDown(within(card).getByRole('button', { name: 'Archive a' }), { key: 'Enter' });
+    expect(onRowClick).toHaveBeenCalledTimes(2);
+});
+
+it('stacked: a card without onRowClick is not a tab stop', () => {
+    viewport.narrow = true;
+    render(<DataTable columns={columns} data={ROWS} stackOnMobile />);
+    expect(screen.getByTestId('stacked-row-a').hasAttribute('tabindex')).toBe(false);
+});
+
+it('stacked: the sortable columns keep a sort control that writes the shared sort state', () => {
+    viewport.narrow = true;
+    const onSortChange = vi.fn();
+    const sortable: ColumnDef<Row, unknown>[] = [
+        { id: 'name', header: 'Name', meta: { sortField: 'name' }, cell: ({ row }) => row.original.name },
+        { id: 'status', header: 'Status', meta: { sortField: 'status' }, cell: ({ row }) => row.original.status },
+    ];
+    const { rerender } = render(
+        <DataTable columns={sortable} data={ROWS} stackOnMobile sorting={{ sortableFields: new Set(['name']), sort: null, onSortChange }} />,
+    );
+    // Only a declared x-sort field gets a control, exactly as in the table header.
+    expect(screen.queryByRole('button', { name: /status/i })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /name/i }));
+    expect(onSortChange).toHaveBeenCalledWith('name');
+    rerender(
+        <DataTable columns={sortable} data={ROWS} stackOnMobile sorting={{ sortableFields: new Set(['name']), sort: 'name', onSortChange }} />,
+    );
+    expect(screen.getByRole('button', { name: /name/i }).getAttribute('aria-sort')).toBe('ascending');
+});

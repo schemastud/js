@@ -6,7 +6,7 @@ import {
     type Header,
 } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useMemo, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { Button } from './button';
 import { cn } from './cn';
 import { useIsMobile } from './use-mobile';
@@ -233,8 +233,26 @@ export function DataTable<TData>({
 
     if (stacked) {
         const rows = table.getRowModel().rows;
+        // The header row is gone, so its sort buttons move into a bar above the cards: the same `x-sort` gating, the same
+        // shared `sort` state.
+        const sortHeaders = (table.getHeaderGroups()[0]?.headers ?? []).filter(
+            (header) => !header.isPlaceholder && sortFieldOf(header, headerSort) !== null,
+        );
         return (
             <div className={cn('space-y-2', className)}>
+                {headerSort && sortHeaders.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground" aria-label="Sort">
+                        <span>Sort</span>
+                        {sortHeaders.map((header) => (
+                            <SortButton
+                                key={header.id}
+                                label={flexRender(header.column.columnDef.header, header.getContext())}
+                                sortField={sortFieldOf(header, headerSort)!}
+                                sorting={headerSort}
+                            />
+                        ))}
+                    </div>
+                )}
                 {showSkeleton ? (
                     <div className="space-y-2" aria-busy="true">
                         {Array.from({ length: Math.min(skeletonRows, 3) }).map((_, i) => (
@@ -255,10 +273,24 @@ export function DataTable<TData>({
                                     data-testid={`stacked-row-${row.id}`}
                                     className={cn(
                                         'min-w-0 space-y-2.5 rounded-lg border bg-card p-3',
-                                        onRowClick && 'cursor-pointer transition-colors hover:bg-accent/50',
+                                        onRowClick &&
+                                            'cursor-pointer transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                         rowClassName?.(row.original),
                                     )}
                                     onClick={() => onRowClick?.(row.original)}
+                                    // A clickable card is a tab stop opened by Enter or Space, as a button would be. A key
+                                    // pressed on a control inside the card belongs to that control.
+                                    tabIndex={onRowClick ? 0 : undefined}
+                                    onKeyDown={
+                                        onRowClick
+                                            ? (event: KeyboardEvent<HTMLLIElement>) => {
+                                                  if (event.target !== event.currentTarget) return;
+                                                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                                                  event.preventDefault();
+                                                  onRowClick(row.original);
+                                              }
+                                            : undefined
+                                    }
                                 >
                                     {heading && (
                                         <div className="min-w-0">{flexRender(heading.column.columnDef.cell, heading.getContext())}</div>
@@ -277,7 +309,11 @@ export function DataTable<TData>({
                                         </dl>
                                     )}
                                     {actions && (
-                                        <div className="flex flex-wrap items-center justify-end gap-1.5 border-t pt-2">
+                                        // The row's actions act on their own: a click here never also opens the row.
+                                        <div
+                                            className="flex flex-wrap items-center justify-end gap-1.5 border-t pt-2"
+                                            onClick={(event) => event.stopPropagation()}
+                                        >
                                             {flexRender(actions.column.columnDef.cell, actions.getContext())}
                                         </div>
                                     )}
@@ -396,51 +432,74 @@ function SortableHeaderCell<TData>({
         ? null
         : flexRender(header.column.columnDef.header, header.getContext());
 
-    const sortField = header.column.columnDef.meta?.sortField;
-    const sortable =
-        Boolean(sorting) && Boolean(sortField) && sorting!.sortableFields.has(sortField!);
+    const sortField = sortFieldOf(header, sorting);
 
-    if (!sortable) {
+    if (!sortField || !sorting) {
         return <th className="px-3 py-2 text-left font-medium text-muted-foreground">{label}</th>;
     }
 
-    const keys = parseSort(sorting!.sort);
-    const state = sortStateFor(keys, sortField!);
+    return (
+        <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+            <SortButton label={label} sortField={sortField} sorting={sorting} />
+        </th>
+    );
+}
+
+/** The column's `meta.sortField` when sorting is wired and the resource lists it as `x-sort`; otherwise null. */
+function sortFieldOf<TData>(header: Header<TData, unknown>, sorting?: DataTableSort): string | null {
+    const sortField = header.column.columnDef.meta?.sortField;
+
+    return sorting && sortField && sorting.sortableFields.has(sortField) ? sortField : null;
+}
+
+/**
+ * The sort affordance for one `x-sort` field, shared by the table header and the stacked mode's sort bar so both read and
+ * write the one `sort` state: click sets this field as the sole sort (asc → desc → cleared), shift-click appends it.
+ */
+function SortButton({
+    label,
+    sortField,
+    sorting,
+}: {
+    label: ReactNode;
+    sortField: string;
+    sorting: DataTableSort;
+}) {
+    const keys = parseSort(sorting.sort);
+    const state = sortStateFor(keys, sortField);
     const multi = keys.length > 1;
 
     const onClick = (event: MouseEvent<HTMLButtonElement>) => {
-        const next = toggleSortKey(keys, sortField!, event.shiftKey);
-        sorting!.onSortChange(serializeSort(next));
+        const next = toggleSortKey(keys, sortField, event.shiftKey);
+        sorting.onSortChange(serializeSort(next));
     };
 
     return (
-        <th className="px-3 py-2 text-left font-medium text-muted-foreground">
-            <button
-                type="button"
-                onClick={onClick}
-                aria-sort={state.active ? (state.desc ? 'descending' : 'ascending') : 'none'}
-                className={cn(
-                    'group -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-accent',
-                    state.active && 'text-foreground',
-                )}
-                title="Click to sort; shift-click to add a secondary sort"
-            >
-                <span>{label}</span>
-                {state.active ? (
-                    state.desc ? (
-                        <ArrowDown className="size-3.5" />
-                    ) : (
-                        <ArrowUp className="size-3.5" />
-                    )
+        <button
+            type="button"
+            onClick={onClick}
+            aria-sort={state.active ? (state.desc ? 'descending' : 'ascending') : 'none'}
+            className={cn(
+                'group -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-accent',
+                state.active && 'text-foreground',
+            )}
+            title="Click to sort; shift-click to add a secondary sort"
+        >
+            <span>{label}</span>
+            {state.active ? (
+                state.desc ? (
+                    <ArrowDown className="size-3.5" />
                 ) : (
-                    <ChevronsUpDown className="size-3.5 opacity-0 transition-opacity group-hover:opacity-60" />
-                )}
-                {state.active && multi && (
-                    <span className="rounded bg-muted px-1 text-[10px] leading-4 tabular-nums text-muted-foreground">
-                        {state.index + 1}
-                    </span>
-                )}
-            </button>
-        </th>
+                    <ArrowUp className="size-3.5" />
+                )
+            ) : (
+                <ChevronsUpDown className="size-3.5 opacity-0 transition-opacity group-hover:opacity-60" />
+            )}
+            {state.active && multi && (
+                <span className="rounded bg-muted px-1 text-[10px] leading-4 tabular-nums text-muted-foreground">
+                    {state.index + 1}
+                </span>
+            )}
+        </button>
     );
 }
