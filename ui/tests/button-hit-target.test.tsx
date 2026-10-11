@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { Button } from '../src/index';
+import { Button, hitTargetFloor } from '../src/index';
 
 // C40 (UX04): the shared icon control must offer an ~44×44 interactive target at mobile (390px) while
 // its desktop visual footprint and the surrounding layout stay exactly as they were. jsdom can't
@@ -33,6 +33,19 @@ describe('Button icon control mobile hit-target floor (C40 / UX04)', () => {
         // Keyboard-operable: a native, focusable button.
         btn.focus();
         expect(document.activeElement).toBe(btn);
+    });
+
+    it('the icon size COMPOSES the exported hitTargetFloor constant (one source of the 44px rule)', () => {
+        // The shared floor is a single exported constant, reused by consumers (the flagship shell
+        // controls) and by the icon size — not a second copy of the tokens.
+        expect(hitTargetFloor).toContain('before:size-11');
+        expect(hitTargetFloor).toContain('md:before:hidden');
+        render(
+            <Button size="icon" aria-label="Review">
+                <svg />
+            </Button>,
+        );
+        expect(screen.getByRole('button', { name: 'Review' }).className).toContain(hitTargetFloor);
     });
 
     it('non-icon sizes do not acquire the hit-target overlay (the floor is the icon control only)', () => {

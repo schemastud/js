@@ -18,6 +18,7 @@ export {
 } from './sort';
 
 export { Button, buttonVariants } from './button';
+export { hitTargetFloor } from './hit-target';
 export { Badge, badgeVariants } from './badge';
 export { Switch } from './switch';
 export {
