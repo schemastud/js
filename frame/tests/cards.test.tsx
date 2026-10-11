@@ -431,14 +431,16 @@ describe('DashboardCard', () => {
         expect(manifestFor).not.toHaveBeenCalled();
     });
 
-    it('a tier bound to a name nothing registered draws the UNBOUND marker, never the default card', () => {
+    it('a tier bound to a name nothing registered draws the public UNBOUND marker without leaking the raw name', () => {
         const wrapper = setup({ bills: manifest({ overview: { participates: true, widget: 'typo' } }) });
         const { container } = render(
             <DashboardCard value={row({ resource: 'bills', context: 'overview', summary: summary({ key: 'bills', label: 'Bills' }) })} />,
             { wrapper },
         );
 
-        expect(container.querySelector('[data-frame-view-error]')?.textContent).toContain('typo');
+        expect(container.querySelector('[data-frame-view-error]')?.textContent).toBe('Unable to display this field');
+        expect(container.textContent).not.toContain('typo');
+        expect(container.querySelector('[data-frame-view-widget="typo"]')?.getAttribute('title')).toBeNull();
         expect(container.querySelector('[data-frame-card="figure-card"]')).toBeNull();
         expect(container.querySelector('[data-frame-card="stat-row"]')).toBeNull();
     });
@@ -655,7 +657,7 @@ describe('RecentList', () => {
         expect(container.querySelector('[data-frame-record-line-time]')).toBeNull();
     });
 
-    it('a DECLARED name the registry does not know stays the honest unbound marker — never record-line, never JSON', () => {
+    it('a DECLARED name the registry does not know stays a public unbound marker without leaking the raw name', () => {
         const registry = createWidgetRegistry();
         registerCardWidgets(registry);
         const wrapper = wrap(
@@ -664,9 +666,11 @@ describe('RecentList', () => {
 
         const { container } = render(<RecentList value={centralRow.summary!} row={centralRow} />, { wrapper });
 
-        expect(container.querySelector('[data-frame-view="unbound-list-item"] [data-frame-view-error]')?.textContent).toContain(
-            'activity-lien',
+        expect(container.querySelector('[data-frame-view="unbound-list-item"] [data-frame-view-error]')?.textContent).toBe(
+            'Unable to display this field',
         );
+        expect(container.textContent).not.toContain('activity-lien');
+        expect(container.querySelector('[data-frame-view-widget="activity-lien"]')?.getAttribute('title')).toBeNull();
         expect(container.querySelector('[data-frame-record-line]')).toBeNull();
         expect(container.querySelector('[data-frame-recent-items]')).toBeNull();
         expect(container.innerHTML).not.toContain('{"id"');
