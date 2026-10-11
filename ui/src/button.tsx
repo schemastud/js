@@ -31,7 +31,13 @@ const buttonVariants = cva(
                 default: 'h-9 px-4 py-2',
                 sm: 'h-8 rounded-md px-3 text-xs',
                 lg: 'h-10 rounded-md px-6',
-                icon: 'size-9',
+                // C40 (UX04): the 36px visual icon control keeps its exact desktop footprint, but below
+                // the 768px breakpoint an invisible centered ::before overlay expands the INTERACTIVE
+                // target to 44×44 (the mobile hit-target floor). It is `absolute`, so it adds no layout
+                // box (surrounding layout unchanged), carries no paint (visual density unchanged), and
+                // `md:before:hidden` removes it entirely at desktop width. Keyboard/focus/accessible-name
+                // stay on the native <button>; the pseudo only widens where a finger lands.
+                icon: 'size-9 relative before:absolute before:left-1/2 before:top-1/2 before:size-11 before:-translate-x-1/2 before:-translate-y-1/2 before:content-[""] md:before:hidden',
             },
         },
         defaultVariants: {
