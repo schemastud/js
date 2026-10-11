@@ -1,6 +1,7 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as React from 'react';
 import { cn } from './cn';
+import { hitTargetFloor } from './hit-target';
 
 const buttonVariants = cva(
     "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
@@ -31,7 +32,10 @@ const buttonVariants = cva(
                 default: 'h-9 px-4 py-2',
                 sm: 'h-8 rounded-md px-3 text-xs',
                 lg: 'h-10 rounded-md px-6',
-                icon: 'size-9',
+                // C40 (UX04): the 36px visual icon control keeps its exact desktop footprint and composes
+                // the shared {@link hitTargetFloor} (the single source of the 44px mobile floor) — an
+                // invisible, layout-free ::before overlay below md, removed at desktop.
+                icon: `size-9 ${hitTargetFloor}`,
             },
         },
         defaultVariants: {
