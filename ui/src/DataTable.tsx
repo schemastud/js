@@ -418,11 +418,59 @@ export function DataTable<TData>({
                                     )}
                                     onClick={() => onRowClick?.(row.original)}
                                 >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <td key={cell.id} className="px-3 py-2">
-                                            {flexRender(
-                                                cell.column.columnDef.cell,
-                                                cell.getContext(),
+                                    {row.getVisibleCells().map((cell, index) => (
+                                        <td
+                                            key={cell.id}
+                                            className={cn(
+                                                'px-3 py-2',
+                                                index === 0 && onRowClick && 'relative',
+                                            )}
+                                            // The row's actions act on their own: a click here (pointer OR a
+                                            // keyboard activation that bubbles) never also opens the row, the
+                                            // same rule the stacked card applies.
+                                            onClick={
+                                                cell.column.id === 'actions'
+                                                    ? (event) => event.stopPropagation()
+                                                    : undefined
+                                            }
+                                        >
+                                            {index === 0 && onRowClick && (
+                                                // Keyboard-reachable row opener, named "Open <heading>" the
+                                                // same way the stacked card's Open control is (aria-labelledby
+                                                // = this button + the heading cell). A sibling of the cells'
+                                                // own controls, never a wrapper, so no interactive element is
+                                                // wrongly nested and the <tr> stays a plain row (a pointer
+                                                // convenience) rather than a button that would swallow them.
+                                                // Hidden until focused, then shown in place so the visible
+                                                // table layout is unchanged for every consumer.
+                                                <button
+                                                    type="button"
+                                                    id={`${uid}-open-${row.id}`}
+                                                    aria-labelledby={`${uid}-open-${row.id} ${uid}-row-${row.id}`}
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        onRowClick(row.original);
+                                                    }}
+                                                    className="sr-only rounded-md bg-card px-2 py-1 text-xs font-medium text-primary underline focus:not-sr-only focus:absolute focus:left-1 focus:top-1 focus:z-10 focus:no-underline focus:shadow focus:outline-none focus:ring-2 focus:ring-ring"
+                                                >
+                                                    Open
+                                                </button>
+                                            )}
+                                            {index === 0 ? (
+                                                <span
+                                                    id={`${uid}-row-${row.id}`}
+                                                    className="contents"
+                                                >
+                                                    {flexRender(
+                                                        cell.column.columnDef.cell,
+                                                        cell.getContext(),
+                                                    )}
+                                                </span>
+                                            ) : (
+                                                flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext(),
+                                                )
                                             )}
                                         </td>
                                     ))}
