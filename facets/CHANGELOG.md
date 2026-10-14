@@ -1,5 +1,11 @@
 # @schemastud/facets
 
+## 0.2.2
+
+### Patch Changes
+
+- a179834: Release `useBrowserUrlState`, which `@schemastud/frame` already imports.
+
 ## 0.2.1
 
 ### Patch Changes

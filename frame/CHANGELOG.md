@@ -1,5 +1,22 @@
 # @schemastud/frame
 
+## 0.2.2
+
+### Patch Changes
+
+- 13d0a50: Render the rows of a `recent-list` whose target binds no `list-item` widget through a new
+  `record-line` default (text · event/status badge · short time, never a bare id), and hide the
+  list pager when the response is a single page.
+- 8cbe626: The generic list table no longer clips a wide list on a narrow screen: below 768px each record renders as a stacked
+  card (first column the heading, the others labelled fields, row actions the footer), and at desktop width the table's
+  wrapper scrolls sideways (`overflow-x-auto`) instead of hiding its right edge (`overflow-hidden`).
+- Updated dependencies [a179834]
+- Updated dependencies [a179834]
+- Updated dependencies [8cbe626]
+  - @schemastud/facets@0.2.2
+  - @schemastud/seam@0.2.2
+  - @schemastud/ui@0.1.2
+
 ## 0.2.1
 
 ### Patch Changes
