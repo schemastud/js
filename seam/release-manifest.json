@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "package": "@schemastud/seam",
+  "version": "0.2.2",
+  "sourceCommit": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "releaseCommitParent": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "versionTag": "seam@0.2.2",
+  "distTree": "4d211e2d7fa20516ed566a3f0b479f59b0e7cd40",
+  "packageJsonSha256": "b9a3074b868c13a96b385e0a0083a633b34013d67f4769666d08e13a32a4f096",
+  "distFiles": {
+    "index.d.ts": {
+      "sha256": "d0abd1d4b2abae9e8cf8860ede3a72a05f0e429abd0a84bc9078e425137563ff",
+      "executable": false
+    },
+    "index.js": {
+      "sha256": "8d81d82954a4cf028bca7114d03968a795d3a3437446f9ad2e24e68e457c950e",
+      "executable": false
+    },
+    "index.js.map": {
+      "sha256": "a0cb5e09db817f08f070d1b2ec840d6559715d13195fd12f06b13aaaf0d75e7a",
+      "executable": false
+    },
+    "vite.d.ts": {
+      "sha256": "2bc43d900af223bf0806d02c032bb809a303e170ad4b2ae5ee790326f1ef29d8",
+      "executable": false
+    },
+    "vite.js": {
+      "sha256": "ac4dffaad9d3ed2d953e5682c78ed608eebbfa1d73dd9c977855b8256db591ed",
+      "executable": false
+    },
+    "vite.js.map": {
+      "sha256": "f00e8a88d0a581820b827ab55331bbefc48be8de9d3ab09f9793277877e436c1",
+      "executable": false
+    }
+  },
+  "dependencyMap": {},
+  "node": "v22.23.3",
+  "pnpm": "9.15.3",
+  "commands": {
+    "install": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ],
+    "build": [
+      [
+        "npm",
+        "run",
+        "build"
+      ]
+    ],
+    "verify": [
+      [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      [
+        "npm",
+        "run",
+        "test"
+      ],
+      [
+        "npm",
+        "run",
+        "check:node"
+      ]
+    ]
+  },
+  "installCommands": {
+    "first": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ],
+    "second": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ]
+  },
+  "rebuildVerified": true
+}
