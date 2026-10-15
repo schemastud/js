@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "package": "@schemastud/nav",
+  "version": "0.1.0",
+  "sourceCommit": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "releaseCommitParent": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "versionTag": "nav@0.1.0",
+  "distTree": "4a212d8ad3a0336f7774e11f6c7b4342a73ba96d",
+  "packageJsonSha256": "521c48ca91db9421248374a7afa4cab68f3348de1c1e92eb07767bc6a18c1733",
+  "distFiles": {
+    "index.d.ts": {
+      "sha256": "f035d7776eac46f1e561f7a92e35b3edfb2957621a16b8622ed3850f16d6049a",
+      "executable": false
+    },
+    "index.js": {
+      "sha256": "3b4e860e281b4f4ae3a45977d74c3a3d9220b6d480346e6ddfa8a4b4d5a5326c",
+      "executable": false
+    },
+    "index.js.map": {
+      "sha256": "7f3390aea796fb36cdab69050d3a05ae121fde8830bca8b0b178c03c096e7d62",
+      "executable": false
+    }
+  },
+  "dependencyMap": {},
+  "node": "v22.23.3",
+  "pnpm": "9.15.3",
+  "commands": {
+    "install": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ],
+    "build": [
+      [
+        "npm",
+        "run",
+        "build"
+      ]
+    ],
+    "verify": [
+      [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      [
+        "npm",
+        "run",
+        "test"
+      ]
+    ]
+  },
+  "installCommands": {
+    "first": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ],
+    "second": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ]
+  },
+  "rebuildVerified": true
+}
