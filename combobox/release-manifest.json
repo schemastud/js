@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "package": "@schemastud/combobox",
+  "version": "0.1.0",
+  "sourceCommit": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "releaseCommitParent": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "versionTag": "combobox@0.1.0",
+  "distTree": "074c1d01562c5ce817dd05690e72b1ddc38dbef1",
+  "packageJsonSha256": "204d3a0a59613016a9bc2572c68293e193edd58a58edae28a752d346fbe13ba3",
+  "distFiles": {
+    "index.d.ts": {
+      "sha256": "e1663174fbd24b0c8441b5e02de6a5f68f2dafbfad06f92b1a7237d7abe1c3b9",
+      "executable": false
+    },
+    "index.js": {
+      "sha256": "8cc814f770cac0cb763074b9bdd0b6325b1f99dd2c2bf80a662b37d0d9a2cda1",
+      "executable": false
+    },
+    "index.js.map": {
+      "sha256": "4a4561b62f70045c758383be7e7cbed42a6a0221381438d7a2d393c00e390fff",
+      "executable": false
+    }
+  },
+  "dependencyMap": {},
+  "node": "v22.23.3",
+  "pnpm": "9.15.3",
+  "commands": {
+    "install": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ],
+    "build": [
+      [
+        "npm",
+        "run",
+        "build"
+      ]
+    ],
+    "verify": [
+      [
+        "npm",
+        "run",
+        "typecheck"
+      ]
+    ]
+  },
+  "rebuildVerified": true
+}
