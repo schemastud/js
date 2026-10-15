@@ -234,7 +234,7 @@ export function FacetsBar({
                                     type="button"
                                     className="flex items-center gap-1 py-1 pr-1.5 pl-2.5 font-medium hover:bg-accent"
                                 >
-                                    <span className="text-muted-foreground">{facet.label}:</span>
+                                    <span className="text-muted-foreground">{facet.label}:</span>{' '}
                                     <span>{chipSummary(value, facet.descriptor.options === undefined
                                         ? labelCache
                                         : Object.fromEntries(facet.descriptor.options.map((option) => [String(option.value), option.label]))) || '…'}</span>
