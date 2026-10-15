@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "package": "@schemastud/ui",
+  "version": "0.1.2",
+  "sourceCommit": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "releaseCommitParent": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "versionTag": "ui@0.1.2",
+  "distTree": "360c4d548b2500f13d7fbb7b38aa24cf7595e5d4",
+  "packageJsonSha256": "68a36cd991d62b5394a28f95aa41e59f79a8dd976a86b9d33dfeeec1d68467ed",
+  "distFiles": {
+    "index.d.ts": {
+      "sha256": "08654236317718afef648c3d634a8ce43db4eb982a7990653ccda0b088a0a5d1",
+      "executable": false
+    },
+    "index.js": {
+      "sha256": "920b8d2aba57548c0d0d984c735686553cb8efdd7418996f5ff4aaf129036892",
+      "executable": false
+    },
+    "index.js.map": {
+      "sha256": "fa1f5422771bae7b9722da706696673140c3a5147eb1232ac40ae6c949dc5413",
+      "executable": false
+    }
+  },
+  "dependencyMap": {},
+  "node": "v22.23.3",
+  "pnpm": "9.15.3",
+  "commands": {
+    "install": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ]
+    ],
+    "build": [
+      [
+        "npm",
+        "run",
+        "build"
+      ]
+    ],
+    "verify": [
+      [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      [
+        "npm",
+        "run",
+        "test"
+      ],
+      [
+        "npm",
+        "run",
+        "lint:imports"
+      ]
+    ]
+  },
+  "rebuildVerified": true
+}
