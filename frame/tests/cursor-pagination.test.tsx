@@ -9,7 +9,7 @@ import {
     waitFor,
 } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
-import { useBrowserUrlState } from '../../facets/src/useBrowserUrlState';
+import { useBrowserUrlState } from '@schemastud/facets';
 import { FrameProvider } from '../src/context';
 import { useListPagination } from '../src/useListPagination';
 import type { ReactNode } from 'react';
