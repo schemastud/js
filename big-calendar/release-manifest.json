@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "package": "@schemastud/big-calendar",
+  "version": "0.1.0",
+  "sourceCommit": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "releaseCommitParent": "f993e15f46a525c20490c2166881eb6c24d7cd3b",
+  "versionTag": "big-calendar@0.1.0",
+  "distTree": "e7d1575f9b5cf64c36d854879b647d90794471f4",
+  "packageJsonSha256": "9ad7b49d5ffb5d7554c60a888bb9f217a81792eb22a7f97db4b8406b08179f05",
+  "distFiles": {
+    "index.d.ts": {
+      "sha256": "d2421fd5dd485f4c43fb8b4e3767d2de21ebf74ce448c2ec5dc9da4ca3bf3957",
+      "executable": false
+    },
+    "index.js": {
+      "sha256": "91d080ca2f910633b1fe7d81c58f6520cefb2ace602b9e0dd6fde92d7d6f68cf",
+      "executable": false
+    },
+    "index.js.map": {
+      "sha256": "09fcf6c2c2044a19f4a66e90f7f2f777dc3b5ce09d5570b7470776e3ccf20f70",
+      "executable": false
+    }
+  },
+  "dependencyMap": {},
+  "node": "v22.23.3",
+  "pnpm": "9.15.3",
+  "commands": {
+    "install": [
+      [
+        "npm",
+        "ci",
+        "--prefix",
+        "..",
+        "--ignore-scripts"
+      ],
+      [
+        "npm",
+        "ci",
+        "--workspaces=false",
+        "--ignore-scripts"
+      ]
+    ],
+    "build": [
+      [
+        "npm",
+        "run",
+        "build",
+        "--workspaces=false"
+      ]
+    ],
+    "verify": [
+      [
+        "npm",
+        "run",
+        "typecheck",
+        "--workspaces=false"
+      ],
+      [
+        "npm",
+        "test",
+        "--workspaces=false"
+      ],
+      [
+        "npm",
+        "run",
+        "lint:imports",
+        "--workspaces=false"
+      ]
+    ]
+  },
+  "rebuildVerified": true
+}
