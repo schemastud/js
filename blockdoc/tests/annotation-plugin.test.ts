@@ -23,7 +23,7 @@ const annotatedDoc = {
     type: 'doc',
     content: [
         {
-            type: 'paragraph',
+            type: 'p',
             content: [
                 { type: 'text', text: 'An ' },
                 { type: 'text', text: 'evidence-bound', marks: [{ type: 'annotation', attrs: { id: 'span-1' } }] },
@@ -39,7 +39,7 @@ describe('annotation mark integrity', () => {
             type: 'doc',
             content: [
                 {
-                    type: 'paragraph',
+                    type: 'p',
                     content: [
                         { type: 'text', text: 'one', marks: [{ type: 'annotation', attrs: { id: 'a' } }] },
                         { type: 'text', text: 'two', marks: [{ type: 'annotation', attrs: { id: 'b' } }] },
@@ -80,7 +80,7 @@ describe('annotation mark integrity', () => {
             type: 'doc',
             content: [
                 {
-                    type: 'paragraph',
+                    type: 'p',
                     content: [
                         { type: 'text', text: 'raw', marks: [{ type: 'annotation', attrs: { id: null } }] },
                     ],
@@ -102,7 +102,7 @@ describe('annotation mark integrity', () => {
             type: 'doc',
             content: [
                 {
-                    type: 'paragraph',
+                    type: 'p',
                     content: [
                         { type: 'text', text: 'one', marks: [{ type: 'annotation', attrs: { id: 'x' } }] },
                         {

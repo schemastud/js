@@ -17,7 +17,7 @@ import { NODE_ID_ATTR } from '../core';
 import type { DocJson } from './commit-controller';
 
 // ── The base prose manifest ──────────────────────────────────────────────────
-// The vendored base set: paragraph/heading/lists/blockquote/code + the inline marks
+// The vendored base set: p/h1..h6/lists/blockquote/pre + the inline marks
 // (strong/em/code/link). It owns no `doc` node (that is the profile's job).
 export const BASE_MANIFEST: BlockdocManifest = {
     profile: 'base',
@@ -25,7 +25,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
     doc: null,
     nodes: [
         {
-            name: 'paragraph',
+            name: 'p',
             description: 'A paragraph of inline prose.',
             group: 'block',
             category: 'prose',
@@ -34,19 +34,16 @@ export const BASE_MANIFEST: BlockdocManifest = {
             contentExpression: null,
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
-        {
-            name: 'heading',
-            description: 'A section heading at a given level.',
+        ...(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const).map((name) => ({
+            name,
+            description: `A level-${name.slice(1)} heading.`,
             group: 'block',
             category: 'prose',
             admitsChildCategories: null,
             admitsText: true,
             contentExpression: null,
-            attrsSchema: {
-                type: 'object',
-                properties: { id: { type: ['string', 'null'] }, level: { type: 'integer', default: 1 } },
-            },
-        },
+            attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
+        })),
         {
             name: 'blockquote',
             description: 'A quoted run of prose blocks.',
@@ -58,7 +55,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
         {
-            name: 'bullet_list',
+            name: 'ul',
             description: 'An unordered list.',
             group: 'block',
             category: 'prose',
@@ -68,7 +65,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
         {
-            name: 'ordered_list',
+            name: 'ol',
             description: 'An ordered list.',
             group: 'block',
             category: 'prose',
@@ -78,7 +75,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
         {
-            name: 'list_item',
+            name: 'li',
             description: 'One list item holding prose blocks.',
             group: 'block',
             category: 'list_item',
@@ -88,7 +85,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
         {
-            name: 'code_block',
+            name: 'pre',
             description: 'A block of literal code text.',
             group: 'block',
             category: 'prose',
@@ -98,7 +95,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
         {
-            name: 'horizontal_rule',
+            name: 'hr',
             description: 'A thematic break.',
             group: 'block',
             category: 'prose',
@@ -108,7 +105,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
         {
-            name: 'hard_break',
+            name: 'br',
             description: 'A forced line break within inline content.',
             group: 'inline',
             category: null,
@@ -166,7 +163,7 @@ export const STORY_MANIFESTS: BlockdocManifest[] = [BASE_MANIFEST, PROFILE_MANIF
 
 // ── Document fixtures ───────────────────────────────────────────────────────
 function para(id: string, ...content: unknown[]): unknown {
-    return { type: 'paragraph', attrs: { [NODE_ID_ATTR]: id }, content };
+    return { type: 'p', attrs: { [NODE_ID_ATTR]: id }, content };
 }
 function text(value: string, marks?: unknown[]): unknown {
     return marks ? { type: 'text', text: value, marks } : { type: 'text', text: value };
@@ -186,7 +183,7 @@ export const SINGLE_BLOCK_DOC: DocJson = {
 export const RICH_DOC: DocJson = {
     type: 'doc',
     content: [
-        { type: 'heading', attrs: { [NODE_ID_ATTR]: 'h-1', level: 1 }, content: [text('Release notes')] },
+        { type: 'h1', attrs: { [NODE_ID_ATTR]: 'h-1' }, content: [text('Release notes')] },
         para(
             'p-1',
             text('The editor commits '),
@@ -196,16 +193,16 @@ export const RICH_DOC: DocJson = {
             text('.'),
         ),
         {
-            type: 'bullet_list',
+            type: 'ul',
             attrs: { [NODE_ID_ATTR]: 'ul-1' },
             content: [
                 {
-                    type: 'list_item',
+                    type: 'li',
                     attrs: { [NODE_ID_ATTR]: 'li-1' },
                     content: [para('li-1-p', text('Node ids survive an external rebuild.'))],
                 },
                 {
-                    type: 'list_item',
+                    type: 'li',
                     attrs: { [NODE_ID_ATTR]: 'li-2' },
                     content: [para('li-2-p', text('The selection is remapped by id.'))],
                 },

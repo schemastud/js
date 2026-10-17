@@ -15,21 +15,20 @@ describe('containment via assembled schema', () => {
                     attrs: { heading: 'Intro' },
                     content: [
                         {
-                            type: 'heading',
-                            attrs: { level: 2 },
+                            type: 'h2',
                             content: [{ type: 'text', text: 'Intro' }],
                         },
                         {
-                            type: 'paragraph',
+                            type: 'p',
                             content: [{ type: 'text', text: 'Grounded prose.' }],
                         },
                         {
-                            type: 'bullet_list',
+                            type: 'ul',
                             content: [
                                 {
-                                    type: 'list_item',
+                                    type: 'li',
                                     content: [
-                                        { type: 'paragraph', content: [{ type: 'text', text: 'point' }] },
+                                        { type: 'p', content: [{ type: 'text', text: 'point' }] },
                                     ],
                                 },
                             ],
@@ -39,7 +38,7 @@ describe('containment via assembled schema', () => {
                             type: 'contentSection',
                             attrs: { heading: 'Sub' },
                             content: [
-                                { type: 'paragraph', content: [{ type: 'text', text: 'nested' }] },
+                                { type: 'p', content: [{ type: 'text', text: 'nested' }] },
                             ],
                         },
                     ],
@@ -55,7 +54,7 @@ describe('containment via assembled schema', () => {
         // doc admits only 'section'; paragraph is category 'prose'.
         const doc = schema.nodeFromJSON({
             type: 'doc',
-            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'loose prose' }] }],
+            content: [{ type: 'p', content: [{ type: 'text', text: 'loose prose' }] }],
         });
 
         expect(() => doc.check()).toThrow(RangeError);
@@ -73,8 +72,8 @@ describe('containment via assembled schema', () => {
                             type: 'blockquote',
                             content: [
                                 {
-                                    type: 'list_item',
-                                    content: [{ type: 'paragraph', content: [] }],
+                                    type: 'li',
+                                    content: [{ type: 'p', content: [] }],
                                 },
                             ],
                         },

@@ -22,7 +22,7 @@ const proseDoc: BlockdocManifest = {
 const manifests: BlockdocManifest[] = [base, proseDoc];
 
 function paragraph(id: string, text: string) {
-    return { type: 'paragraph', attrs: { [NODE_ID_ATTR]: id }, content: [{ type: 'text', text }] };
+    return { type: 'p', attrs: { [NODE_ID_ATTR]: id }, content: [{ type: 'text', text }] };
 }
 
 function doc(...paragraphs: unknown[]): DocJson {

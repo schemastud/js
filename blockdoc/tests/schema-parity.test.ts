@@ -40,7 +40,7 @@ describe('manifest-extensions schema parity with assemblePMSchema', () => {
             content: [
                 // list_item outside a list — not admitted at doc level
                 // (doc admits content_outline | content_section only).
-                { type: 'list_item', content: [{ type: 'paragraph' }] },
+                { type: 'li', content: [{ type: 'p' }] },
             ],
         };
 
@@ -92,7 +92,7 @@ describe('manifest-extensions schema parity with assemblePMSchema', () => {
 
         const proseDoc = {
             type: 'doc',
-            content: [{ type: 'paragraph', content: [{ type: 'text', text: 'plain prose at top level' }] }],
+            content: [{ type: 'p', content: [{ type: 'text', text: 'plain prose at top level' }] }],
         };
 
         expect(() => overridden.nodeFromJSON(proseDoc).check()).not.toThrow();

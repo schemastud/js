@@ -117,7 +117,7 @@ describe('contentExpressionFor — childConstraints compilation (B1)', () => {
         // The existing fixtures are unchanged too.
         const schema = assemblePMSchema([base, contentArticle]);
         expect(schema.nodes.contentSection.spec.content).toBe('(section | prose)*');
-        expect(schema.nodes.bullet_list.spec.content).toBe('(list_item)*');
+        expect(schema.nodes.ul.spec.content).toBe('(list_item)*');
     });
 });
 

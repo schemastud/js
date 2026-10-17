@@ -14,7 +14,7 @@ const proseDoc = {
     type: 'doc',
     content: [
         {
-            type: 'paragraph',
+            type: 'p',
             attrs: { id: 'p1' },
             content: [{ type: 'text', text: 'Grounded prose.' }],
         },

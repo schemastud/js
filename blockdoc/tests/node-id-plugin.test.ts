@@ -17,7 +17,7 @@ const proseDoc: BlockdocManifest = {
 const schema = assemblePMSchema([base, proseDoc]);
 
 function paragraph(id: string | null, text: string) {
-    return { type: 'paragraph', attrs: { [NODE_ID_ATTR]: id }, content: [{ type: 'text', text }] };
+    return { type: 'p', attrs: { [NODE_ID_ATTR]: id }, content: [{ type: 'text', text }] };
 }
 
 function stateFromDoc(content: unknown[]): EditorState {

@@ -63,7 +63,7 @@ describe('NodeView resolution', () => {
 
         expect(
             needsGenericNodeView({
-                name: 'paragraph',
+                name: 'p',
                 category: 'prose',
                 admitsChildCategories: null,
                 admitsText: true,

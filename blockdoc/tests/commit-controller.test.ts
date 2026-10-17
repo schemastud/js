@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommitController } from '../src/react/commit-controller';
 import type { DocJson } from '../src/react/commit-controller';
 
-const docA: DocJson = { type: 'doc', content: [{ type: 'paragraph', attrs: { id: 'a' } }] };
-const docB: DocJson = { type: 'doc', content: [{ type: 'paragraph', attrs: { id: 'b' } }] };
+const docA: DocJson = { type: 'doc', content: [{ type: 'p', attrs: { id: 'a' } }] };
+const docB: DocJson = { type: 'doc', content: [{ type: 'p', attrs: { id: 'b' } }] };
 
 function makeController(policy?: ConstructorParameters<typeof CommitController>[2], initial?: DocJson | null) {
     let current: DocJson = docA;

@@ -18,7 +18,7 @@ const sectionDoc = {
             attrs: { id: 'section-1', heading: 'Intro' },
             content: [
                 {
-                    type: 'paragraph',
+                    type: 'p',
                     attrs: { id: 'p1' },
                     content: [{ type: 'text', text: 'Grounded prose.' }],
                 },

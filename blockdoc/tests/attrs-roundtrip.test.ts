@@ -23,12 +23,12 @@ describe('attr round-tripping', () => {
                     },
                     content: [
                         {
-                            type: 'heading',
-                            attrs: { id: null, level: 2 },
+                            type: 'h2',
+                            attrs: { id: null },
                             content: [{ type: 'text', text: 'Grounded intro' }],
                         },
                         {
-                            type: 'paragraph',
+                            type: 'p',
                             attrs: { id: generateNodeId() },
                             content: [
                                 { type: 'text', text: 'Hello ' },
@@ -41,7 +41,7 @@ describe('attr round-tripping', () => {
                                         { type: 'annotation', attrs: { id: generateNodeId() } },
                                     ],
                                 },
-                                { type: 'hard_break', attrs: { id: null } },
+                                { type: 'br', attrs: { id: null } },
                             ],
                         },
                     ],
@@ -57,9 +57,9 @@ describe('attr round-tripping', () => {
     });
 
     it('fills omitted attrs from schema defaults (id null, declared defaults honoured)', () => {
-        const heading = schema.nodeFromJSON({ type: 'heading', content: [] });
+        const heading = schema.nodeFromJSON({ type: 'h2', content: [] });
 
-        expect(heading.attrs).toEqual({ id: null, level: 1 });
+        expect(heading.attrs).toEqual({ id: null });
 
         const section = schema.nodeFromJSON({ type: 'contentSection', content: [] });
 

@@ -62,7 +62,7 @@ describe('client/server conformance', () => {
             content: [
                 // list_item outside a list — not admitted at doc level
                 // (doc admits content_outline | content_section only).
-                { type: 'list_item', content: [{ type: 'paragraph' }] },
+                { type: 'li', content: [{ type: 'p' }] },
             ],
         };
 

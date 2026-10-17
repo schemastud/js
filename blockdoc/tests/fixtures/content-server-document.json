@@ -13,7 +13,7 @@
             },
             "content": [
                 {
-                    "type": "paragraph",
+                    "type": "p",
                     "content": [
                         {"type": "text", "text": "Filmed in "},
                         {"type": "text", "text": "Scotland", "marks": [{"type": "strong"}]},
@@ -23,18 +23,18 @@
                     ]
                 },
                 {
-                    "type": "bullet_list",
+                    "type": "ul",
                     "content": [
                         {
-                            "type": "list_item",
+                            "type": "li",
                             "content": [
-                                {"type": "paragraph", "content": [{"type": "text", "text": "Glen Coe"}]}
+                                {"type": "p", "content": [{"type": "text", "text": "Glen Coe"}]}
                             ]
                         },
                         {
-                            "type": "list_item",
+                            "type": "li",
                             "content": [
-                                {"type": "paragraph", "content": [{"type": "text", "text": "Isle of Skye"}]}
+                                {"type": "p", "content": [{"type": "text", "text": "Isle of Skye"}]}
                             ]
                         }
                     ]
@@ -53,7 +53,7 @@
             },
             "content": [
                 {
-                    "type": "paragraph",
+                    "type": "p",
                     "content": [
                         {"type": "text", "text": "An "},
                         {"type": "text", "text": "evidence-bound", "marks": [{"type": "annotation", "attrs": {"id": "0197c2f0-5c5e-7000-8000-0000000000aa"}}]},

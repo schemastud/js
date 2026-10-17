@@ -4,7 +4,7 @@
     "doc": null,
     "nodes": [
         {
-            "name": "paragraph",
+            "name": "p",
             "description": "A paragraph of inline prose.",
             "group": "block",
             "category": "prose",
@@ -19,8 +19,8 @@
             }
         },
         {
-            "name": "heading",
-            "description": "A section heading at a given level.",
+            "name": "h1",
+            "description": "A level-1 heading.",
             "group": "block",
             "category": "prose",
             "admitsChildCategories": null,
@@ -29,8 +29,82 @@
             "attrsSchema": {
                 "type": "object",
                 "properties": {
-                    "id": { "type": ["string", "null"] },
-                    "level": { "type": "integer", "default": 1 }
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "h2",
+            "description": "A level-2 heading.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "h3",
+            "description": "A level-3 heading.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "h4",
+            "description": "A level-4 heading.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "h5",
+            "description": "A level-5 heading.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
+                }
+            }
+        },
+        {
+            "name": "h6",
+            "description": "A level-6 heading.",
+            "group": "block",
+            "category": "prose",
+            "admitsChildCategories": null,
+            "admitsText": true,
+            "contentExpression": null,
+            "attrsSchema": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": ["string", "null"] }
                 }
             }
         },
@@ -50,7 +124,7 @@
             }
         },
         {
-            "name": "bullet_list",
+            "name": "ul",
             "description": "An unordered list.",
             "group": "block",
             "category": "prose",
@@ -65,7 +139,7 @@
             }
         },
         {
-            "name": "ordered_list",
+            "name": "ol",
             "description": "An ordered list.",
             "group": "block",
             "category": "prose",
@@ -80,7 +154,7 @@
             }
         },
         {
-            "name": "list_item",
+            "name": "li",
             "description": "One list item holding prose blocks.",
             "group": "block",
             "category": "list_item",
@@ -95,7 +169,7 @@
             }
         },
         {
-            "name": "code_block",
+            "name": "pre",
             "description": "A block of literal code text.",
             "group": "block",
             "category": "prose",
@@ -110,7 +184,7 @@
             }
         },
         {
-            "name": "horizontal_rule",
+            "name": "hr",
             "description": "A thematic break.",
             "group": "block",
             "category": "prose",
@@ -125,7 +199,7 @@
             }
         },
         {
-            "name": "hard_break",
+            "name": "br",
             "description": "A forced line break within inline content.",
             "group": "inline",
             "category": null,

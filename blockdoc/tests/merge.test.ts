@@ -24,7 +24,7 @@ describe('manifest merging', () => {
     it('concatenates nodes and marks across an array of manifests', () => {
         const schema = assemblePMSchema([base, contentArticle]);
 
-        expect(schema.nodes.paragraph).toBeDefined();
+        expect(schema.nodes.p).toBeDefined();
         expect(schema.nodes.contentSection).toBeDefined();
         expect(schema.marks.strong).toBeDefined();
     });
@@ -48,10 +48,10 @@ describe('manifest merging', () => {
 
     it('throws when a later manifest redeclares an existing node name', () => {
         const clash = manifest('clash', {
-            nodes: [leafNode('paragraph', 'prose')],
+            nodes: [leafNode('p', 'prose')],
         });
 
-        expect(() => assemblePMSchema([base, contentArticle, clash])).toThrow(/paragraph/);
+        expect(() => assemblePMSchema([base, contentArticle, clash])).toThrow(/"p"/);
         expect(() => assemblePMSchema([base, contentArticle, base])).toThrow(/already declared/);
     });
 

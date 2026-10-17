@@ -110,8 +110,8 @@ function nodeAttributes(entry: NodeManifestEntry): Record<string, Attribute> {
                   }
                 : {
                       default: spec.default,
-                      // Parse rules may still set the attr (heading level from
-                      // its tag); null here defers to them / the default.
+                      // Parse rules may still set the attr from the tag; null here
+                      // defers to them / the default.
                       parseHTML: () => null,
                       renderHTML: () => ({}),
                   };
@@ -120,77 +120,71 @@ function nodeAttributes(entry: NodeManifestEntry): Record<string, Attribute> {
     return attributes;
 }
 
-function clampLevel(level: unknown): number {
-    return typeof level === 'number' && level >= 1 && level <= 6 ? level : 1;
-}
-
 type NodeDOM = Pick<NodeConfig, 'parseHTML' | 'renderHTML'>;
 
 /**
- * The editing DOM for a generated node: semantic tags for the base prose set,
- * a generic `div[data-node-type]` (span when inline) for typed blocks — which
- * normally render through NodeViews anyway; the generic renderHTML also
- * serves clipboard serialization.
+ * The intrinsic HTML block/inline elements whose editing DOM is a plain element of
+ * the node's own name with a single content hole (ADR-0228 d6 — a node's name is its
+ * JSX tag). `pre`/`hr`/`br` are intrinsic too but carry a DOM shape the name alone
+ * does not express (a `<code>` wrapper; a void element), so they stay explicit below.
+ */
+const INTRINSIC_HTML_ELEMENTS: ReadonlySet<string> = new Set([
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'ul',
+    'ol',
+    'li',
+]);
+
+/**
+ * The editing DOM for a generated node. For the base prose vocabulary the node name
+ * IS the HTML tag (ADR-0228 d6), so it renders to the element of the same name; the
+ * three shaped intrinsics (`pre`/`hr`/`br`) stay explicit. A typed block (a
+ * PascalCase component, whose name is not an intrinsic tag) falls through to a generic
+ * `div[data-node-type]` (span when inline) and normally renders through a NodeView;
+ * the generic renderHTML also serves clipboard serialization.
  */
 function nodeDOM(entry: NodeManifestEntry, hasContent: boolean): NodeDOM {
     switch (entry.name) {
-        case 'paragraph':
-            return {
-                parseHTML: () => [{ tag: 'p' }],
-                renderHTML: ({ HTMLAttributes }) => ['p', HTMLAttributes, 0],
-            };
-        case 'heading':
-            return {
-                parseHTML: () => [1, 2, 3, 4, 5, 6].map((level) => ({ tag: `h${level}`, getAttrs: () => ({ level }) })),
-                renderHTML: ({ node, HTMLAttributes }) => [`h${clampLevel(node.attrs.level)}`, HTMLAttributes, 0],
-            };
-        case 'blockquote':
-            return {
-                parseHTML: () => [{ tag: 'blockquote' }],
-                renderHTML: ({ HTMLAttributes }) => ['blockquote', HTMLAttributes, 0],
-            };
-        case 'bullet_list':
-            return {
-                parseHTML: () => [{ tag: 'ul' }],
-                renderHTML: ({ HTMLAttributes }) => ['ul', HTMLAttributes, 0],
-            };
-        case 'ordered_list':
-            return {
-                parseHTML: () => [{ tag: 'ol' }],
-                renderHTML: ({ HTMLAttributes }) => ['ol', HTMLAttributes, 0],
-            };
-        case 'list_item':
-            return {
-                parseHTML: () => [{ tag: 'li' }],
-                renderHTML: ({ HTMLAttributes }) => ['li', HTMLAttributes, 0],
-            };
-        case 'code_block':
+        case 'pre':
             return {
                 parseHTML: () => [{ tag: 'pre', preserveWhitespace: 'full' }],
                 renderHTML: ({ HTMLAttributes }) => ['pre', HTMLAttributes, ['code', 0]],
             };
-        case 'horizontal_rule':
+        case 'hr':
             return {
                 parseHTML: () => [{ tag: 'hr' }],
                 renderHTML: ({ HTMLAttributes }) => ['hr', HTMLAttributes],
             };
-        case 'hard_break':
+        case 'br':
             return {
                 parseHTML: () => [{ tag: 'br' }],
                 renderHTML: () => ['br'],
             };
-        default: {
-            const tag = entry.group === 'inline' ? 'span' : 'div';
-
-            return {
-                parseHTML: () => [{ tag: `${tag}[data-node-type="${entry.name}"]` }],
-                renderHTML: ({ HTMLAttributes }) =>
-                    hasContent
-                        ? [tag, mergeAttributes({ 'data-node-type': entry.name }, HTMLAttributes), 0]
-                        : [tag, mergeAttributes({ 'data-node-type': entry.name }, HTMLAttributes)],
-            };
-        }
     }
+
+    if (INTRINSIC_HTML_ELEMENTS.has(entry.name)) {
+        return {
+            parseHTML: () => [{ tag: entry.name }],
+            renderHTML: ({ HTMLAttributes }) => [entry.name, HTMLAttributes, 0],
+        };
+    }
+
+    const tag = entry.group === 'inline' ? 'span' : 'div';
+
+    return {
+        parseHTML: () => [{ tag: `${tag}[data-node-type="${entry.name}"]` }],
+        renderHTML: ({ HTMLAttributes }) =>
+            hasContent
+                ? [tag, mergeAttributes({ 'data-node-type': entry.name }, HTMLAttributes), 0]
+                : [tag, mergeAttributes({ 'data-node-type': entry.name }, HTMLAttributes)],
+    };
 }
 
 function nodeExtensionFor(
