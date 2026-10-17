@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEGACY_PROSE_RENAME, legacyHeadingTag, normalizeLegacyNodeNames } from '../src/core/legacy-prose-names';
+import { LEGACY_COMPONENT_RENAME, LEGACY_PROSE_RENAME, legacyHeadingTag, normalizeLegacyNodeNames } from '../src/core/legacy-prose-names';
 
 /**
  * EP-07c shared rename table + the normalize-on-load used for read-compat. This table
@@ -29,6 +29,17 @@ describe('the shared pre-07c -> post-07c rename table', () => {
         expect(legacyHeadingTag(7)).toBe('h6'); // ceiling
         expect(legacyHeadingTag(undefined)).toBe('h3'); // default
     });
+
+    it('maps every composition component name to its PascalCase tag (EP-07c C)', () => {
+        expect(LEGACY_COMPONENT_RENAME).toEqual({
+            content_section: 'ContentSection',
+            content_outline: 'ContentOutline',
+            content_article: 'ContentArticle',
+            script_screenplay: 'ScriptScreenplay',
+            script_scene: 'ScriptScene',
+            script_outline: 'ScriptOutline',
+        });
+    });
 });
 
 describe('normalizeLegacyNodeNames', () => {
@@ -37,7 +48,7 @@ describe('normalizeLegacyNodeNames', () => {
             type: 'doc',
             content: [
                 {
-                    type: 'contentSection',
+                    type: 'content_section',
                     attrs: { id: 's1', heading: 'Intro' },
                     content: [
                         { type: 'heading', attrs: { id: 'h', level: 1 }, content: [{ type: 'text', text: 'T' }] },
@@ -52,7 +63,8 @@ describe('normalizeLegacyNodeNames', () => {
             type: 'doc',
             content: [
                 {
-                    type: 'contentSection',
+                    // the component name is renamed (EP-07c C); its `heading` ATTR is left alone
+                    type: 'ContentSection',
                     attrs: { id: 's1', heading: 'Intro' },
                     content: [
                         { type: 'h2', attrs: { id: 'h' }, content: [{ type: 'text', text: 'T' }] },

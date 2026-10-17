@@ -22,6 +22,21 @@ export const LEGACY_PROSE_RENAME: Readonly<Record<string, string>> = {
 };
 
 /**
+ * EP-07c part C: pre-07c composition COMPONENT node names → their post-07c PascalCase JSX
+ * tags (a component's JSX tag is its #[NodeType] name, from Tower's Block classes). A
+ * separate set from the prose rename so part B is unchanged; the normalizer applies both.
+ * Mirrors laravel-satellite-composition's `SlotNodeRename::COMPONENT_RENAME` byte-for-byte.
+ */
+export const LEGACY_COMPONENT_RENAME: Readonly<Record<string, string>> = {
+    content_section: 'ContentSection',
+    content_outline: 'ContentOutline',
+    content_article: 'ContentArticle',
+    script_screenplay: 'ScriptScreenplay',
+    script_scene: 'ScriptScene',
+    script_outline: 'ScriptOutline',
+};
+
+/**
  * A pre-07c `heading` carried its level as an attr; post-07c the level IS the tag,
  * clamped to h2..h6 (h2 floor — the page title owns the one h1 — default 3), matching
  * the PHP serializer and B's migration exactly.
@@ -66,6 +81,8 @@ function visit(value: unknown): unknown {
             }
         } else if (type in LEGACY_PROSE_RENAME) {
             out.type = LEGACY_PROSE_RENAME[type];
+        } else if (type in LEGACY_COMPONENT_RENAME) {
+            out.type = LEGACY_COMPONENT_RENAME[type];
         }
     }
 
