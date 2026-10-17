@@ -127,6 +127,8 @@ export interface DocManifest {
 
 /** A full profile manifest. */
 export interface BlockdocManifest {
+    /** ADR-0227: false hides code authoring; the server still enforces admission on save. */
+    'x-admits-code'?: boolean;
     /** Profile key, or 'base' for the vendored base set. */
     profile: string;
     /** Manifest format version. */
