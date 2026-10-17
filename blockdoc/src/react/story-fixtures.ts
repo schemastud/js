@@ -34,7 +34,7 @@ export const BASE_MANIFEST: BlockdocManifest = {
             contentExpression: null,
             attrsSchema: { type: 'object', properties: { id: { type: ['string', 'null'] } } },
         },
-        ...(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const).map((name) => ({
+        ...(['h2', 'h3', 'h4', 'h5', 'h6'] as const).map((name) => ({
             name,
             description: `A level-${name.slice(1)} heading.`,
             group: 'block',
@@ -183,7 +183,7 @@ export const SINGLE_BLOCK_DOC: DocJson = {
 export const RICH_DOC: DocJson = {
     type: 'doc',
     content: [
-        { type: 'h1', attrs: { [NODE_ID_ATTR]: 'h-1' }, content: [text('Release notes')] },
+        { type: 'h2', attrs: { [NODE_ID_ATTR]: 'h-1' }, content: [text('Release notes')] },
         para(
             'p-1',
             text('The editor commits '),

@@ -9,7 +9,7 @@ import { UndoRedo } from '@tiptap/extensions';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { EditorState } from '@tiptap/pm/state';
-import { generateNodeId, NODE_ID_ATTR } from '../core';
+import { generateNodeId, NODE_ID_ATTR, normalizeLegacyNodeNames } from '../core';
 import type { BlockdocManifest, JsonSchema } from '../core';
 import { CommitController } from './commit-controller';
 import type { CommitPolicy, DocJson } from './commit-controller';
@@ -249,7 +249,9 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     const editor = useEditor(
         {
             extensions,
-            content: isDocJson(initialValue) ? initialValue : null,
+            // EP-07c read-compat: normalize a pre-migration document's old node names
+            // to the current JSX tags before the schema sees it (removed post-migration).
+            content: isDocJson(initialValue) ? normalizeLegacyNodeNames(initialValue) : null,
             immediatelyRender: true,
             shouldRerenderOnTransaction: false,
             onCreate: ({ editor: created }) => noteSelection(created.state),
@@ -328,7 +330,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
 
                         return true;
                     })
-                    .setContent(isDocJson(doc) ? doc : null, { emitUpdate: false })
+                    .setContent(isDocJson(doc) ? normalizeLegacyNodeNames(doc) : null, { emitUpdate: false })
                     .command(({ tr }) => {
                         tr.setSelection(selectionForNodeId(tr.doc, survivingId));
 

@@ -41,3 +41,4 @@ export type {
     Verdict,
 } from './legality';
 export { generateNodeId, NODE_ID_ATTR } from './ids';
+export { LEGACY_PROSE_RENAME, legacyHeadingTag, normalizeLegacyNodeNames } from './legacy-prose-names';

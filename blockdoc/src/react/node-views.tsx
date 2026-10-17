@@ -40,7 +40,6 @@ export interface NodeViewComponentProps {
  */
 export const BASE_PROSE_NODE_NAMES: ReadonlySet<string> = new Set([
     'p',
-    'h1',
     'h2',
     'h3',
     'h4',
