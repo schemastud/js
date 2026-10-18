@@ -221,6 +221,21 @@ export interface RealmRouteRegistries {
      * which is what happens with no fallback at all.
      */
     fallback?: (entry: RouteContextEntry) => RouteComponent | undefined;
+    /**
+     * Called for a leaf whose NAMED guard no `registerGuard()` bound. Such a leaf fails CLOSED: it renders a refusal
+     * (`data-page-state="forbidden"`), never its page. Without this hook the missing key is reported with
+     * `console.error`. A guarded page must never render unguarded because a host forgot to bind the guard.
+     */
+    onUnguarded?: (entry: RouteContextEntry) => void;
+}
+
+/** What a guarded leaf renders when its named guard is not registered: a refusal, never the page. */
+function UnguardedRefusal(): ReactElement {
+    return createElement(
+        'div',
+        { role: 'alert', 'data-page-state': 'forbidden', className: 'p-6 text-sm' },
+        createElement('p', { className: 'font-medium' }, 'This page is not available.'),
+    );
 }
 
 /**
@@ -254,12 +269,22 @@ export function buildRealmRoutes(
             return null;
         }
 
-        let element: ReactElement = createElement(Component);
-        const Guard = entry.guard ? registries.guards.resolveGuard(entry.guard) : undefined;
-        if (Guard) {
-            element = createElement(Guard, null, element);
+        if (entry.guard) {
+            const Guard = registries.guards.resolveGuard(entry.guard);
+            if (!Guard) {
+                // Fail CLOSED: a named guard nobody bound never degrades to "no guard".
+                if (registries.onUnguarded) {
+                    registries.onUnguarded(entry);
+                } else {
+                    console.error(
+                        `[frame] guard "${entry.guard}" is not registered; leaf "${entry.routeName}" (${entry.path}) is refused.`,
+                    );
+                }
+                return createElement(UnguardedRefusal);
+            }
+            return createElement(Guard, null, createElement(Component));
         }
-        return element;
+        return createElement(Component);
     };
 
     for (const entry of entries) {

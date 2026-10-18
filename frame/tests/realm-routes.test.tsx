@@ -74,6 +74,52 @@ describe('buildRealmRoutes', () => {
         expect(guardSpy).toHaveBeenCalled();
     });
 
+    // A guard the manifest NAMES but the host never registered fails CLOSED (orch-peer HIGH on tower-ux 9df223a;
+    // orch-lead 10:00Z): the leaf renders a refusal, never its page, and the missing key is reported. Before this, an
+    // unregistered guard meant "no wrapper", so a guarded page rendered to anyone whose host forgot to bind the guard.
+    it('refuses a guarded leaf whose guard nothing registers, and reports the missing key', () => {
+        const routes = createRouteRegistry();
+        routes.registerRoute('plans.index', () => <div>plans page</div>);
+        const unguarded = vi.fn();
+
+        const built = buildRealmRoutes(
+            [entry({ routeName: 'plans.index', path: 'plans', guard: 'root' })],
+            { routes, guards: createGuardRegistry(), onUnguarded: unguarded },
+        );
+
+        render(built[0].element);
+        expect(screen.queryByText('plans page')).toBeNull();
+        expect(document.querySelector('[data-page-state="forbidden"]')).not.toBeNull();
+        expect(unguarded).toHaveBeenCalledWith(expect.objectContaining({ routeName: 'plans.index', guard: 'root' }));
+    });
+
+    it('logs the missing guard key when the host passes no onUnguarded', () => {
+        const routes = createRouteRegistry();
+        routes.registerRoute('plans.index', () => <div>plans page</div>);
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        const built = buildRealmRoutes(
+            [entry({ routeName: 'plans.index', path: 'plans', guard: 'root' })],
+            { routes, guards: createGuardRegistry() },
+        );
+
+        render(built[0].element);
+        expect(screen.queryByText('plans page')).toBeNull();
+        expect(error).toHaveBeenCalledWith(expect.stringContaining('"root"'));
+        error.mockRestore();
+    });
+
+    it('fails closed for a dispatched leaf too (the fallback path)', () => {
+        const built = buildRealmRoutes(
+            [entry({ routeName: 'tenants.edit', path: 'tenants/:id', mounts: 'edit', guard: 'root' })],
+            { routes: createRouteRegistry(), guards: createGuardRegistry(), fallback: () => () => <div>dispatched</div>, onUnguarded: () => {} },
+        );
+
+        render(built[0].element);
+        expect(screen.queryByText('dispatched')).toBeNull();
+        expect(document.querySelector('[data-page-state="forbidden"]')).not.toBeNull();
+    });
+
     it('leaves an unguarded leaf unwrapped', () => {
         const routes = createRouteRegistry();
         routes.registerRoute('tenants.index', () => <div>tenants</div>);
