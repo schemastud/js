@@ -239,6 +239,7 @@ function markDOM(entry: MarkManifestEntry): MarkDOM {
                 parseHTML: () => [{ tag: 'code' }],
                 renderHTML: () => ['code', 0],
             };
+        case 'a':
         case 'link':
             return {
                 parseHTML: () => [{ tag: 'a[href]' }],
@@ -272,7 +273,7 @@ function markAttributes(entry: MarkManifestEntry): Record<string, Attribute> {
     const attributes: Record<string, Attribute> = {};
 
     for (const [name, spec] of Object.entries(attrsFromSchema(entry.attrsSchema, false))) {
-        if (entry.name === 'link' && name === 'href') {
+        if ((entry.name === 'link' || entry.name === 'a') && name === 'href') {
             attributes[name] = {
                 default: spec.default,
                 parseHTML: (element) => element.getAttribute('href'),

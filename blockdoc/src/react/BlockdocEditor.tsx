@@ -1,3 +1,4 @@
+import {proseShortcuts} from './prose-shortcuts';
 import { Extension } from '@tiptap/core';
 import type { Editor } from '@tiptap/core';
 import type { NodeType, Schema } from '@tiptap/pm/model';
@@ -236,6 +237,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                 name: 'blockdocPlugins',
                 addProseMirrorPlugins() {
                     return [
+                        ...proseShortcuts(this.editor.schema, manifestList),
                         (idPluginRef.current ?? nodeIdPlugin)(),
                         annotationIntegrityPlugin(),
                         ...(extraPluginsRef.current?.({ schema: this.editor.schema }) ?? []),
