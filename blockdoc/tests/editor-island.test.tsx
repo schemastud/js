@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { TextSelection } from '@tiptap/pm/state';
+import { undoDepth } from '@tiptap/pm/history';
 import type { EditorView } from '@tiptap/pm/view';
 import { createRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -242,4 +243,14 @@ describe('BlockdocEditor island', () => {
         });
         expect(view.state.doc.toJSON()).toEqual(external);
     });
+});
+
+it('can delegate undo to the owning Local Session without installing a second history', () => {
+    const ref = createRef<BlockdocEditorHandle>();
+    const mounted = render(<BlockdocEditor ref={ref} manifests={manifests} value={doc(paragraph('p', 'hello'))} history={false} palette={false} />);
+    const view = ref.current!.view!;
+    act(() => view.dispatch(view.state.tr.insertText('!', 6)));
+    expect(view.state.doc.textContent).toBe('hello!');
+    expect(undoDepth(view.state)).toBe(0);
+    mounted.unmount();
 });

@@ -118,6 +118,9 @@ export function resolveNodeViewComponents(
                 continue;
             }
 
+            // Declared prose uses its editing DOM, not the unknown-component fallback skin.
+            if (manifest['x-prose']?.[entry.name]) continue;
+
             if (needsGenericNodeView(entry)) {
                 // The generic node-view composes a skin; an unregistered node-type
                 // resolves to seam's block-chrome fallback (via the registry).
