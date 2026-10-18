@@ -127,6 +127,8 @@ export interface DocManifest {
 
 /** A full profile manifest. */
 export interface BlockdocManifest {
+    /** Editor-only prose projection; never changes save admission or the original node grammar. */
+    'x-prose'?: Record<string, 'block' | 'container' | 'mark' | 'inline' | 'cell'>;
     /** ADR-0227: false hides code authoring; the server still enforces admission on save. */
     'x-admits-code'?: boolean;
     /** Profile key, or 'base' for the vendored base set. */

@@ -59,6 +59,8 @@ export interface BlockdocEditorHandle {
 }
 
 export interface BlockdocEditorProps {
+    /** False when the owning editor supplies the sole undo history (e.g. Beam Local Session). */
+    history?: boolean;
     /** Ordered manifests (e.g. [base, profile]) compiled into Tiptap extensions. */
     manifests: BlockdocManifest | BlockdocManifest[];
     /** PM doc JSON; null/undefined initializes an empty doc valid per schema. */
@@ -173,6 +175,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
         docSource,
         idPlugin,
         palette = true,
+        history = true,
         className,
     },
     ref,
@@ -226,7 +229,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     const extensions = useMemo(
         () => [
             ...createManifestExtensions(manifestList, { nodeViews }),
-            UndoRedo,
+            ...(history ? [UndoRedo] : []),
             // GUARDRAIL (ADR-0072): our plugins stay raw PM plugins — one-layer
             // portability in both directions.
             Extension.create({
@@ -241,7 +244,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
             }),
         ],
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [manifestList, nodeViews],
+        [manifestList, nodeViews, history],
     );
 
     const initialValue = sourceRef.current.get();

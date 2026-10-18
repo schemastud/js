@@ -243,3 +243,13 @@ describe('BlockdocEditor island', () => {
         expect(view.state.doc.toJSON()).toEqual(external);
     });
 });
+
+it('can delegate undo to the owning Local Session without installing a second history', () => {
+    const ref = createRef<BlockdocEditorHandle>();
+    const mounted = render(<BlockdocEditor ref={ref} manifests={manifests} value={doc(paragraph('p', 'hello'))} history={false} palette={false} />);
+    const view = ref.current!.view!;
+    expect(view.state.plugins.some(plugin => plugin.spec.key?.key?.startsWith('history'))).toBe(false);
+    act(() => view.dispatch(view.state.tr.insertText('!', 6)));
+    expect(view.state.doc.textContent).toBe('hello!');
+    mounted.unmount();
+});
