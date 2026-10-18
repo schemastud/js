@@ -73,6 +73,8 @@ export interface NodeManifestEntry {
     category: string | null;
     /** Null = unconstrained; [] = leaf; list = category union. */
     admitsChildCategories: string[] | null;
+    /** ux-0231 d9: named slots; children remains the default slot above. */
+    slots?: { name: string; admitsChildCategories: string[] | null }[];
     /** True → textblock (content 'inline*') when admitsChildCategories is null. */
     admitsText?: boolean;
     /**
