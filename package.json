@@ -4,7 +4,7 @@
   "type": "module",
   "description": "The @schemastud JS package family — a single npm workspace. Packages stay at their existing top-level paths so the fleet's file: overlays and the live FC/RCP wiring keep resolving unchanged.",
   "packageManager": "npm@10.9.2",
-  "//workspaces": "Listed in TOPOLOGICAL order (leaves first) so `npm run build --workspaces` builds each package after the @schemastud deps whose .d.ts it needs: seam/facets (leaves) -> blockdoc/frame-remote -> mainframe/frame -> chat. If the graph outgrows a hand-ordered list, adopt a graph-aware runner (Turborepo/Nx) rather than maintaining this by hand. (beam-mdx lives in the separate `beam` app-substrate monorepo — same @schemastud npm scope.)",
+  "//workspaces": "Listed in TOPOLOGICAL order (leaves first) so `npm run build --workspaces` builds each package after the @schemastud deps whose .d.ts it needs: seam/facets (leaves) -> blockdoc/frame-remote -> mainframe/frame -> chat. If the graph outgrows a hand-ordered list, adopt a graph-aware runner (Turborepo/Nx) rather than maintaining this by hand. (beam-mdx lives in the separate `beam` app-substrate monorepo — same @schemastud npm scope. big-calendar is tracked here but DELIBERATELY not a workspace: it keeps its own lockfile and node_modules because its RBC/date-fns/react-query surface is host-provided peers, so root installs skip it and beam-calendar links it by file: — run `npm run build:big-calendar` before building beam. Whether to admit it as a workspace leaf is an open owner question, architecture-pass A5-C2 2026-10-18; this comment records the exclusion so it stops being unwritten fleet lore.)",
   "workspaces": [
     "_resources",
     "seam",
@@ -30,7 +30,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook --url http://127.0.0.1:6006",
-    "lint:tokens": "node scripts/lint-tokens.mjs"
+    "lint:tokens": "node scripts/lint-tokens.mjs",
+    "build:big-calendar": "npm --prefix big-calendar install && npm --prefix big-calendar run build"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.9",
