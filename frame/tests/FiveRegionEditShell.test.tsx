@@ -60,6 +60,20 @@ function renderShell() {
 }
 
 describe('FiveRegionEditShell + always-mounted inspector (ED-08)', () => {
+    it('mounts an optional inspector in the same selection context', () => {
+        function CustomInspector() {
+            const mount = useEditShellMount();
+            return <output data-testid="custom-inspector">{mount.selectedNodeId ?? 'empty'}</output>;
+        }
+        const { getByTestId, getByText, container } = render(
+            <FiveRegionEditShell schema={{ type: 'object' }} widget="editor" registry={makeRegistry()} inspector={<CustomInspector />} />,
+        );
+        expect(getByTestId('custom-inspector').textContent).toBe('empty');
+        fireEvent.click(getByText('select block-1'));
+        expect(getByTestId('custom-inspector').textContent).toBe('block-1');
+        expect(container.querySelector('[data-frame-inspector-empty]')).toBeNull();
+    });
+
     it('renders all five regions with the editor mounted full-surface in the canvas', () => {
         const { container, getByTestId } = renderShell();
 

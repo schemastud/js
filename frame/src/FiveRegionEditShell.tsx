@@ -39,6 +39,8 @@ export interface FiveRegionEditShellProps {
     topBar?: ReactNode;
     /** Palette region content — defaults to the hoisted PalettePane (ED-09). */
     palette?: ReactNode;
+    /** Inspector region content; omitted retains the schema-driven Inspector. */
+    inspector?: ReactNode;
     /** Status region content — a stub until ED-14. */
     status?: ReactNode;
     /**
@@ -61,6 +63,7 @@ export function FiveRegionEditShell({
     readOnly = false,
     topBar,
     palette,
+    inspector,
     status,
     autosave = true,
     onSave,
@@ -165,7 +168,7 @@ export function FiveRegionEditShell({
                         data-inspector-mode={regions.inspector}
                         style={INSPECTOR_STYLE}
                     >
-                        <Inspector />
+                        {inspector ?? <Inspector />}
                     </div>
                 </div>
                 <div data-frame-region="status" style={STATUS_STYLE}>
@@ -183,4 +186,3 @@ export function FiveRegionEditShell({
         shell
     );
 }
-
