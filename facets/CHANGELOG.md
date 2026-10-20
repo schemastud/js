@@ -1,5 +1,13 @@
 # @schemastud/facets
 
+## 0.2.2
+
+### Patch Changes
+
+- Add `useBrowserUrlState`, a URL-search-params state hook that keeps list state in the browser history; its
+  `UrlStateSetter` accepts an optional `{ replace }` so a cursor page can replace rather than push a history entry.
+  The multi-select filter renders a declared filter's inline options.
+
 ## 0.2.1
 
 ### Patch Changes
