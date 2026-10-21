@@ -414,13 +414,16 @@ interface CursorPaginated<T> {
 }
 type ResourcePage<T> = Paginated<T> | CursorPaginated<T>;
 type FormMode = 'enriched' | 'bare';
+/** DTO projection axis, independent of widget presentation and interaction permissions. */
+type SchemaPurpose = 'write' | 'read';
 type FrameAction = 'viewAny' | 'view' | 'create' | 'update' | 'delete';
 type FrameCan = (action: FrameAction, resource: string, record?: unknown) => boolean;
 interface FrameTransport extends FacetsTransport {
     list<Result = Row>(resource: string, params: Record<string, string>): Promise<ResourcePage<Result>>;
     summary(resource: string, params: Record<string, string>): Promise<SummaryPayload>;
     get(resource: string, id: string): Promise<Row>;
-    getFormSchema(resource: string, form: FormMode): Promise<SchemaNode>;
+    /** Omitted purpose retains the write/edit schema. Read requires a purpose-aware producer. */
+    getFormSchema(resource: string, form: FormMode, purpose?: SchemaPurpose): Promise<SchemaNode>;
     /** Create returns the resource's declared createResultData, or its ordinary row by default. */
     create<Result = Row>(resource: string, data: unknown): Promise<Result>;
     save(resource: string, id: string, data: unknown): Promise<Row>;
@@ -882,6 +885,8 @@ interface EditShellProps {
     resource: string;
     id: string | null;
     readOnly?: boolean;
+    /** Explicit projection opt-in; defaults to write, including legacy disabled editors. Create always uses write. */
+    schemaPurpose?: SchemaPurpose;
     /**
      * The resource's ContextManifest, for the record ACTIONS a detail page draws (ADR-0005). Absent,
      * the shell asks the injection's `manifestFor`; with neither, no action renders.
@@ -927,4 +932,4 @@ interface EditShellProps {
     slots?: Partial<EditSlots>;
 }
 
-export { MasterDetail as $, type ActionResult as A, type FrameAction as B, type ContextManifest as C, type DashboardRow as D, type EditShellProps as E, type FrameInjection as F, type FrameCan as G, type FrameHooks as H, type IconResolver as I, FrameLayout as J, type FrameLayoutProps as K, type ListShellProps as L, type ManifestLookup as M, type NodeParticipation as N, FrameLayoutShell as O, type PaginationSlotProps as P, type FrameLayoutSidePanel as Q, type Row as R, type SummaryPayload as S, type ToolbarSlotProps as T, type FrameLayoutVariant as U, type FrameLayoutWidth as V, type WidgetShellProps as W, type FramePrimitives as X, INHERITS as Y, KNOWN_CONTEXTS as Z, type ListSlots as _, type RouteContextEntry as a, type MasterDetailProps as a0, type OverviewPayload as a1, type Paginated as a2, type RealmDefinition as a3, type RealmScope as a4, type RouteMounts as a5, SingleColumn as a6, type SingleColumnProps as a7, SubNavColumn as a8, type SubNavColumnProps as a9, type SubNavItem as aa, type SubmittedContext as ab, type SubmittedHandler as ac, type SummaryFigure as ad, type WelcomeAction as ae, createFrameHooks as af, type FrameColumn as b, type FormMode as c, type ResolveColumns as d, type FormResolver as e, type FrameContext as f, type CardWidgetProps as g, type NavTilePayload as h, type WelcomePayload as i, type CardWidgetOptions as j, type CardLinkRenderer as k, type FrameTransport as l, type ResourcePage as m, type ResourceActionDefinition as n, type FrameNotice as o, type CardsSlotProps as p, type CellSlotProps as q, type ErrorSlotProps as r, type FormBodySlotProps as s, type RowActionsSlotProps as t, type SaveBarSlotProps as u, type AdminResourceDefinition as v, type CollapseMode as w, type CursorPaginated as x, type DetailPresentation as y, type EditSlots as z };
+export { type ListSlots as $, type ActionResult as A, type EditSlots as B, type ContextManifest as C, type DashboardRow as D, type EditShellProps as E, type FrameInjection as F, type FrameAction as G, type FrameCan as H, type IconResolver as I, type FrameHooks as J, FrameLayout as K, type ListShellProps as L, type ManifestLookup as M, type NodeParticipation as N, type FrameLayoutProps as O, type PaginationSlotProps as P, FrameLayoutShell as Q, type Row as R, type SummaryPayload as S, type ToolbarSlotProps as T, type FrameLayoutSidePanel as U, type FrameLayoutVariant as V, type WidgetShellProps as W, type FrameLayoutWidth as X, type FramePrimitives as Y, INHERITS as Z, KNOWN_CONTEXTS as _, type RouteContextEntry as a, MasterDetail as a0, type MasterDetailProps as a1, type OverviewPayload as a2, type Paginated as a3, type RealmDefinition as a4, type RealmScope as a5, type RouteMounts as a6, SingleColumn as a7, type SingleColumnProps as a8, SubNavColumn as a9, type SubNavColumnProps as aa, type SubNavItem as ab, type SubmittedContext as ac, type SubmittedHandler as ad, type SummaryFigure as ae, type WelcomeAction as af, createFrameHooks as ag, type FrameColumn as b, type FormMode as c, type ResolveColumns as d, type FormResolver as e, type FrameContext as f, type CardWidgetProps as g, type NavTilePayload as h, type WelcomePayload as i, type CardWidgetOptions as j, type CardLinkRenderer as k, type FrameTransport as l, type SchemaPurpose as m, type ResourcePage as n, type ResourceActionDefinition as o, type FrameNotice as p, type CardsSlotProps as q, type CellSlotProps as r, type ErrorSlotProps as s, type FormBodySlotProps as t, type RowActionsSlotProps as u, type SaveBarSlotProps as v, type AdminResourceDefinition as w, type CollapseMode as x, type CursorPaginated as y, type DetailPresentation as z };

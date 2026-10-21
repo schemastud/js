@@ -49,7 +49,7 @@ import {
   useResourceList,
   useResourceRecord,
   useSaveResource
-} from "./chunk-NZOBJ6BJ.js";
+} from "./chunk-KVNPSXXM.js";
 
 // src/ListShell.tsx
 import { useLayoutEffect, useMemo as useMemo3, useRef as useRef2, useState as useState3 } from "react";
@@ -990,12 +990,13 @@ function isNotFound(error) {
 // src/EditShell.tsx
 import { Fragment as Fragment3, jsx as jsx5, jsxs as jsxs5 } from "react/jsx-runtime";
 function EditShell(props) {
-  return /* @__PURE__ */ jsx5(EditShellRecord, { ...props }, JSON.stringify([props.resource, props.id]));
+  return /* @__PURE__ */ jsx5(EditShellRecord, { ...props }, JSON.stringify([props.resource, props.id, props.schemaPurpose ?? "write"]));
 }
 function EditShellRecord({
   resource,
   id,
   readOnly = false,
+  schemaPurpose = "write",
   container = "panel",
   form: formProp = "bare",
   showModeToggle = false,
@@ -1018,7 +1019,7 @@ function EditShellRecord({
   }, []);
   const dirty = useRef3(false);
   const intentBus = useMemo4(() => createFormIntentBus2(), []);
-  const schemaQuery = useFormSchema(resource, form);
+  const schemaQuery = useFormSchema(resource, form, id === null ? "write" : schemaPurpose);
   const recordQuery = useResourceRecord(resource, id);
   const saveMutation = useSaveResource(resource);
   const schema = useMemo4(() => {

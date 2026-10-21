@@ -1,0 +1,31 @@
+{
+  "name": "frame-schema-purpose-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@schemastud/frame": "file:../../frame",
+    "@schemastud/seam": "github:schemastud/js#72b9e79d72e3dbd9a14113988c67b72f065a5b87&path:/seam",
+    "@schemastud/facets": "github:schemastud/js#efc0e405f2d3b515ca075dffed0aa53cb34d8e93&path:/facets",
+    "@tanstack/react-query": "5.101.4",
+    "@rjsf/core": "6.7.1",
+    "@rjsf/shadcn": "6.7.1",
+    "@rjsf/utils": "6.7.1",
+    "@rjsf/validator-ajv8": "6.7.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "lucide-react": "0.475.0",
+    "zustand": "5.0.14"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3",
+    "vite": "8.2.1"
+  },
+  "packageManager": "pnpm@9.15.3"
+}

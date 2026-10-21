@@ -842,12 +842,12 @@ function useResourceRecord(resource, id, options) {
     ...options
   });
 }
-function useFormSchema(resource, form) {
+function useFormSchema(resource, form, purpose = "write") {
   const { transport } = useFrameInjection();
   return useQuery({
-    queryKey: resourceQueryKey(transport, resource, "form-schema", form),
+    queryKey: resourceQueryKey(transport, resource, "form-schema", form, purpose),
     placeholderData: void 0,
-    queryFn: () => transport.getFormSchema(resource, form),
+    queryFn: () => transport.getFormSchema(resource, form, purpose),
     staleTime: 5 * 60 * 1e3
   });
 }
@@ -1266,4 +1266,4 @@ export {
   DefaultSaveBar,
   DefaultContainer
 };
-//# sourceMappingURL=chunk-NZOBJ6BJ.js.map
+//# sourceMappingURL=chunk-KVNPSXXM.js.map

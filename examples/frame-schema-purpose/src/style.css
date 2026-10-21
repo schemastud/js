@@ -1,0 +1,9 @@
+:root { font-family: system-ui,sans-serif; color-scheme: light dark; }
+body { margin: 2rem; }
+.schema-purpose-example { max-width: 48rem; margin: auto; }
+nav { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+button { padding: .5rem .75rem; cursor: pointer; }
+label { display: block; margin-top: .75rem; }
+input { padding: .5rem; width: min(90%,30rem); }
+output { display: block; margin-top: 1.5rem; }
+[role=alert] { border: 1px solid; padding: .75rem; }

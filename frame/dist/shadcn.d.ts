@@ -1,6 +1,6 @@
 import * as react from 'react';
 import { ComponentType } from 'react';
-import { q as CellSlotProps, P as PaginationSlotProps, b as FrameColumn, R as Row, T as ToolbarSlotProps, r as ErrorSlotProps, u as SaveBarSlotProps, c as FormMode } from './types-DBk4K56z.js';
+import { r as CellSlotProps, P as PaginationSlotProps, b as FrameColumn, R as Row, T as ToolbarSlotProps, s as ErrorSlotProps, v as SaveBarSlotProps, c as FormMode } from './types-DDtEoMgn.js';
 import '@schemastud/seam';
 import '@schemastud/facets';
 import '@schemastud/ui';

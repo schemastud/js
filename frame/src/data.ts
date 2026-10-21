@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@ta
 import { transportScope } from '@schemastud/facets';
 import type { SchemaNode } from '@schemastud/seam';
 import { useFrameInjection } from './context';
-import type { FormMode, FrameTransport, ResourcePage, Row } from './types';
+import type { FormMode, FrameTransport, ResourcePage, Row, SchemaPurpose } from './types';
 
 /**
  * Extra `useQuery` knobs a caller may thread onto a Frame read (e.g. `refetchInterval`,
@@ -93,14 +93,14 @@ export function useResourceRecord(
     });
 }
 
-/** The form JSON-schema (JsonSchemaGenerator->forRequest() on the server). */
-export function useFormSchema(resource: string, form: FormMode) {
+/** The declared schema; purpose selects request/write or response/read projection. */
+export function useFormSchema(resource: string, form: FormMode, purpose: SchemaPurpose = 'write') {
     const { transport } = useFrameInjection();
 
     return useQuery<SchemaNode>({
-        queryKey: resourceQueryKey(transport, resource, 'form-schema', form),
+        queryKey: resourceQueryKey(transport, resource, 'form-schema', form, purpose),
         placeholderData: undefined,
-        queryFn: () => transport.getFormSchema(resource, form),
+        queryFn: () => transport.getFormSchema(resource, form, purpose),
         staleTime: 5 * 60 * 1000,
     });
 }
