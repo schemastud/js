@@ -49,7 +49,7 @@ import {
   useResourceList,
   useResourceRecord,
   useSaveResource
-} from "./chunk-KVNPSXXM.js";
+} from "./chunk-PGKSHJFZ.js";
 
 // src/ListShell.tsx
 import { useLayoutEffect, useMemo as useMemo3, useRef as useRef2, useState as useState3 } from "react";
@@ -469,6 +469,11 @@ function ActionButton({
   const { Button } = primitives;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState2(false);
+  const trigger = useRef(null);
+  const close = useCallback(() => {
+    setOpen(false);
+    queueMicrotask(() => trigger.current?.focus());
+  }, []);
   const notice = useCallback(
     (n) => notify ? notify(n) : onNotice?.(n),
     [notify, onNotice]
@@ -483,7 +488,7 @@ function ActionButton({
       });
     },
     onSuccess: (result) => {
-      setOpen(false);
+      close();
       notice({ tone: "success", message: result.message || `${action.label} done.` });
       const target = action.result === "navigate" ? navigateTarget(result, record) : null;
       if (target !== null && onNavigate) {
@@ -514,6 +519,7 @@ function ActionButton({
         style: compact && action.destructive ? { color: "var(--destructive, #dc2626)" } : void 0,
         onClick: (event) => {
           event?.stopPropagation?.();
+          trigger.current = event.currentTarget ?? null;
           invoke.reset();
           setOpen(true);
         },
@@ -527,7 +533,7 @@ function ActionButton({
         action,
         pending: invoke.isPending,
         error: invoke.error,
-        onCancel: () => setOpen(false),
+        onCancel: close,
         onSubmit: (data) => invoke.mutate(data)
       }
     ) : null

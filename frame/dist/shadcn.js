@@ -3,7 +3,7 @@ import {
   createNoun,
   getPath,
   useFrameInjection
-} from "./chunk-KVNPSXXM.js";
+} from "./chunk-PGKSHJFZ.js";
 
 // src/shadcn/list-slots.tsx
 import { useId } from "react";

@@ -882,7 +882,7 @@ function useRemoveResource(resource) {
 
 // src/slots/defaults.tsx
 import { SchemaForm } from "@schemastud/seam";
-import { useEffect as useEffect2, useRef } from "react";
+import { useEffect as useEffect2, useId, useRef } from "react";
 import { Trash2 } from "lucide-react";
 import { Fragment as Fragment2, jsx as jsx12, jsxs as jsxs10 } from "react/jsx-runtime";
 function DefaultToolbar({
@@ -1128,6 +1128,7 @@ function SchemaFormBody({
   registerSubmit
 }) {
   const { schemaFetcher, registry } = useFrameInjection();
+  const idPrefix = useId();
   const root = useRef(null);
   useEffect2(() => {
     registerSubmit(() => root.current?.querySelector("form")?.requestSubmit());
@@ -1136,6 +1137,7 @@ function SchemaFormBody({
   return /* @__PURE__ */ jsx12("div", { ref: root, "data-frame-slot": "FormBody", "data-frame-readonly": readOnly ? "" : void 0, children: /* @__PURE__ */ jsx12(
     SchemaForm,
     {
+      idPrefix,
       schema,
       formData,
       registry,
@@ -1266,4 +1268,4 @@ export {
   DefaultSaveBar,
   DefaultContainer
 };
-//# sourceMappingURL=chunk-KVNPSXXM.js.map
+//# sourceMappingURL=chunk-PGKSHJFZ.js.map

@@ -329,6 +329,43 @@ describe('a confirm-only record action', () => {
 });
 
 describe('createResourceTransport', () => {
+    it('keeps same-named readonly detail and action fields independently labelled across cancel and reopen', async () => {
+        const action: ResourceActionDefinition = { ...ARCHIVE, key: 'commit-now', label: 'Commit now', input: 'RecorderInput' };
+        const schema = { type: 'object', properties: { releaseId: { type: 'string', title: 'Release ID' } }, required: ['releaseId'] };
+        const transport = makeTransport({
+            get: vi.fn(async () => ({ id: '7', releaseId: 'release-1' })),
+            getFormSchema: vi.fn(async () => schema),
+            getActionSchema: vi.fn(async () => schema),
+        });
+        render(<Harness transport={transport}>
+            <EditShell resource="files" id="7" readOnly container="bare"
+                manifest={manifestOf([action], { 'commit-now': true })} />
+        </Harness>);
+        const detail = await screen.findByRole('textbox', { name: /Release ID/ });
+        expect(detail.hasAttribute('disabled')).toBe(true);
+        const open = screen.getByRole('button', { name: 'Commit now' });
+        fireEvent.click(open);
+        let dialog = screen.getByRole('dialog');
+        let input = await within(dialog).findByRole('textbox', { name: /Release ID/ });
+        expect(input.id).not.toBe(detail.id);
+        expect(document.querySelectorAll('[id="' + input.id + '"]')).toHaveLength(1);
+        expect(input.hasAttribute('disabled')).toBe(false);
+        input.focus();
+        expect(document.activeElement).toBe(input);
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+        expect(screen.queryByRole('dialog')).toBeNull();
+        await waitFor(() => expect(document.activeElement).toBe(open));
+        expect(detail.hasAttribute('disabled')).toBe(true);
+        fireEvent.click(open);
+        dialog = screen.getByRole('dialog');
+        input = await within(dialog).findByRole('textbox', { name: /Release ID/ });
+        fireEvent.change(input, { target: { value: 'release-1' } });
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Commit now' }));
+        await waitFor(() => expect(transport.invoke).toHaveBeenCalledWith(action, { id: '7', data: { releaseId: 'release-1' } }));
+        expect(transport.save).not.toHaveBeenCalled();
+        expect(detail.getAttribute('value')).toBe('release-1');
+    });
+
     // The CRUD half a host hands over has no action methods of its own.
     const { invoke: _invoke, getActionSchema: _schema, ...crud } = makeTransport();
 
