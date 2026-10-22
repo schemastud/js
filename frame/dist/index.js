@@ -1819,6 +1819,7 @@ function FiveRegionEditShell({
   readOnly = false,
   topBar,
   palette,
+  inspector,
   status,
   autosave = true,
   onSave,
@@ -1916,7 +1917,7 @@ function FiveRegionEditShell({
               "data-frame-region": "inspector-region",
               "data-inspector-mode": regions.inspector,
               style: INSPECTOR_STYLE,
-              children: /* @__PURE__ */ jsx14(Inspector, {})
+              children: inspector ?? /* @__PURE__ */ jsx14(Inspector, {})
             }
           )
         ] }),
@@ -2087,6 +2088,13 @@ function assertRouteContext(entries, registry, options = {}) {
     }
   }
 }
+function UnguardedRefusal() {
+  return createElement2(
+    "div",
+    { role: "alert", "data-page-state": "forbidden", className: "p-6 text-sm" },
+    createElement2("p", { className: "font-medium" }, "This page is not available.")
+  );
+}
 function buildRealmRoutes(entries, registries) {
   const routes = [];
   const shellGroups = /* @__PURE__ */ new Map();
@@ -2096,12 +2104,21 @@ function buildRealmRoutes(entries, registries) {
       registries.onUnbound?.(entry);
       return null;
     }
-    let element = createElement2(Component);
-    const Guard = entry.guard ? registries.guards.resolveGuard(entry.guard) : void 0;
-    if (Guard) {
-      element = createElement2(Guard, null, element);
+    if (entry.guard) {
+      const Guard = registries.guards.resolveGuard(entry.guard);
+      if (!Guard) {
+        if (registries.onUnguarded) {
+          registries.onUnguarded(entry);
+        } else {
+          console.error(
+            `[frame] guard "${entry.guard}" is not registered; leaf "${entry.routeName}" (${entry.path}) is refused.`
+          );
+        }
+        return createElement2(UnguardedRefusal);
+      }
+      return createElement2(Guard, null, createElement2(Component));
     }
-    return element;
+    return createElement2(Component);
   };
   for (const entry of entries) {
     const Shell = entry.shell && entry.shell !== "app" ? registries.shells?.resolveShell(entry.shell) : void 0;

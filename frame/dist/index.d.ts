@@ -260,6 +260,12 @@ interface RealmRouteRegistries {
      * which is what happens with no fallback at all.
      */
     fallback?: (entry: RouteContextEntry) => RouteComponent | undefined;
+    /**
+     * Called for a leaf whose NAMED guard no `registerGuard()` bound. Such a leaf fails CLOSED: it renders a refusal
+     * (`data-page-state="forbidden"`), never its page. Without this hook the missing key is reported with
+     * `console.error`. A guarded page must never render unguarded because a host forgot to bind the guard.
+     */
+    onUnguarded?: (entry: RouteContextEntry) => void;
 }
 /**
  * Expand a realm's flat `RouteContext` into router leaves: resolve each `routeName` to its
@@ -416,6 +422,8 @@ interface FiveRegionEditShellProps {
     topBar?: ReactNode;
     /** Palette region content — defaults to the hoisted PalettePane (ED-09). */
     palette?: ReactNode;
+    /** Inspector region content; omitted retains the schema-driven Inspector. */
+    inspector?: ReactNode;
     /** Status region content — a stub until ED-14. */
     status?: ReactNode;
     /**
@@ -429,7 +437,7 @@ interface FiveRegionEditShellProps {
     /** Force a responsive collapse level (0/1/2); otherwise derived from width (ED-11). */
     collapseLevel?: CollapseLevel;
 }
-declare function FiveRegionEditShell({ schema, record, widget, registry, readOnly, topBar, palette, status, autosave, onSave, sourceToggle, collapseLevel, }: FiveRegionEditShellProps): react.JSX.Element;
+declare function FiveRegionEditShell({ schema, record, widget, registry, readOnly, topBar, palette, inspector, status, autosave, onSave, sourceToggle, collapseLevel, }: FiveRegionEditShellProps): react.JSX.Element;
 
 declare function Inspector(): react.JSX.Element;
 
