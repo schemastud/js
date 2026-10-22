@@ -1,5 +1,5 @@
 import { SchemaForm } from '@schemastud/seam';
-import { useEffect, useRef, type ComponentType, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ComponentType, type ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
 import { useFrameInjection } from '../context';
 import { dashboardRowRenders } from '../cards';
@@ -421,6 +421,7 @@ function SchemaFormBody({
     registerSubmit,
 }: FormBodySlotProps) {
     const { schemaFetcher, registry } = useFrameInjection();
+    const idPrefix = useId();
     const root = useRef<HTMLDivElement>(null);
     useEffect(() => {
         registerSubmit(() => root.current?.querySelector('form')?.requestSubmit());
@@ -430,6 +431,7 @@ function SchemaFormBody({
     return (
         <div ref={root} data-frame-slot="FormBody" data-frame-readonly={readOnly ? '' : undefined}>
             <SchemaForm
+                idPrefix={idPrefix}
                 schema={schema}
                 formData={formData}
                 registry={registry}

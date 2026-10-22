@@ -27,6 +27,8 @@ export interface CursorPaginated<T> {
 export type ResourcePage<T> = Paginated<T> | CursorPaginated<T>;
 
 export type FormMode = 'enriched' | 'bare';
+/** DTO projection axis, independent of widget presentation and interaction permissions. */
+export type SchemaPurpose = 'write' | 'read';
 
 // -----------------------------------------------------------------------------
 // Injected auth check — frame CALLS `can`, never absorbs a policy cascade. numero
@@ -48,7 +50,8 @@ export interface FrameTransport extends FacetsTransport {
     ): Promise<ResourcePage<Result>>;
     summary(resource: string, params: Record<string, string>): Promise<SummaryPayload>;
     get(resource: string, id: string): Promise<Row>;
-    getFormSchema(resource: string, form: FormMode): Promise<SchemaNode>;
+    /** Omitted purpose retains the write/edit schema. Read requires a purpose-aware producer. */
+    getFormSchema(resource: string, form: FormMode, purpose?: SchemaPurpose): Promise<SchemaNode>;
     /** Create returns the resource's declared createResultData, or its ordinary row by default. */
     create<Result = Row>(resource: string, data: unknown): Promise<Result>;
     save(resource: string, id: string, data: unknown): Promise<Row>;
@@ -620,6 +623,8 @@ export interface EditShellProps {
     resource: string;
     id: string | null;
     readOnly?: boolean;
+    /** Explicit projection opt-in; defaults to write, including legacy disabled editors. Create always uses write. */
+    schemaPurpose?: SchemaPurpose;
     /**
      * The resource's ContextManifest, for the record ACTIONS a detail page draws (ADR-0005). Absent,
      * the shell asks the injection's `manifestFor`; with neither, no action renders.

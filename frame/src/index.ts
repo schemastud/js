@@ -178,6 +178,7 @@ export type {
     CursorPaginated,
     ResourcePage,
     FormMode,
+    SchemaPurpose,
     FrameAction,
     FrameCan,
     FrameTransport,

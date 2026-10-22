@@ -67,3 +67,5 @@ the line by hand.
 - `npm run build` — tsup ESM + `.d.ts`.
 - `npm run typecheck` — `tsc --noEmit`.
 - `npm test` — vitest.
+
+See [schema purpose](docs/schema-purpose.md) for separate write/read projection, presentation, cache and compatibility, and the independent Frame example.

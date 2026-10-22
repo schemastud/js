@@ -178,3 +178,40 @@ export const OnTheDetailPage: Story = {
         await expect(await within(canvasElement).findByRole('button', { name: 'Suspend' })).toBeVisible();
     },
 };
+
+/** Recording's stock action and detail deliberately share a property name. */
+export const FilesRecordingRefused: Story = {
+    render: () => {
+        const action: ResourceActionDefinition = {
+            key: 'commit-now', label: 'Commit now', scope: 'record', method: 'POST',
+            url: '/beam-ux-release-files/{id}/commit-now', input: 'ReleaseRecordInputData',
+            result: 'toast', destructive: false,
+        };
+        const form = { type: 'object', properties: {
+            releaseId: { type: 'string', title: 'Release ID' },
+            status: { type: 'string', title: 'Local record' },
+            members: { type: 'string', title: 'Whole Release' },
+        }, required: ['releaseId'] };
+        return <MockFrameProvider fixtures={{
+            rows: { files: [{id:'member-brand', releaseId:'release-brand',status:'failed',members:'Theme, Header'}] },
+            formSchema: {files:form},
+            actionSchema: {'commit-now':{type:'object',properties:{releaseId:{type:'string',title:'Release ID'}},required:['releaseId']}},
+            actionRefusal:'Publication succeeded. Local Git recording is still refused by the hook.',
+        }}>
+            <EditShell resource="files" id="member-brand" readOnly container="page"
+                manifest={{...ALLOWED, actions:[action],can:{create:false,update:false,delete:false,actions:{'commit-now':true}}}} />
+        </MockFrameProvider>;
+    },
+    play: async ({canvasElement}) => {
+        const canvas=within(canvasElement);
+        const detail=await canvas.findByRole('textbox',{name:/Release ID/});
+        await expect(detail).toBeDisabled();
+        await userEvent.click(canvas.getByRole('button',{name:'Commit now'}));
+        const dialog=await canvas.findByRole('dialog',{name:'Commit now'});
+        const input=within(dialog).getByRole('textbox',{name:/Release ID/});
+        await expect(input.id).not.toBe(detail.id);
+        await userEvent.type(input,'release-brand');
+        await userEvent.click(within(dialog).getByRole('button',{name:'Commit now'}));
+        await expect(await within(dialog).findByRole('alert')).toHaveTextContent('refused by the hook');
+    },
+};

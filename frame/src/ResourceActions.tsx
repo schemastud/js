@@ -109,6 +109,13 @@ export function ActionButton({
     const { Button } = primitives;
     const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
+    const trigger = useRef<HTMLElement | null>(null);
+    const close = useCallback(() => {
+        setOpen(false);
+        // A host Dialog need not use its own Trigger primitive. Restore the actual invoking
+        // action after unmount, including cancel/escape and successful form submission.
+        queueMicrotask(() => trigger.current?.focus());
+    }, []);
 
     const notice = useCallback(
         (n: FrameNotice) => (notify ? notify(n) : onNotice?.(n)),
@@ -125,7 +132,7 @@ export function ActionButton({
             });
         },
         onSuccess: (result) => {
-            setOpen(false);
+            close();
             notice({ tone: 'success', message: result.message || `${action.label} done.` });
 
             const target = action.result === 'navigate' ? navigateTarget(result, record) : null;
@@ -161,9 +168,10 @@ export function ActionButton({
                 variant={compact ? 'outline' : action.destructive ? 'destructive' : undefined}
                 size={compact ? 'sm' : undefined}
                 style={compact && action.destructive ? { color: 'var(--destructive, #dc2626)' } : undefined}
-                onClick={(event: { stopPropagation?: () => void }) => {
+                onClick={(event: { stopPropagation?: () => void; currentTarget?: HTMLElement }) => {
                     // On a row, the row itself opens the record; the action must not do both.
                     event?.stopPropagation?.();
+                    trigger.current = event.currentTarget ?? null;
                     invoke.reset();
                     setOpen(true);
                 }}
@@ -176,7 +184,7 @@ export function ActionButton({
                     action={action}
                     pending={invoke.isPending}
                     error={invoke.error}
-                    onCancel={() => setOpen(false)}
+                    onCancel={close}
                     onSubmit={(data) => invoke.mutate(data)}
                 />
             ) : null}

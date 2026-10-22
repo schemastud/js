@@ -12,19 +12,21 @@ import type { EditShellProps, FormMode, Row } from './types';
 /**
  * The edit surface (create when id === null; detail = <EditShell readOnly/> — no
  * distinct DetailShell). Renders a form from `transport.getFormSchema` (the server's
- * forRequest() output), tracks edits, and submits via `transport.save`. The host's
+ * request projection by default, explicit response projection for read detail), tracks edits,
+ * and submits via `transport.save`. The host's
  * persist strategy sits BELOW the transport; the shell is blind to which strategy
  * runs. Every slot has a frame default the host may override.
  */
 export function EditShell(props: EditShellProps) {
     // A different record (including create mode) must never inherit another record's draft.
-    return <EditShellRecord key={JSON.stringify([props.resource, props.id])} {...props} />;
+    return <EditShellRecord key={JSON.stringify([props.resource, props.id, props.schemaPurpose ?? 'write'])} {...props} />;
 }
 
 function EditShellRecord({
     resource,
     id,
     readOnly = false,
+    schemaPurpose = 'write',
     container = 'panel',
     form: formProp = 'bare',
     showModeToggle = false,
@@ -52,7 +54,7 @@ function EditShellRecord({
     const dirty = useRef(false);
     const intentBus = useMemo(() => createFormIntentBus(), []);
 
-    const schemaQuery = useFormSchema(resource, form);
+    const schemaQuery = useFormSchema(resource, form, id === null ? 'write' : schemaPurpose);
     const recordQuery = useResourceRecord(resource, id);
     const saveMutation = useSaveResource(resource);
     // A stable schema keeps SchemaForm's asynchronous ref resolution from remounting
