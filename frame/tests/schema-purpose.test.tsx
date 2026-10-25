@@ -39,6 +39,7 @@ function fixture() {
         async (_resource: string, _form: FormMode, purpose = 'write') =>
             purpose === 'read' ? read : write,
     );
+    const save = vi.fn(async (_r: string, id: string) => ({ id }));
     const transport = createResourceTransport(
         {
             list: async () => ({ data: [], total: 0, page: 1, perPage: 25 }),
@@ -49,7 +50,7 @@ function fixture() {
             }),
             getFormSchema: schema,
             create: async (_r, data) => Response.json(data).json(),
-            save: vi.fn(async (_r, id) => ({ id })),
+            save,
             remove: async () => undefined,
         },
         {
@@ -85,6 +86,7 @@ function fixture() {
     return {
         transport,
         schema,
+        save,
         client,
         Wrapper,
         replace: (next: typeof transport) => {
@@ -183,6 +185,7 @@ describe('declared schema purpose', () => {
                 'requests',
                 'enriched',
                 'read',
+                undefined,
             ),
         );
     });
@@ -208,7 +211,7 @@ describe('declared schema purpose', () => {
         });
         expect((value as HTMLInputElement).value).toBe('approved');
         expect((value as HTMLInputElement).disabled).toBe(true);
-        expect(f.transport.save).not.toHaveBeenCalled();
+        expect(f.save).not.toHaveBeenCalled();
     });
     it('keeps legacy actor-disabled editors and every create on write', async () => {
         const f = fixture();

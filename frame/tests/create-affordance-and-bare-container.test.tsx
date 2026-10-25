@@ -325,6 +325,7 @@ describe("EditShell container='bare'", () => {
         const injection = {
             transport: makeTransport(),
             primitives,
+            useUrlState: () => [new URLSearchParams(), () => {}] as const,
             registry: createWidgetRegistry(),
             schemaFetcher: async () => ({ type: 'object', properties: {} }),
             can: () => true,

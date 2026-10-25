@@ -51,6 +51,7 @@ const wrap = (primitives: Record<string, unknown>) => {
     const value = {
         transport,
         primitives: { ...basePrimitives, ...primitives },
+        useUrlState: () => [new URLSearchParams(), () => {}] as const,
         registry: createWidgetRegistry(),
         schemaFetcher: async (ref: string) => ({ $id: ref }),
         can: () => true,
