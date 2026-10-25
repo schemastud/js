@@ -47,12 +47,12 @@ export interface FrameTransport extends FacetsTransport {
         params: Record<string, string>,
     ): Promise<ResourcePage<Result>>;
     summary(resource: string, params: Record<string, string>): Promise<SummaryPayload>;
-    get(resource: string, id: string): Promise<Row>;
-    getFormSchema(resource: string, form: FormMode): Promise<SchemaNode>;
+    get(resource: string, id: string, params?: Record<string, string>): Promise<Row>;
+    getFormSchema(resource: string, form: FormMode, params?: Record<string, string>): Promise<SchemaNode>;
     /** Create returns the resource's declared createResultData, or its ordinary row by default. */
-    create<Result = Row>(resource: string, data: unknown): Promise<Result>;
-    save(resource: string, id: string, data: unknown): Promise<Row>;
-    remove(resource: string, id: string): Promise<void>;
+    create<Result = Row>(resource: string, data: unknown, params?: Record<string, string>): Promise<Result>;
+    save(resource: string, id: string, data: unknown, params?: Record<string, string>): Promise<Row>;
+    remove(resource: string, id: string, params?: Record<string, string>): Promise<void>;
     /**
      * Send a declared ACTION's request to its own URL (schemastud/laravel-frame ADR-0005). The action's
      * URL is the producer's mount — frame does not route it through its socket — so the transport
@@ -72,7 +72,7 @@ export interface FrameTransport extends FacetsTransport {
      * `GET {prefix}/resources/{resource}/actions/{action}/schema`. Optional like `invoke`; an action
      * with an input and no way to fetch its form renders no button.
      */
-    getActionSchema?(resource: string, action: string): Promise<SchemaNode>;
+    getActionSchema?(resource: string, action: string, params?: Record<string, string>): Promise<SchemaNode>;
 }
 
 /**

@@ -28,6 +28,11 @@ export interface ResourceFilterHttp {
     write?<T>(method: string, url: string, body?: unknown): Promise<T>;
 }
 
+/** Stable address context for the lifetime of a resource transport. Recreate the transport when it changes. */
+export interface ResourceTransportOptions {
+    collectionByResource?: Readonly<Record<string, string>>;
+}
+
 export interface FilterSchemaResponse {
     data: FilterSchema;
     savedViewsResource?: string | null;
@@ -38,12 +43,29 @@ export interface FilterSchemaResponse {
 export function createResourceTransport(
     crud: FrameCrudTransport,
     http: ResourceFilterHttp,
+    options: ResourceTransportOptions = {},
 ): FrameTransport {
+    // Snapshot the addresses: this transport object is also Frame's cache scope. A host that selects
+    // another Collection creates another transport, so one collection's response cannot fill another's cache.
+    const collectionByResource = Object.freeze({ ...options.collectionByResource });
+    const collectionParams = (resource: string): Record<string, string> | undefined => {
+        const address = collectionByResource[resource];
+        return address === undefined ? undefined : { collection: address };
+    };
+    const addressed = (
+        resource: string,
+        params?: Record<string, string>,
+    ): Record<string, string> | undefined => {
+        const collection = collectionParams(resource);
+        return collection ? { ...params, ...collection } : params;
+    };
+
     async function getFilterSchema(resource: string, variant?: string): Promise<FilterSchema> {
         const response = await http.read<FilterSchemaResponse>(
             `${http.resourceUrl(resource)}/filters/${
                 variant ? `${encodeURIComponent(variant)}/` : ''
             }schema`,
+            collectionParams(resource),
         );
         return {
             ...response.data,
@@ -64,10 +86,20 @@ export function createResourceTransport(
     const write = http.write;
 
     return {
-        ...crud,
+        list: (resource, params) => crud.list(resource, addressed(resource, params) ?? params),
+        get: (resource, id) => crud.get(resource, id, collectionParams(resource)),
+        getFormSchema: (resource, form) =>
+            crud.getFormSchema(resource, form, collectionParams(resource)),
+        create: (resource, data) => crud.create(resource, data, collectionParams(resource)),
+        save: (resource, id, data) => crud.save(resource, id, data, collectionParams(resource)),
+        remove: (resource, id) => crud.remove(resource, id, collectionParams(resource)),
         // An action's form schema rides the resource root like every other frame read.
-        getActionSchema: (resource, action) =>
-            http.read(`${http.resourceUrl(resource)}/actions/${encodeURIComponent(action)}/schema`),
+        getActionSchema: (resource, action) => {
+            const params = collectionParams(resource);
+            return params
+                ? http.read(`${http.resourceUrl(resource)}/actions/${encodeURIComponent(action)}/schema`, params)
+                : http.read(`${http.resourceUrl(resource)}/actions/${encodeURIComponent(action)}/schema`);
+        },
         ...(write
             ? {
                   async invoke(action, target): Promise<ActionResult> {
@@ -81,18 +113,19 @@ export function createResourceTransport(
               }
             : {}),
         summary: (resource, params): Promise<SummaryPayload> =>
-            http.read<SummaryPayload>(`${http.resourceUrl(resource)}/summary`, params),
+            http.read<SummaryPayload>(`${http.resourceUrl(resource)}/summary`, addressed(resource, params)),
         getFilterSchema,
         async getFilterVariants(resource): Promise<FilterVariants> {
             const response = await http.read<{ data: FilterVariants }>(
                 `${http.resourceUrl(resource)}/filters/variants`,
+                collectionParams(resource),
             );
             return response.data;
         },
         async getFilterOptions(resource, ref, search): Promise<FilterOption[]> {
             const response = await http.read<{ data: FilterOption[] }>(
                 `${http.resourceUrl(resource)}/filters/options/${encodeURIComponent(ref)}`,
-                { search },
+                addressed(resource, { search }),
             );
             return response.data;
         },

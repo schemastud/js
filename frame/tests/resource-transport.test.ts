@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createResourceTransport, type FrameCrudTransport } from '../src/resourceTransport';
+import {
+    createResourceTransport,
+    type FrameCrudTransport,
+    type ResourceFilterHttp,
+} from '../src/resourceTransport';
 
 function fixture() {
     const records = Array.from({ length: 31 }, (_, index) => ({
@@ -70,6 +74,100 @@ function fixture() {
 }
 
 describe('resource behavior composition', () => {
+    it('carries the declared Collection address through Frame reads and writes', async () => {
+        const calls: unknown[][] = [];
+        const crud: FrameCrudTransport = {
+            list: vi.fn(async (...args) => {
+                calls.push(['list', ...args]);
+                return { data: [], total: 0, page: 1, perPage: 25 };
+            }),
+            get: vi.fn(async (...args) => {
+                calls.push(['get', ...args]);
+                return { id: 'one' };
+            }),
+            getFormSchema: vi.fn(async (...args) => {
+                calls.push(['schema', ...args]);
+                return { type: 'object' };
+            }),
+            create: vi.fn(async (...args) => {
+                calls.push(['create', ...args]);
+                return { id: 'new' };
+            }),
+            save: vi.fn(async (...args) => {
+                calls.push(['save', ...args]);
+                return { id: 'one' };
+            }),
+            remove: vi.fn(async (...args) => {
+                calls.push(['remove', ...args]);
+            }),
+        };
+        const read = vi.fn(async (url: string, params?: Record<string, string>) => {
+            calls.push(['read', url, params]);
+            return { data: { properties: {} } };
+        });
+        const write = vi.fn(async (_method: string, _url: string, _body?: unknown) => ({ message: null }));
+        const collections = { records: 'https://schemas.example/Articles' };
+        const transport = createResourceTransport(
+            crud,
+            {
+                resourceUrl: (resource) => `/frame/resources/${resource}`,
+                read: async <T>(url: string, params?: Record<string, string>) =>
+                    (await read(url, params)) as T,
+                write,
+            },
+            { collectionByResource: collections },
+        );
+        collections.records = 'https://schemas.example/People';
+
+        await transport.list('records', { page: '2', collection: 'caller-value' });
+        await transport.get('records', 'one');
+        await transport.getFormSchema('records', 'create');
+        await transport.create('records', { title: 'New' });
+        await transport.save('records', 'one', { title: 'Changed' });
+        await transport.remove('records', 'one');
+        await transport.getFilterSchema('records');
+        await transport.getFilterVariants('records');
+        await transport.getFilterOptions('records', 'status', 'open');
+        await transport.summary('records', { perPage: '10', collection: 'caller-value' });
+        await transport.getActionSchema?.('records', 'publish');
+
+        const expectedAddress = { collection: 'https://schemas.example/Articles' };
+        expect(calls).toContainEqual(['list', 'records', { page: '2', ...expectedAddress }]);
+        expect(calls).toContainEqual(['get', 'records', 'one', expectedAddress]);
+        expect(calls).toContainEqual(['schema', 'records', 'create', expectedAddress]);
+        expect(calls).toContainEqual(['create', 'records', { title: 'New' }, expectedAddress]);
+        expect(calls).toContainEqual(['save', 'records', 'one', { title: 'Changed' }, expectedAddress]);
+        expect(calls).toContainEqual(['remove', 'records', 'one', expectedAddress]);
+        expect(calls).toContainEqual([
+            'read',
+            '/frame/resources/records/filters/schema',
+            expectedAddress,
+        ]);
+        expect(calls).toContainEqual([
+            'read',
+            '/frame/resources/records/filters/variants',
+            expectedAddress,
+        ]);
+        expect(calls).toContainEqual([
+            'read',
+            '/frame/resources/records/filters/options/status',
+            { search: 'open', ...expectedAddress },
+        ]);
+        expect(calls).toContainEqual([
+            'read',
+            '/frame/resources/records/summary',
+            { perPage: '10', ...expectedAddress },
+        ]);
+        expect(calls).toContainEqual([
+            'read',
+            '/frame/resources/records/actions/publish/schema',
+            expectedAddress,
+        ]);
+
+        await transport.list('articles', { page: '1' });
+        expect(calls).toContainEqual(['list', 'articles', { page: '1' }]);
+    });
+
     it('discovers declared variants and requests the selected resource schema', async () => {
         const { transport, read } = fixture();
         const variants = {

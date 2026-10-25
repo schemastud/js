@@ -233,6 +233,7 @@ export {
     createResourceTransport,
     type FrameCrudTransport,
     type ResourceFilterHttp,
+    type ResourceTransportOptions,
     type FilterSchemaResponse,
 } from './resourceTransport';
 
