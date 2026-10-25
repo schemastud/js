@@ -170,6 +170,44 @@ describe('resolveColumns — a manifest with ZERO host columns is a complete col
     });
 });
 
+describe('Collection selection on a shared Frame resource', () => {
+    it('offers the actor-readable choices and sends the selected stem with the list request', async () => {
+        const transport = makeTransport();
+        const injection = makeInjection({
+            transport,
+            primitives: {
+                ...primitives,
+                SimpleSelect: ({ options, value, onValueChange, ...props }: any) => (
+                    <select {...props} value={value} onChange={(event) => onValueChange(event.target.value)}>
+                        {options.map((option: { value: string; label: string }) => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                ),
+            },
+        });
+        const manifest: ContextManifest = {
+            ...MANIFEST,
+            collections: [
+                { stem: 'https://schemas.example/articles', label: 'Articles' },
+                { stem: 'https://schemas.example/people', label: 'People' },
+            ],
+        };
+
+        render(<ListShell resource="records" columns={[]} manifest={manifest} />, { wrapper: wrap(injection) });
+
+        const selector = screen.getByRole('combobox', { name: 'Collection' });
+        expect((selector as HTMLSelectElement).value).toBe('https://schemas.example/articles');
+        fireEvent.change(selector, { target: { value: 'https://schemas.example/people' } });
+
+        await waitFor(() => {
+            expect(transport.list).toHaveBeenCalledWith('records', { collection: 'https://schemas.example/people' });
+            expect(transport.getFilterSchema).toHaveBeenCalledWith('records', undefined, 'https://schemas.example/people');
+            expect(transport.getFilterVariants).toHaveBeenCalledWith('records', 'https://schemas.example/people');
+        });
+    });
+});
+
 // -----------------------------------------------------------------------------------------
 // 2. mounts: 'list' renders from the manifest alone.
 // -----------------------------------------------------------------------------------------

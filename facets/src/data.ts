@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { transportScope } from './transportScope';
-import { useFacetsInjection, useFacetsResource } from './context';
+import { useFacetsCollection, useFacetsInjection, useFacetsResource } from './context';
 import type {
     FacetsTransport,
     FilterSchema,
@@ -19,32 +19,36 @@ export function filterSchemaOptions(
     transport: FacetsTransport,
     resource: string,
     variant?: string,
+    collection?: string,
 ) {
     return {
-        queryKey: ['filter-schema', resource, variant ?? null, transportScope(transport)],
+        queryKey: ['filter-schema', resource, variant ?? null, collection ?? null, transportScope(transport)],
         // A host's list-wide keepPreviousData default must not carry another
         // resource or variant's vocabulary and permissions into this one.
         placeholderData: undefined,
         staleTime: 5 * 60_000,
         queryFn: () =>
-            variant
-                ? transport.getFilterSchema(resource, variant)
-                : transport.getFilterSchema(resource),
+            collection
+                ? transport.getFilterSchema(resource, variant, collection)
+                : variant
+                  ? transport.getFilterSchema(resource, variant)
+                  : transport.getFilterSchema(resource),
     };
 }
 
-export function useFilterSchema(resource: string, variant?: string) {
+export function useFilterSchema(resource: string, variant?: string, collection?: string) {
     const { transport } = useFacetsInjection();
-    return useQuery(filterSchemaOptions(transport, resource, variant));
+    return useQuery(filterSchemaOptions(transport, resource, variant, collection));
 }
 
-export function useFilterVariants(resource: string) {
+export function useFilterVariants(resource: string, collection?: string) {
     const { transport } = useFacetsInjection();
     return useQuery({
-        queryKey: ['filter-variants', resource, transportScope(transport)],
+        queryKey: ['filter-variants', resource, collection ?? null, transportScope(transport)],
         placeholderData: undefined,
         staleTime: 5 * 60_000,
-        queryFn: () => transport.getFilterVariants(resource),
+        queryFn: () =>
+            collection ? transport.getFilterVariants(resource, collection) : transport.getFilterVariants(resource),
     });
 }
 
@@ -55,39 +59,44 @@ export function useFilterVariants(resource: string) {
 export function useFilterOptions(ref: string | undefined, search: string, resource?: string) {
     const { transport } = useFacetsInjection();
     const contextResource = useFacetsResource();
+    const contextCollection = useFacetsCollection();
     const target = resource ?? contextResource;
     return useQuery({
-        queryKey: ['filter-options', target, ref, search, transportScope(transport)],
+        queryKey: ['filter-options', target, ref, search, contextCollection ?? null, transportScope(transport)],
         placeholderData: undefined,
         enabled: Boolean(ref) && Boolean(target),
         staleTime: 60_000,
         queryFn: () =>
-            transport.getFilterOptions(target as string, ref as string, search) as Promise<
-                FilterOption[]
-            >,
+            (contextCollection
+                ? transport.getFilterOptions(target as string, ref as string, search, contextCollection)
+                : transport.getFilterOptions(target as string, ref as string, search)) as Promise<FilterOption[]>,
     });
 }
 
-export function useSavedFilters(resource: string, enabled = true, variant?: string) {
+export function useSavedFilters(resource: string, enabled = true, variant?: string, collection?: string) {
     const { transport } = useFacetsInjection();
     return useQuery({
-        queryKey: ['saved-filters', resource, variant ?? null, transportScope(transport)],
+        queryKey: ['saved-filters', resource, variant ?? null, collection ?? null, transportScope(transport)],
         placeholderData: undefined,
         enabled,
         queryFn: () =>
-            variant
-                ? transport.getSavedFilters(resource, variant)
-                : transport.getSavedFilters(resource),
+            collection
+                ? variant
+                    ? transport.getSavedFilters(resource, variant, collection)
+                    : transport.getSavedFilters(resource, undefined, collection)
+                : variant
+                  ? transport.getSavedFilters(resource, variant)
+                  : transport.getSavedFilters(resource),
     });
 }
 
-export function useSaveFilter(resource: string) {
+export function useSaveFilter(resource: string, collection?: string) {
     const { transport } = useFacetsInjection();
     const queryClient = useQueryClient();
     return useMutation({
-        mutationKey: ['saved-filters', resource, transportScope(transport), 'save'],
+        mutationKey: ['saved-filters', resource, collection ?? null, transportScope(transport), 'save'],
         mutationFn: (payload: { name: string; queryParameters: SavedFilterQueryParameters }) =>
-            transport.saveFilter(resource, payload),
+            collection ? transport.saveFilter(resource, payload, collection) : transport.saveFilter(resource, payload),
         onSuccess: () =>
             queryClient.invalidateQueries({
                 queryKey: ['saved-filters', resource],
@@ -96,7 +105,7 @@ export function useSaveFilter(resource: string) {
     });
 }
 
-export function useDeleteSavedFilter(resource: string, variant?: string) {
+export function useDeleteSavedFilter(resource: string, variant?: string, collection?: string) {
     const { transport } = useFacetsInjection();
     const queryClient = useQueryClient();
     return useMutation({
@@ -106,11 +115,16 @@ export function useDeleteSavedFilter(resource: string, variant?: string) {
             transportScope(transport),
             'delete',
             variant ?? null,
+            collection ?? null,
         ],
         mutationFn: (id: string) =>
-            variant
-                ? transport.deleteSavedFilter(resource, id, variant)
-                : transport.deleteSavedFilter(resource, id),
+            collection
+                ? variant
+                    ? transport.deleteSavedFilter(resource, id, variant, collection)
+                    : transport.deleteSavedFilter(resource, id, undefined, collection)
+                : variant
+                  ? transport.deleteSavedFilter(resource, id, variant)
+                  : transport.deleteSavedFilter(resource, id),
         onSuccess: () =>
             queryClient.invalidateQueries({
                 queryKey: ['saved-filters', resource],

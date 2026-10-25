@@ -136,6 +136,8 @@ export interface ContextManifest {
      * shell is handed its manifest, never the definition. Absent for a resource that declares none.
      */
     actions?: import('./types').ResourceActionDefinition[];
+    /** Actor-readable Collection choices for a resource backed by multiple Collections. */
+    collections?: import('./types').ResourceCollectionAddress[];
 }
 
 /** The full context vocabulary, in wire order. */

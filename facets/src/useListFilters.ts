@@ -26,6 +26,7 @@ import type { FilterSchema, FilterVariant, SavedFilterQueryParameters } from './
  */
 export interface ListFilters {
     resource: string;
+    collection?: string;
     schema: FilterSchema | undefined;
     variants: FilterVariant[];
     filterVariant: string | null;
@@ -57,14 +58,14 @@ export interface ListFilters {
 function filterFingerprint(searchParams: URLSearchParams): string {
     const parts: string[] = [];
     for (const [key, value] of searchParams.entries()) {
-        if (key.startsWith('filter[') || key === 'sort' || key === 'filterVariant') {
+        if (key.startsWith('filter[') || key === 'sort' || key === 'filterVariant' || key === 'collection') {
             parts.push(`${key}=${value}`);
         }
     }
     return parts.sort().join('&');
 }
 
-export function useListFilters(resource: string): ListFilters {
+export function useListFilters(resource: string, collection?: string): ListFilters {
     const { useUrlState, transport } = useFacetsInjection();
     const queryClient = useQueryClient();
     const [searchParams, setSearchParams] = useUrlState();
@@ -77,8 +78,8 @@ export function useListFilters(resource: string): ListFilters {
         };
     }, [resource, queryString, transport]);
     const filterVariant = searchParams.get('filterVariant') || null;
-    const schemaQuery = useFilterSchema(resource, filterVariant ?? undefined);
-    const variantsQuery = useFilterVariants(resource);
+    const schemaQuery = useFilterSchema(resource, filterVariant ?? undefined, collection);
+    const variantsQuery = useFilterVariants(resource, collection);
     const schema = schemaQuery.data;
 
     const requestParams = Object.fromEntries(searchParams.entries());
@@ -150,7 +151,7 @@ export function useListFilters(resource: string): ListFilters {
         // Resolve the saved view's vocabulary before pruning. The currently displayed
         // variant may declare entirely different filters and sorts.
         const selectedSchema = await queryClient
-            .fetchQuery(filterSchemaOptions(transport, resource, params.filterVariant))
+            .fetchQuery(filterSchemaOptions(transport, resource, params.filterVariant, collection))
             .catch((error: unknown) => {
                 if (sequence === applySequence.current) throw error;
                 return undefined;
@@ -182,6 +183,7 @@ export function useListFilters(resource: string): ListFilters {
 
     return {
         resource,
+        collection,
         schema,
         variants: variantsQuery.data?.variants ?? [],
         filterVariant,

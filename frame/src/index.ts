@@ -189,6 +189,7 @@ export type {
     FrameColumn,
     ResolveColumns,
     AdminResourceDefinition,
+    ResourceCollectionAddress,
     RouteContextEntry,
     RouteMounts,
     RealmDefinition,
@@ -234,6 +235,7 @@ export {
     createResourceTransport,
     type FrameCrudTransport,
     type ResourceFilterHttp,
+    type ResourceTransportOptions,
     type FilterSchemaResponse,
 } from './resourceTransport';
 

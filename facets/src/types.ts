@@ -119,21 +119,22 @@ export interface SavedFilter {
  * the transport seam is per-capability, not one-size.
  */
 export interface FacetsTransport {
-    getFilterSchema(resource: string, variant?: string): Promise<FilterSchema>;
-    getFilterVariants(resource: string): Promise<FilterVariants>;
+    getFilterSchema(resource: string, variant?: string, collection?: string): Promise<FilterSchema>;
+    getFilterVariants(resource: string, collection?: string): Promise<FilterVariants>;
     /**
      * Resolve a named options source for a resource. `resource` was added when the filter surface
      * became per-resource (splicewire api-surface-coherence 35): the flat, resource-less options
      * route it replaced had nothing to authorize against and enumerated every value list to any
      * authenticated caller.
      */
-    getFilterOptions(resource: string, ref: string, search: string): Promise<FilterOption[]>;
-    getSavedFilters(resource: string, variant?: string): Promise<SavedFilter[]>;
+    getFilterOptions(resource: string, ref: string, search: string, collection?: string): Promise<FilterOption[]>;
+    getSavedFilters(resource: string, variant?: string, collection?: string): Promise<SavedFilter[]>;
     saveFilter(
         resource: string,
         payload: { name: string; queryParameters: SavedFilterQueryParameters },
+        collection?: string,
     ): Promise<SavedFilter>;
-    deleteSavedFilter(resource: string, id: string, variant?: string): Promise<void>;
+    deleteSavedFilter(resource: string, id: string, variant?: string, collection?: string): Promise<void>;
 }
 
 /**

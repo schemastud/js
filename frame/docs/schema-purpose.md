@@ -25,7 +25,12 @@ unchanged. No normal read schema should be paired with a narrower public/custom 
 ## Transport, hook and cache
 
 ```ts
-getFormSchema(resource: string, form: FormMode, purpose?: SchemaPurpose): Promise<SchemaNode>
+getFormSchema(
+  resource: string,
+  form: FormMode,
+  purpose?: SchemaPurpose,
+  params?: Record<string, string>,
+): Promise<SchemaNode>
 useFormSchema(resource, form, purpose = 'write')
 ```
 

@@ -31,16 +31,21 @@ export function FacetsProvider({
  * whose intermediate props are all about rendering a chip.
  */
 const FacetsResourceContext = createContext<string | null>(null);
+const FacetsCollectionContext = createContext<string | undefined>(undefined);
 
 export function FacetsResourceProvider({
     resource,
+    collection,
     children,
 }: {
     resource: string;
+    collection?: string;
     children: ReactNode;
 }) {
     return (
-        <FacetsResourceContext.Provider value={resource}>{children}</FacetsResourceContext.Provider>
+        <FacetsResourceContext.Provider value={resource}>
+            <FacetsCollectionContext.Provider value={collection}>{children}</FacetsCollectionContext.Provider>
+        </FacetsResourceContext.Provider>
     );
 }
 
@@ -50,6 +55,11 @@ export function FacetsResourceProvider({
  */
 export function useFacetsResource(): string | null {
     return useContext(FacetsResourceContext);
+}
+
+/** The selected Collection stem in scope, if this resource serves multiple Collections. */
+export function useFacetsCollection(): string | undefined {
+    return useContext(FacetsCollectionContext);
 }
 
 /** Read the injection bundle; throws if a facets hook/component renders outside a provider. */

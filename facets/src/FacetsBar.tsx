@@ -103,6 +103,7 @@ function FacetControl({
  */
 export function FacetsBar({
     resource,
+    collection,
     schema,
     values,
     sort,
@@ -116,6 +117,7 @@ export function FacetsBar({
      * `FacetsResourceProvider` rather than threaded as a prop through the chip-rendering tree.
      */
     resource: string;
+    collection?: string;
     schema: FilterSchema;
     values: Record<string, string>;
     sort: string | null;
@@ -190,7 +192,7 @@ export function FacetsBar({
     };
 
     return (
-        <FacetsResourceProvider resource={resource}>
+        <FacetsResourceProvider resource={resource} collection={collection}>
         <div className="flex flex-wrap items-center gap-2 rounded-md border bg-card p-2">
             {/* Warm chip labels for active option-backed facets (deep-link / refresh). */}
             {activeFacets

@@ -74,7 +74,7 @@ function makeTransport(authority: string, gate?: Promise<void>): FrameTransport 
 }
 
 const Noop = () => null;
-function fixture(first: FrameTransport, retry = false) {
+function fixture(first: FrameTransport, retry = false, initialSearch = '') {
     let transport = first;
     const client = new QueryClient({
         defaultOptions: {
@@ -100,7 +100,7 @@ function fixture(first: FrameTransport, retry = false) {
             Skeleton: Noop,
             SidePanel: Noop,
         },
-        useUrlState: () => [new URLSearchParams(), () => {}] as const,
+        useUrlState: () => [new URLSearchParams(initialSearch), () => {}] as const,
         registry: createWidgetRegistry(),
         schemaFetcher: async (ref) => ({ $id: ref }),
         can: () => true,
@@ -160,6 +160,32 @@ const reads = [
 ] as const;
 
 describe('shared QueryClient, distinct Frame transports', () => {
+    it('threads a selected Collection through record, form and write hooks', async () => {
+        const transport = makeTransport('selected');
+        const stem = 'https://schemas.example/people';
+        const f = fixture(transport, false, `collection=${encodeURIComponent(stem)}`);
+        const hook = renderHook(
+            () => ({
+                record: useResourceRecord('things', '1'),
+                schema: useFormSchema('things', 'enriched', 'read'),
+                save: useSaveResource('things'),
+                remove: useRemoveResource('things'),
+            }),
+            { wrapper: f.wrapper },
+        );
+
+        await waitFor(() => expect(hook.result.current.schema.data).toBeDefined());
+        expect(transport.get).toHaveBeenCalledWith('things', '1', { collection: stem });
+        expect(transport.getFormSchema).toHaveBeenCalledWith('things', 'enriched', 'read', { collection: stem });
+
+        await act(async () => {
+            await hook.result.current.save.mutateAsync({ id: '1', data: { title: 'updated' } });
+            await hook.result.current.remove.mutateAsync('1');
+        });
+        expect(transport.save).toHaveBeenCalledWith('things', '1', { title: 'updated' }, { collection: stem });
+        expect(transport.remove).toHaveBeenCalledWith('things', '1', { collection: stem });
+    });
+
     it.each(reads)(
         'isolates cached $name and inherited placeholders, but reuses its own cache',
         async ({ useRead, method }) => {
