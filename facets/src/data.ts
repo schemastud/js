@@ -94,7 +94,7 @@ export function useSaveFilter(resource: string, collection?: string) {
     const { transport } = useFacetsInjection();
     const queryClient = useQueryClient();
     return useMutation({
-        mutationKey: ['saved-filters', resource, transportScope(transport), 'save'],
+        mutationKey: ['saved-filters', resource, collection ?? null, transportScope(transport), 'save'],
         mutationFn: (payload: { name: string; queryParameters: SavedFilterQueryParameters }) =>
             collection ? transport.saveFilter(resource, payload, collection) : transport.saveFilter(resource, payload),
         onSuccess: () =>

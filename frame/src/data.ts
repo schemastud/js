@@ -126,7 +126,7 @@ export function useSaveResource(resource: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationKey: resourceQueryKey(transport, resource, 'save'),
+        mutationKey: resourceQueryKey(transport, resource, 'save', collection ?? null),
         mutationFn: ({ id, data }: { id: string | null; data: unknown }) =>
             id === null
                 ? collection
@@ -151,7 +151,7 @@ export function useRemoveResource(resource: string) {
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationKey: resourceQueryKey(transport, resource, 'remove'),
+        mutationKey: resourceQueryKey(transport, resource, 'remove', collection ?? null),
         mutationFn: (id: string) =>
             collection ? transport.remove(resource, id, { collection }) : transport.remove(resource, id),
         onSuccess: () => {

@@ -45,8 +45,8 @@ export function createResourceTransport(
     http: ResourceFilterHttp,
     options: ResourceTransportOptions = {},
 ): FrameTransport {
-    // Snapshot the addresses: this transport object is also Frame's cache scope. A host that selects
-    // another Collection creates another transport, so one collection's response cannot fill another's cache.
+    // Snapshot explicit host overrides: transport identity is a cache scope, while manifest-selected
+    // addresses are carried in each query key and request. Recreate the transport if an override changes.
     const collectionByResource = Object.freeze({ ...options.collectionByResource });
     const collectionParams = (resource: string, selected?: string): Record<string, string> | undefined => {
         const address = collectionByResource[resource] ?? selected;

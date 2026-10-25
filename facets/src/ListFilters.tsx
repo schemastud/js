@@ -45,7 +45,7 @@ export function ListFilters(state: ListFiltersState) {
             )}
             {schema && hasVocabulary && (
                     <FacetsBar
-                        key={`${resource}:${filterVariant ?? ''}`}
+                        key={`${resource}:${collection ?? ''}:${filterVariant ?? ''}`}
                         resource={resource}
                         collection={collection}
                     schema={schema}
