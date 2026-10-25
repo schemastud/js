@@ -188,6 +188,7 @@ export type {
     FrameColumn,
     ResolveColumns,
     AdminResourceDefinition,
+    ResourceCollectionAddress,
     RouteContextEntry,
     RouteMounts,
     RealmDefinition,

@@ -25,10 +25,12 @@ function firstValidationMessage(error: unknown): string | null {
  */
 export function SavedViews({
     resource,
+    collection,
     current,
     onApply,
 }: {
     resource: string;
+    collection?: string;
     current: SavedFilterQueryParameters;
     onApply: (params: SavedFilterQueryParameters) => void | Promise<void>;
 }) {
@@ -36,11 +38,11 @@ export function SavedViews({
         primitives: { Button, Input },
         can,
     } = useFacetsInjection();
-    const schema = useFilterSchema(resource, current.filterVariant).data;
+    const schema = useFilterSchema(resource, current.filterVariant, collection).data;
     const savedResource = schema?.savedViewsResource;
-    const views = useSavedFilters(resource, Boolean(savedResource), current.filterVariant);
-    const save = useSaveFilter(resource);
-    const remove = useDeleteSavedFilter(resource, current.filterVariant);
+    const views = useSavedFilters(resource, Boolean(savedResource), current.filterVariant, collection);
+    const save = useSaveFilter(resource, collection);
+    const remove = useDeleteSavedFilter(resource, current.filterVariant, collection);
 
     const [naming, setNaming] = useState(false);
     const [name, setName] = useState('');

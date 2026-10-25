@@ -48,24 +48,25 @@ export function createResourceTransport(
     // Snapshot the addresses: this transport object is also Frame's cache scope. A host that selects
     // another Collection creates another transport, so one collection's response cannot fill another's cache.
     const collectionByResource = Object.freeze({ ...options.collectionByResource });
-    const collectionParams = (resource: string): Record<string, string> | undefined => {
-        const address = collectionByResource[resource];
+    const collectionParams = (resource: string, selected?: string): Record<string, string> | undefined => {
+        const address = collectionByResource[resource] ?? selected;
         return address === undefined ? undefined : { collection: address };
     };
     const addressed = (
         resource: string,
         params?: Record<string, string>,
+        selected?: string,
     ): Record<string, string> | undefined => {
-        const collection = collectionParams(resource);
+        const collection = collectionParams(resource, selected);
         return collection ? { ...params, ...collection } : params;
     };
 
-    async function getFilterSchema(resource: string, variant?: string): Promise<FilterSchema> {
+    async function getFilterSchema(resource: string, variant?: string, selected?: string): Promise<FilterSchema> {
         const response = await http.read<FilterSchemaResponse>(
             `${http.resourceUrl(resource)}/filters/${
                 variant ? `${encodeURIComponent(variant)}/` : ''
             }schema`,
-            collectionParams(resource),
+            collectionParams(resource, selected),
         );
         return {
             ...response.data,
@@ -74,9 +75,9 @@ export function createResourceTransport(
         };
     }
 
-    async function savedResource(resource: string, variant?: string): Promise<string> {
+    async function savedResource(resource: string, variant?: string, selected?: string): Promise<string> {
         // Resolve per operation: a long-lived transport can outlive a principal/tenant change.
-        const schema = await getFilterSchema(resource, variant);
+        const schema = await getFilterSchema(resource, variant, selected);
         if (!schema.savedViewsResource) {
             throw new Error(`Saved views are unavailable for resource "${resource}".`);
         }
@@ -87,12 +88,12 @@ export function createResourceTransport(
 
     return {
         list: (resource, params) => crud.list(resource, addressed(resource, params) ?? params),
-        get: (resource, id) => crud.get(resource, id, collectionParams(resource)),
-        getFormSchema: (resource, form) =>
-            crud.getFormSchema(resource, form, collectionParams(resource)),
-        create: (resource, data) => crud.create(resource, data, collectionParams(resource)),
-        save: (resource, id, data) => crud.save(resource, id, data, collectionParams(resource)),
-        remove: (resource, id) => crud.remove(resource, id, collectionParams(resource)),
+        get: (resource, id, params) => crud.get(resource, id, addressed(resource, params)),
+        getFormSchema: (resource, form, params) =>
+            crud.getFormSchema(resource, form, addressed(resource, params)),
+        create: (resource, data, params) => crud.create(resource, data, addressed(resource, params)),
+        save: (resource, id, data, params) => crud.save(resource, id, data, addressed(resource, params)),
+        remove: (resource, id, params) => crud.remove(resource, id, addressed(resource, params)),
         // An action's form schema rides the resource root like every other frame read.
         getActionSchema: (resource, action) => {
             const params = collectionParams(resource);
@@ -115,22 +116,22 @@ export function createResourceTransport(
         summary: (resource, params): Promise<SummaryPayload> =>
             http.read<SummaryPayload>(`${http.resourceUrl(resource)}/summary`, addressed(resource, params)),
         getFilterSchema,
-        async getFilterVariants(resource): Promise<FilterVariants> {
+        async getFilterVariants(resource, selected): Promise<FilterVariants> {
             const response = await http.read<{ data: FilterVariants }>(
                 `${http.resourceUrl(resource)}/filters/variants`,
-                collectionParams(resource),
+                collectionParams(resource, selected),
             );
             return response.data;
         },
-        async getFilterOptions(resource, ref, search): Promise<FilterOption[]> {
+        async getFilterOptions(resource, ref, search, selected): Promise<FilterOption[]> {
             const response = await http.read<{ data: FilterOption[] }>(
                 `${http.resourceUrl(resource)}/filters/options/${encodeURIComponent(ref)}`,
-                addressed(resource, { search }),
+                addressed(resource, { search }, selected),
             );
             return response.data;
         },
-        async getSavedFilters(resource, variant): Promise<SavedFilter[]> {
-            const schema = await getFilterSchema(resource, variant);
+        async getSavedFilters(resource, variant, selected): Promise<SavedFilter[]> {
+            const schema = await getFilterSchema(resource, variant, selected);
             if (!schema.savedViewsResource) return [];
             const rows: SavedFilter[] = [];
             let mode: 'offset' | 'cursor' | undefined;
@@ -173,17 +174,17 @@ export function createResourceTransport(
                 }
             }
         },
-        async saveFilter(resource, payload): Promise<SavedFilter> {
+        async saveFilter(resource, payload, selected): Promise<SavedFilter> {
             return crud.create<SavedFilter>(
-                await savedResource(resource, payload.queryParameters.filterVariant),
+                await savedResource(resource, payload.queryParameters.filterVariant, selected),
                 {
                     ...payload,
                     resource,
                 },
             );
         },
-        async deleteSavedFilter(resource, id, variant): Promise<void> {
-            await crud.remove(await savedResource(resource, variant), id);
+        async deleteSavedFilter(resource, id, variant, selected): Promise<void> {
+            await crud.remove(await savedResource(resource, variant, selected), id);
         },
     };
 }

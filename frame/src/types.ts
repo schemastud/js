@@ -1,5 +1,14 @@
 import type { FormIntentBus, SchemaFetcher, SchemaNode, WidgetRegistry } from '@schemastud/seam';
-import type { FacetsPrimitives, FacetsTransport, UseUrlState } from '@schemastud/facets';
+import type {
+    FacetsPrimitives,
+    FacetsTransport,
+    UseUrlState,
+    FilterOption,
+    FilterSchema,
+    FilterVariants,
+    SavedFilter,
+    SavedFilterQueryParameters,
+} from '@schemastud/facets';
 import type { ComponentType, ReactNode } from 'react';
 import type { FrameHooks } from './hooks';
 import type { SummaryPayload } from './cards/types';
@@ -42,6 +51,17 @@ export type FrameCan = (action: FrameAction, resource: string, record?: unknown)
 // persist strategy and JsonSchemaGenerator->forRequest() sit BELOW this seam.
 // -----------------------------------------------------------------------------
 export interface FrameTransport extends FacetsTransport {
+    /** Collection selection is explicit per request; the host map remains an override. */
+    getFilterSchema(resource: string, variant?: string, collection?: string): Promise<FilterSchema>;
+    getFilterVariants(resource: string, collection?: string): Promise<FilterVariants>;
+    getFilterOptions(resource: string, ref: string, search: string, collection?: string): Promise<FilterOption[]>;
+    getSavedFilters(resource: string, variant?: string, collection?: string): Promise<SavedFilter[]>;
+    saveFilter(
+        resource: string,
+        payload: { name: string; queryParameters: SavedFilterQueryParameters },
+        collection?: string,
+    ): Promise<SavedFilter>;
+    deleteSavedFilter(resource: string, id: string, variant?: string, collection?: string): Promise<void>;
     list<Result = Row>(
         resource: string,
         params: Record<string, string>,
@@ -310,6 +330,8 @@ export interface AdminResourceDefinition {
      * Optional so an older server and a hand-built fixture still typecheck; absent means none.
      */
     actions?: ResourceActionDefinition[];
+    /** Registered Collection choices for this resource that the current actor may read. */
+    collections?: ResourceCollectionAddress[];
     nav: {
         label: string;
         group?: string | null;
@@ -321,6 +343,12 @@ export interface AdminResourceDefinition {
         navOrder?: number | null;
         routeName?: string | null;
     };
+}
+
+/** One actor-readable Collection schema stem offered by a shared Frame resource. */
+export interface ResourceCollectionAddress {
+    stem: string;
+    label: string;
 }
 
 // =============================================================================

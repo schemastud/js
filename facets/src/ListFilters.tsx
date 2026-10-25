@@ -7,6 +7,7 @@ import type { ListFilters as ListFiltersState } from './useListFilters';
 export function ListFilters(state: ListFiltersState) {
     const {
         resource,
+        collection,
         schema,
         variants,
         filterVariant,
@@ -43,9 +44,10 @@ export function ListFilters(state: ListFiltersState) {
                 />
             )}
             {schema && hasVocabulary && (
-                <FacetsBar
-                    key={`${resource}:${filterVariant ?? ''}`}
-                    resource={resource}
+                    <FacetsBar
+                        key={`${resource}:${filterVariant ?? ''}`}
+                        resource={resource}
+                        collection={collection}
                     schema={schema}
                     values={filterValues}
                     sort={sort}
@@ -56,6 +58,7 @@ export function ListFilters(state: ListFiltersState) {
             {schema?.savedViewsResource && (
                 <SavedViews
                     resource={resource}
+                    collection={collection}
                     current={{
                         filter: filterValues,
                         sort: sort ?? undefined,

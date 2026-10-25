@@ -168,6 +168,30 @@ describe('resource behavior composition', () => {
         expect(calls).toContainEqual(['list', 'articles', { page: '1' }]);
     });
 
+    it('uses the selected manifest Collection when no explicit host override is configured', async () => {
+        const { transport, read, crud } = fixture();
+        const address = 'https://schemas.example/People';
+
+        await transport.list('records', { collection: address });
+        await transport.get('records', 'one', { collection: address });
+        await transport.getFormSchema('records', 'edit', { collection: address });
+        await transport.create('records', {}, { collection: address });
+        await transport.save('records', 'one', {}, { collection: address });
+        await transport.remove('records', 'one', { collection: address });
+        await transport.getFilterSchema('records', undefined, address);
+        await transport.getFilterVariants('records', address);
+        await transport.getFilterOptions('records', 'owner', 'Ada', address);
+        await transport.getSavedFilters('records', undefined, address);
+        await transport.saveFilter('records', { name: 'People view', queryParameters: {} }, address);
+        await transport.deleteSavedFilter('records', 'view-1', undefined, address);
+
+        expect(read).toHaveBeenCalledWith('/realm/resources/records/filters/schema', { collection: address });
+        expect(read).toHaveBeenCalledWith('/realm/resources/records/filters/variants', { collection: address });
+        expect(read).toHaveBeenCalledWith('/realm/resources/records/filters/options/owner', { search: 'Ada', collection: address });
+        expect(crud.create).toHaveBeenCalledWith('team-views', { name: 'People view', queryParameters: {}, resource: 'records' });
+        expect(crud.remove).toHaveBeenCalledWith('team-views', 'view-1');
+    });
+
     it('discovers declared variants and requests the selected resource schema', async () => {
         const { transport, read } = fixture();
         const variants = {

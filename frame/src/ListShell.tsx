@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import { ListFilters, useListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
@@ -41,10 +41,34 @@ export function ListShell({
     onCellCommit,
     paginationPlacement = 'both',
 }: ListShellProps) {
-    const { can, registry, listSlots, transport } = useFrameInjection();
-    const filters = useListFilters(resource);
+    const { can, registry, listSlots, transport, useUrlState } = useFrameInjection();
+    const [searchParams, setSearchParams] = useUrlState();
+    const collections = manifest?.collections ?? [];
+    const requestedCollection = searchParams.get('collection');
+    const selectedCollection = collections.find((choice) => choice.stem === requestedCollection)?.stem
+        ?? collections[0]?.stem;
+    // Frame and Facets ship together; the source-level Facets hook accepts the
+    // selected Collection in this slice even when a checked-in sibling dist is stale.
+    const filters = (useListFilters as (resource: string, collection?: string) => ReturnType<typeof useListFilters>)(
+        resource,
+        selectedCollection,
+    );
+    const requestParams = selectedCollection
+        ? { ...filters.requestParams, collection: selectedCollection }
+        : filters.requestParams;
 
-    const query = useResourceList(resource, filters.requestParams);
+    useEffect(() => {
+        if (!selectedCollection || requestedCollection === selectedCollection) return;
+        setSearchParams((previous) => {
+            const next = new URLSearchParams(previous);
+            next.set('collection', selectedCollection);
+            next.delete('page');
+            next.delete('cursor');
+            return next;
+        });
+    }, [requestedCollection, selectedCollection, setSearchParams]);
+
+    const query = useResourceList(resource, requestParams);
 
     // Manifest folds list-column participation into the columns; absent → passthrough.
     const resolvedColumns = withEditableCells(
@@ -68,6 +92,7 @@ export function ListShell({
     // inherits the host's `Cell`/`Empty`/`Pagination` instead of dropping back to bare HTML
     // for every key it did not restate.
     const Toolbar = slots?.Toolbar ?? listSlots?.Toolbar ?? DefaultToolbar;
+    const { SimpleSelect } = useFrameInjection().primitives;
     // The default is rendered INLINE, not wrapped in a component: an inline `() => <ListFilters/>`
     // was a new component type on every shell render, so each re-render remounted the whole filters
     // row (facets bar, saved views) and dropped its local state mid-interaction.
@@ -219,6 +244,31 @@ export function ListShell({
                     marginBottom: controlsShown ? '0.75rem' : 0,
                 }}
             >
+                {collections.length > 1 && SimpleSelect && (
+                    <SimpleSelect
+                        aria-label="Collection"
+                        value={selectedCollection}
+                        options={collections.map(({ stem, label }) => ({ value: stem, label }))}
+                        onValueChange={(stem: string) =>
+                            setSearchParams((previous) => {
+                                const next = new URLSearchParams(previous);
+                                next.set('collection', stem);
+                                for (const key of [...next.keys()]) {
+                                    if (
+                                        key === 'page' ||
+                                        key === 'cursor' ||
+                                        key === 'sort' ||
+                                        key === 'filterVariant' ||
+                                        key.startsWith('filter[')
+                                    ) {
+                                        next.delete(key);
+                                    }
+                                }
+                                return next;
+                            })
+                        }
+                    />
+                )}
                 {/* The facets bar fills the row (flex:1) so it spans full-width like
                     the bespoke list surfaces; any Toolbar (e.g. a New button) sits at
                     the right edge. `minWidth:0` lets the bar's chips wrap instead of
