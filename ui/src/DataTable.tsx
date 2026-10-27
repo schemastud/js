@@ -1,12 +1,13 @@
 import {
     flexRender,
     getCoreRowModel,
+    getExpandedRowModel,
     useReactTable,
     type ColumnDef,
     type Header,
 } from '@tanstack/react-table';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'lucide-react';
-import { useId, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, useId, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { Button } from './button';
 import { cn } from './cn';
 import { useIsMobile } from './use-mobile';
@@ -134,6 +135,8 @@ export function DataTable<TData>({
     clientSort,
     clientPageSize,
     stackOnMobile = false,
+    renderExpanded,
+    expandedRows,
 }: {
     columns: ColumnDef<TData, unknown>[];
     data: TData[];
@@ -153,6 +156,10 @@ export function DataTable<TData>({
     clientPageSize?: number;
     /** Below 768px, render each row as a stacked card instead of a table row (see above). */
     stackOnMobile?: boolean;
+    /** Detail content for caller-expanded rows; no expansion controls are added. */
+    renderExpanded?: (row: TData) => ReactNode;
+    /** Caller-owned object identities, not domain ids (two sources may share an id). */
+    expandedRows?: ReadonlySet<TData>;
 }) {
     const isMobile = useIsMobile();
     const uid = useId();
@@ -190,13 +197,25 @@ export function DataTable<TData>({
     // already have previous rows → keep them, dimmed, and cross-fade.
     const showSkeleton = loading && data.length === 0;
     const refetching = loading && data.length > 0;
+    // Source positions key TanStack rows when expansion is enabled; membership is
+    // still by object identity, independent of sorting, paging or duplicate domain ids.
+    const rowKeys = useMemo(() => new Map(data.map((row, index) => [row, String(index)])), [data]);
+    const expanded = Object.fromEntries(
+        renderExpanded
+            ? data.filter((row) => expandedRows?.has(row)).map((row) => [rowKeys.get(row)!, true])
+            : [],
+    );
     const table = useReactTable({
         data: displayData,
         columns,
         getCoreRowModel: getCoreRowModel(),
+        getExpandedRowModel: getExpandedRowModel(),
+        getRowCanExpand: () => Boolean(renderExpanded),
+        state: { expanded },
         manualPagination: true,
-        // A row's own `id` (when it has one) keys it, so a stacked card is `stacked-row-<id>` as ResponsiveRoster's was.
+        // Keep legacy domain ids without the expansion slot; expansion distinguishes source objects.
         getRowId: (row, index) => {
+            if (renderExpanded) return rowKeys.get(row)!;
             const id = (row as { id?: unknown } | null)?.id;
             return typeof id === 'string' || typeof id === 'number' ? String(id) : String(index);
         },
@@ -340,6 +359,14 @@ export function DataTable<TData>({
                                             )}
                                         </div>
                                     )}
+                                    {row.getIsExpanded() && renderExpanded && (
+                                        <div
+                                            className="border-t pt-2"
+                                            onClick={(event) => event.stopPropagation()}
+                                        >
+                                            {renderExpanded(row.original)}
+                                        </div>
+                                    )}
                                 </li>
                             );
                         })}
@@ -408,73 +435,81 @@ export function DataTable<TData>({
                         )}
                         {!showSkeleton &&
                             table.getRowModel().rows.map((row) => (
-                                <tr
-                                    key={row.id}
-                                    className={cn(
-                                        'border-b last:border-0',
-                                        onRowClick &&
-                                            'cursor-pointer transition-colors hover:bg-accent/50',
-                                        rowClassName?.(row.original),
-                                    )}
-                                    onClick={() => onRowClick?.(row.original)}
-                                >
-                                    {row.getVisibleCells().map((cell, index) => (
-                                        <td
-                                            key={cell.id}
-                                            className={cn(
-                                                'px-3 py-2',
-                                                index === 0 && onRowClick && 'relative',
-                                            )}
-                                            // The row's actions act on their own: a click here (pointer OR a
-                                            // keyboard activation that bubbles) never also opens the row, the
-                                            // same rule the stacked card applies.
-                                            onClick={
-                                                cell.column.id === 'actions'
-                                                    ? (event) => event.stopPropagation()
-                                                    : undefined
-                                            }
-                                        >
-                                            {index === 0 && onRowClick && (
-                                                // Keyboard-reachable row opener, named "Open <heading>" the
-                                                // same way the stacked card's Open control is (aria-labelledby
-                                                // = this button + the heading cell). A sibling of the cells'
-                                                // own controls, never a wrapper, so no interactive element is
-                                                // wrongly nested and the <tr> stays a plain row (a pointer
-                                                // convenience) rather than a button that would swallow them.
-                                                // Hidden until focused, then shown in place so the visible
-                                                // table layout is unchanged for every consumer.
-                                                <button
-                                                    type="button"
-                                                    id={`${uid}-open-${row.id}`}
-                                                    aria-labelledby={`${uid}-open-${row.id} ${uid}-row-${row.id}`}
-                                                    onClick={(event) => {
-                                                        event.stopPropagation();
-                                                        onRowClick(row.original);
-                                                    }}
-                                                    className="sr-only rounded-md bg-card px-2 py-1 text-xs font-medium text-primary underline focus:not-sr-only focus:absolute focus:left-1 focus:top-1 focus:z-10 focus:no-underline focus:shadow focus:outline-none focus:ring-2 focus:ring-ring"
-                                                >
-                                                    Open
-                                                </button>
-                                            )}
-                                            {index === 0 ? (
-                                                <span
-                                                    id={`${uid}-row-${row.id}`}
-                                                    className="contents"
-                                                >
-                                                    {flexRender(
+                                <Fragment key={row.id}>
+                                    <tr
+                                        className={cn(
+                                            'border-b last:border-0',
+                                            onRowClick &&
+                                                'cursor-pointer transition-colors hover:bg-accent/50',
+                                            rowClassName?.(row.original),
+                                        )}
+                                        onClick={() => onRowClick?.(row.original)}
+                                    >
+                                        {row.getVisibleCells().map((cell, index) => (
+                                            <td
+                                                key={cell.id}
+                                                className={cn(
+                                                    'px-3 py-2',
+                                                    index === 0 && onRowClick && 'relative',
+                                                )}
+                                                // The row's actions act on their own: a click here (pointer OR a
+                                                // keyboard activation that bubbles) never also opens the row, the
+                                                // same rule the stacked card applies.
+                                                onClick={
+                                                    cell.column.id === 'actions'
+                                                        ? (event) => event.stopPropagation()
+                                                        : undefined
+                                                }
+                                            >
+                                                {index === 0 && onRowClick && (
+                                                    // Keyboard-reachable row opener, named "Open <heading>" the
+                                                    // same way the stacked card's Open control is (aria-labelledby
+                                                    // = this button + the heading cell). A sibling of the cells'
+                                                    // own controls, never a wrapper, so no interactive element is
+                                                    // wrongly nested and the <tr> stays a plain row (a pointer
+                                                    // convenience) rather than a button that would swallow them.
+                                                    // Hidden until focused, then shown in place so the visible
+                                                    // table layout is unchanged for every consumer.
+                                                    <button
+                                                        type="button"
+                                                        id={`${uid}-open-${row.id}`}
+                                                        aria-labelledby={`${uid}-open-${row.id} ${uid}-row-${row.id}`}
+                                                        onClick={(event) => {
+                                                            event.stopPropagation();
+                                                            onRowClick(row.original);
+                                                        }}
+                                                        className="sr-only rounded-md bg-card px-2 py-1 text-xs font-medium text-primary underline focus:not-sr-only focus:absolute focus:left-1 focus:top-1 focus:z-10 focus:no-underline focus:shadow focus:outline-none focus:ring-2 focus:ring-ring"
+                                                    >
+                                                        Open
+                                                    </button>
+                                                )}
+                                                {index === 0 ? (
+                                                    <span
+                                                        id={`${uid}-row-${row.id}`}
+                                                        className="contents"
+                                                    >
+                                                        {flexRender(
+                                                            cell.column.columnDef.cell,
+                                                            cell.getContext(),
+                                                        )}
+                                                    </span>
+                                                ) : (
+                                                    flexRender(
                                                         cell.column.columnDef.cell,
                                                         cell.getContext(),
-                                                    )}
-                                                </span>
-                                            ) : (
-                                                flexRender(
-                                                    cell.column.columnDef.cell,
-                                                    cell.getContext(),
-                                                )
-                                            )}
-                                        </td>
-                                    ))}
-                                </tr>
+                                                    )
+                                                )}
+                                            </td>
+                                        ))}
+                                    </tr>
+                                    {row.getIsExpanded() && renderExpanded && (
+                                        <tr className="border-b last:border-0">
+                                            <td colSpan={row.getVisibleCells().length} className="px-3 py-2">
+                                                {renderExpanded(row.original)}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </Fragment>
                             ))}
                     </tbody>
                 </table>

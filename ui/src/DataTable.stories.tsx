@@ -1,5 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
+import { Button } from './button';
 import { Badge } from './badge';
 import { DataTable } from './DataTable';
 
@@ -64,4 +66,47 @@ export const Empty: Story = {
 /** states = loading — first load with no rows shows shaped skeleton rows (never a bare spinner). */
 export const Loading: Story = {
     render: () => <DataTable columns={columns} data={[]} loading skeletonRows={4} />,
+};
+
+/** Expansion state belongs to the caller and uses row identity rather than a domain id. */
+export const ExpandedRow: Story = {
+    render: function ExpandedTable() {
+        const [expanded, setExpanded] = useState<ReadonlySet<Row>>(new Set([rows[0]]));
+        const expandableColumns: ColumnDef<Row, unknown>[] = [
+            ...columns,
+            {
+                id: 'actions',
+                header: 'Details',
+                cell: ({ row }) => (
+                    <Button
+                        variant="ghost"
+                        aria-expanded={expanded.has(row.original)}
+                        onClick={() =>
+                            setExpanded((current) => {
+                                const next = new Set(current);
+                                if (next.has(row.original)) next.delete(row.original);
+                                else next.add(row.original);
+                                return next;
+                            })
+                        }
+                    >
+                        {expanded.has(row.original) ? 'Hide' : 'Show'} details
+                    </Button>
+                ),
+            },
+        ];
+        return (
+            <DataTable
+                columns={expandableColumns}
+                data={rows}
+                stackOnMobile
+                expandedRows={expanded}
+                renderExpanded={(row) => (
+                    <p>
+                        Snapshot for {row.name}, captured from {row.source}.
+                    </p>
+                )}
+            />
+        );
+    },
 };
