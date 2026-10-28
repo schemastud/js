@@ -7,14 +7,14 @@ import type { CardWidgetProps } from './types';
  * widget of its own. `recent-list` draws each item with it when the TARGET's root `list-item`
  * declares NO name. Measured at tower and the flagship: the Activity overview card printed
  * `5,4,3,2,1`, because `splicewire/tower`'s `CentralActivityData` carries `description` /
- * `event` / `created_at` and no `name` / `title` / `label` — an unbound root through
+ * `event` / `createdAt` and no `name` / `title` / `label` — an unbound root through
  * `SchemaView` falls to its scalar default, and a display-name fallback that knows only three
  * field names falls through to the id.
  *
  * Three slots, each optional, read by field-name convention off the record the server sent:
  *   text  — the first present of `title | label | name | description | summary`
  *   badge — `event`, else `status`
- *   time  — the first present of `created_at | occurred_at | updated_at`: short relative
+ *   time  — the first present of `created_at/createdAt | occurred_at/occurredAt | updated_at/updatedAt`: short relative
  *           within a week (`2h ago`, `yesterday`), the locale date beyond it, and the RAW string
  *           when unparseable — never `Invalid Date`, never a dash for a populated-and-wrong value
  * The id is the text only when no text field exists: the last resort, not the default.
@@ -59,7 +59,7 @@ export function RecordLine({ value }: CardWidgetProps<Row>) {
 
 const TEXT_FIELDS = ['title', 'label', 'name', 'description', 'summary'] as const;
 const BADGE_FIELDS = ['event', 'status'] as const;
-const TIME_FIELDS = ['created_at', 'occurred_at', 'updated_at'] as const;
+const TIME_FIELDS = ['created_at', 'createdAt', 'occurred_at', 'occurredAt', 'updated_at', 'updatedAt'] as const;
 
 /** The first field that holds a non-blank string, in the order given. */
 function firstString(record: Row, fields: readonly string[]): string | undefined {

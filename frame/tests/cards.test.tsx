@@ -766,6 +766,38 @@ describe('leaf cards', () => {
         expect(container.querySelector('[data-frame-record-line-text]')?.textContent).toBe('9');
     });
 
+    it.each(['createdAt', 'occurredAt', 'updatedAt'])(
+        'RecordLine renders the camelCase %s timestamp sent by Tower',
+        (field) => {
+            const raw = '2026-01-05T09:00:00Z';
+            const { container } = render(<RecordLine value={{ id: 9, description: 'Event detail', [field]: raw }} />);
+            const time = container.querySelector('time[data-frame-record-line-time]');
+
+            expect(time?.getAttribute('datetime')).toBe(raw);
+            expect(time?.textContent).toBe(new Date(raw).toLocaleDateString());
+            expect(container.querySelector('[data-frame-record-line-text]')?.textContent).toBe('Event detail');
+        },
+    );
+
+    it('RecordLine gives creation time priority across spellings and keeps snake_case tie priority', () => {
+        const created = '2026-01-05T09:00:00Z';
+        const occurred = '2026-01-06T09:00:00Z';
+        const { container, rerender } = render(
+            <RecordLine value={{ id: 9, createdAt: created, occurred_at: occurred }} />,
+        );
+        expect(container.querySelector('time')?.getAttribute('datetime')).toBe(created);
+        expect(container.querySelector('[data-frame-record-line-text]')?.textContent).toBe('9');
+
+        rerender(<RecordLine value={{ id: 9, created_at: created, createdAt: occurred }} />);
+        expect(container.querySelector('time')?.getAttribute('datetime')).toBe(created);
+    });
+
+    it('RecordLine keeps invalid camelCase timestamps visible as raw text', () => {
+        const { container } = render(<RecordLine value={{ id: 9, createdAt: 'not a date' }} />);
+        expect(container.querySelector('time')?.textContent).toBe('not a date');
+        expect(container.textContent).not.toContain('Invalid Date');
+    });
+
     it('formatRecordTime: relative within a week, the locale date beyond it, raw when unparseable', () => {
         const now = Date.parse('2026-09-18T12:00:00Z');
         const at = (ms: number) => new Date(now - ms).toISOString();
