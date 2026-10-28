@@ -398,7 +398,8 @@ describe('ListShell — the controls row', () => {
     it('keeps the default filters row mounted across shell re-renders', async () => {
         const injection = makeInjection(TABLE_ROWS);
         (injection.transport.getFilterSchema as ReturnType<typeof vi.fn>).mockImplementation(async () => ({
-            properties: {},
+            // Saved Views needs a meaningful query state (B15); this case proves remount stability.
+            properties: { title: { 'x-sort': { name: 'title' } } },
             savedViewsResource: 'saved-views',
         }));
         const Wrapper = wrap(injection);
