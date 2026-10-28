@@ -60,6 +60,10 @@ noncanonical variants exist, including when the default vocabulary is empty. Sel
 `filterVariant` URL parameter. Switching clears filters, sort and page; saved views preserve
 the variant and restore only filters and sorts its current schema declares.
 
+The filter bar, including Saved Views, stays hidden when there are no `x-filter` or `x-sort`
+properties and no non-canonical variants, even if saving is advertised. A zero-result query can
+still be saved when that vocabulary exists; visibility does not depend on the current row count.
+
 Saved-view support comes from the schema response's `savedViewsResource`. Mutation controls
 also require server permissions: `savedViewsCan.create` for Save and each saved row's
 `can.delete` for Delete. Missing permissions leave readable views applicable and hide the

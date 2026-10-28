@@ -10,6 +10,7 @@ import type {
     FacetsPrimitives,
     FacetsTransport,
     FilterSchema,
+    FilterVariant,
 } from '../src/types';
 
 /**
@@ -34,10 +35,10 @@ const POPULATED: FilterSchema = {
     },
 };
 
-function makeTransport(schema: FilterSchema): FacetsTransport {
+function makeTransport(schema: FilterSchema, variants: FilterVariant[] = []): FacetsTransport {
     return {
         getFilterSchema: vi.fn(async () => schema),
-        getFilterVariants: vi.fn(async (resource) => ({ resource, variants: [] })),
+        getFilterVariants: vi.fn(async (resource) => ({ resource, variants })),
         getFilterOptions: vi.fn(async () => []),
         getSavedFilters: vi.fn(async () => []),
         saveFilter: vi.fn(async () => ({
@@ -119,8 +120,8 @@ function Harness({ resource }: { resource: string }) {
     );
 }
 
-function mount(schema: FilterSchema) {
-    const transport = makeTransport(schema);
+function mount(schema: FilterSchema, variants: FilterVariant[] = []) {
+    const transport = makeTransport(schema, variants);
     const injection = { transport, primitives, useUrlState: makeUrlState() };
     render(<Harness resource="thing" />, { wrapper: wrapper(injection) });
     return transport;
@@ -129,6 +130,51 @@ function mount(schema: FilterSchema) {
 afterEach(cleanup);
 
 describe('an empty filter vocabulary', () => {
+    it.each<{ label: string; properties: FilterSchema['properties']; variants: FilterVariant[] }>([
+        { label: 'no vocabulary', properties: {}, variants: [] },
+        { label: 'ordinary properties only', properties: { title: { title: 'Title' } }, variants: [] },
+        {
+            label: 'the canonical variant alone',
+            properties: {},
+            variants: [{ key: 'thing', resource: 'thing', canonical: true, sameAsCanonical: true }],
+        },
+    ])('does not mount advertised saved views for $label', async ({ properties, variants }) => {
+        const transport = mount({
+            properties,
+            savedViewsResource: 'personal-views',
+            savedViewsCan: { create: true, update: true, delete: true },
+        }, variants);
+
+        await waitFor(() => expect(screen.getByTestId('host').dataset.schema).toBe('resolved'));
+        expect(screen.queryByText('Saved views')).toBeNull();
+        expect(screen.queryByText('Save current view')).toBeNull();
+        expect(screen.getByTestId('host').childElementCount).toBe(0);
+        expect(transport.getSavedFilters).not.toHaveBeenCalled();
+    });
+
+    it('keeps saved views available for a non-canonical variant without field vocabulary', async () => {
+        const transport = mount({
+            properties: {},
+            savedViewsResource: 'personal-views',
+            savedViewsCan: { create: true, update: true, delete: true },
+        }, [{ key: 'recent', resource: 'thing', canonical: false, sameAsCanonical: false }]);
+
+        expect(await screen.findByText('Save current view')).toBeDefined();
+        expect(screen.getByText('Saved views')).toBeDefined();
+        await waitFor(() => expect(transport.getSavedFilters).toHaveBeenCalledWith('thing'));
+    });
+
+    it('keeps saved views available for filter vocabulary without sorting', async () => {
+        const transport = mount({
+            properties: { title: { 'x-filter': { name: 'title', operator: 'partial', control: 'text' } } },
+            savedViewsResource: 'personal-views',
+            savedViewsCan: { create: true, update: true, delete: true },
+        });
+
+        expect(await screen.findByText('Save current view')).toBeDefined();
+        await waitFor(() => expect(transport.getSavedFilters).toHaveBeenCalledWith('thing'));
+    });
+
     it('keeps sorting usable without saved-view support and never fetches saved views', async () => {
         const transport = mount(POPULATED);
         const sort = await screen.findByLabelText('Sort by');

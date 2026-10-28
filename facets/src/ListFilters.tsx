@@ -28,7 +28,8 @@ export function ListFilters(state: ListFiltersState) {
         (property) => property['x-filter'] || property['x-sort']
     );
 
-    if (!hasVariants && !hasVocabulary && !schema?.savedViewsResource) return null;
+    // Advertising persistence does not create a filter, sort or variant worth saving.
+    if (!hasVariants && !hasVocabulary) return null;
 
     return (
         <div className="space-y-3">
