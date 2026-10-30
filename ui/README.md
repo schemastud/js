@@ -63,3 +63,19 @@ dependencies — the host provides the single copy.
 - `npm run typecheck` — `tsc --noEmit` (also fails on any stray `@/` import).
 - `npm run lint:imports` — the deny-list gate.
 - `npm test` — isolation mount: primitives render off a plain fixture, no Laravel.
+
+### Money presentation
+
+Mount `MoneyFormatProvider` once with the host's served `{ currency, locale, minorDigits?, costMaxDigits? }`.
+`useMoneyFormat()` returns `(amount, options?) => string`; the pure `formatMoney(amount, options?, format?)`
+uses the same policy. Amounts are currency units, never integer cents. No caller switches automatically.
+
+`mode: 'charge'` (default) uses ISO currency minor units unless overridden. `cost` and `rate` keep up to
+`costMaxDigits` (default 6). A nonzero amount below that display cap reads “less than” the final place;
+a negative one reads “greater than” its negative floor. Locale/currency apply to both. Negative zero
+is suppressed. Invalid amounts/digit ranges throw instead of fabricating a cost.
+
+Use `price: true` only for prices: a zero then reads “Free”. Recorded zeros remain formatted zero.
+Rows may supply `basis: 'unpriced'` (“Not priced”), `'priced'` (normal amount), or `'replayed'`
+(amount plus “· replayed”). Do not infer basis from the amount. Missing rows and uncapped limits
+remain the consumer's separate absence/limit states. This API does not change accounting rounding.
