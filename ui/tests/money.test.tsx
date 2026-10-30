@@ -37,6 +37,12 @@ describe('formatMoney', () => {
         expect(formatMoney(3, { price: true })).toBe('$3.00');
     });
 
+    it('distinguishes an explicit unknown pricing fact from an omitted basis', () => {
+        expect(formatMoney(0, { mode: 'cost', basis: null })).toBe('Pricing unknown');
+        expect(formatMoney(1.25, { mode: 'cost', basis: null })).toBe('Pricing unknown');
+        expect(formatMoney(0, { basis: undefined })).toBe('$0.00');
+    });
+
     it('names the configured precision floor without falsely displaying zero', () => {
         const format = { currency: 'USD', locale: 'en-US', costMaxDigits: 4 };
         expect(formatMoney(0.000029, { mode: 'cost' }, format)).toBe('less than $0.0001');
