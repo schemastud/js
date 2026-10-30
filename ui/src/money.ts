@@ -25,7 +25,8 @@ export const defaultMoneyFormat: Readonly<MoneyFormat> = {
 export function formatMoney(amount: number, options: MoneyOptions = {}, format: MoneyFormat = defaultMoneyFormat): string {
     if (!Number.isFinite(amount)) throw new RangeError('Money amount must be finite');
     const currency = new Intl.NumberFormat(format.locale, { style: 'currency', currency: format.currency });
-    const minor = format.minorDigits ?? currency.resolvedOptions().maximumFractionDigits;
+    // Intl types allow absent fraction digits; currency defaults normally supply them.
+    const minor = format.minorDigits ?? currency.resolvedOptions().maximumFractionDigits ?? 2;
     const cap = format.costMaxDigits ?? 6;
     for (const digits of [minor, cap]) {
         if (!Number.isInteger(digits) || digits < 0 || digits > 20) throw new RangeError('Money digits must be an integer from 0 to 20');
