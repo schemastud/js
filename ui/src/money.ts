@@ -14,7 +14,7 @@ export interface MoneyOptions {
     /** Only a price (plan/offer/listing) of zero is Free. A recorded zero is an amount. */
     price?: boolean;
     /** Supplied by the row; never inferred from an amount or a missing model. */
-    basis?: MoneyBasis;
+    basis?: MoneyBasis | null;
 }
 
 export const defaultMoneyFormat: Readonly<MoneyFormat> = {
@@ -30,6 +30,7 @@ export function formatMoney(amount: number, options: MoneyOptions = {}, format: 
     for (const digits of [minor, cap]) {
         if (!Number.isInteger(digits) || digits < 0 || digits > 20) throw new RangeError('Money digits must be an integer from 0 to 20');
     }
+    if (options.basis === null) return 'Pricing unknown';
     if (options.basis === 'unpriced') return 'Not priced';
     if (amount === 0 && options.price) return 'Free';
 

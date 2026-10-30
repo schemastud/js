@@ -77,5 +77,6 @@ is suppressed. Invalid amounts/digit ranges throw instead of fabricating a cost.
 
 Use `price: true` only for prices: a zero then reads “Free”. Recorded zeros remain formatted zero.
 Rows may supply `basis: 'unpriced'` (“Not priced”), `'priced'` (normal amount), or `'replayed'`
-(amount plus “· replayed”). Do not infer basis from the amount. Missing rows and uncapped limits
+(amount plus “· replayed”). An explicit `basis: null` means the pricing fact is unknown and reads
+“Pricing unknown”; an omitted basis keeps ordinary formatting for older/charge callers. Do not infer basis from the amount. Missing rows and uncapped limits
 remain the consumer's separate absence/limit states. This API does not change accounting rounding.
