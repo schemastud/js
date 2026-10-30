@@ -63,8 +63,8 @@ it('binds the served format once and updates consumers when the provider changes
         const money = useMoneyFormat();
         return <span>{money(0.0049, { mode: 'cost' })}</span>;
     }
-    const { rerender } = render(<MoneyFormatProvider value={{ currency: 'USD', locale: 'en-US' }}><Amount /></MoneyFormatProvider>);
+    const { rerender, container } = render(<MoneyFormatProvider value={{ currency: 'USD', locale: 'en-US' }}><Amount /></MoneyFormatProvider>);
     expect(screen.getByText('$0.0049')).toBeTruthy();
     rerender(<MoneyFormatProvider value={{ currency: 'EUR', locale: 'de-DE' }}><Amount /></MoneyFormatProvider>);
-    expect(screen.getByText('0,0049 €')).toBeTruthy();
+    expect(container.textContent).toBe('0,0049 €');
 });
