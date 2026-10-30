@@ -1,7 +1,11 @@
 name: Release
 
-# Publishes changed @schemastud packages to the public npm registry via Changesets.
-# Requires repo secret NPM_TOKEN (an npm automation token for the `schemastud` org).
+# Opens or updates the "Version Packages" PR from pending changesets. It never publishes: @schemastud
+# packages release as Git release refs (a detached release commit plus a `<package>@<version>` tag, made
+# by the ecosystem's tools/js-release/release-package; docs/design/js-git-release-refs.md), and consumers
+# pin those commits. With `publish:` set, every push to main that left no pending changesets ran
+# `changeset publish`; on 2026-10-18 (run 39164931961) it attempted to publish _resources, breadcrumb and
+# combobox 0.1.0 and failed only on ENEEDAUTH after falling back to npm trusted publishing (OIDC).
 # GITHUB_TOKEN is provided automatically.
 
 on:
@@ -13,7 +17,6 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
-  id-token: write
 
 jobs:
   release:
@@ -26,19 +29,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
       - run: npm ci
 
       - run: npm run build
 
-      # Opens/updates the "Version Packages" PR; when that PR merges, publishes.
-      - name: Create Release PR or publish
+      - name: Create or update the Version Packages PR
         uses: changesets/action@v1
         with:
           version: npm run version-packages
-          publish: npm run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
