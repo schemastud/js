@@ -137,6 +137,7 @@ export function DataTable<TData>({
     stackOnMobile = false,
     renderExpanded,
     expandedRows,
+    rowId,
 }: {
     columns: ColumnDef<TData, unknown>[];
     data: TData[];
@@ -160,6 +161,12 @@ export function DataTable<TData>({
     renderExpanded?: (row: TData) => ReactNode;
     /** Caller-owned object identities, not domain ids (two sources may share an id). */
     expandedRows?: ReadonlySet<TData>;
+    /**
+     * The row's stable identity, for rows without a string/number `id`. Rows then keep their
+     * React identity across inserts and reorders, so per-cell state (a `ChangedCell` roll, an
+     * open menu) stays on its own row instead of following the index.
+     */
+    rowId?: (row: TData) => string;
 }) {
     const isMobile = useIsMobile();
     const uid = useId();
@@ -216,6 +223,7 @@ export function DataTable<TData>({
         // Keep legacy domain ids without the expansion slot; expansion distinguishes source objects.
         getRowId: (row, index) => {
             if (renderExpanded) return rowKeys.get(row)!;
+            if (rowId) return rowId(row);
             const id = (row as { id?: unknown } | null)?.id;
             return typeof id === 'string' || typeof id === 'number' ? String(id) : String(index);
         },

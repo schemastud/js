@@ -57,6 +57,25 @@ package's built `dist` for the utility classes it uses:
 `@radix-ui/react-switch`, `@tanstack/react-table` and `lucide-react` are **peer**
 dependencies — the host provides the single copy.
 
+## Motion
+
+The motion vocabulary ships as a stylesheet. Import it after Tailwind and `tw-animate-css`:
+
+```css
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@schemastud/ui/motion.css';
+```
+
+It holds the `--splice-motion-*` tokens (under `:where(:root)`, so a host's `:root` value wins),
+the `motion-standard` / `route-enter` / `list-cross-fade` utilities, and the state transitions
+ruled in owner-review 18: overlays enter in 200 ms and leave in 140 ms with short travel (keyed on
+the primitives' `data-slot` hooks), `SaveButton` / `MotionFaces` hold their width while the label
+fades (B1), `DetailSwap` soft-cuts a desktop detail or pushes/backs a phone stack (C1/C2),
+`ChangedCell` rolls only a changed cell (D3), and `MotionRow` / `useFlip` open, close and re-sort
+the operator's own rows (D2). Under `prefers-reduced-motion: reduce` each piece drops its travel
+and keeps its fade.
+
 ## Verify
 
 - `npm run build` — tsup ESM + `.d.ts`.

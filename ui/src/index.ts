@@ -67,6 +67,18 @@ export {
     type SimpleSelectOption,
 } from './select';
 export { Popover, PopoverTrigger, PopoverContent } from './popover';
+// The state-transition primitives `@schemastud/ui/motion.css` styles (owner-review 18).
+export {
+    ChangedCell,
+    DetailSwap,
+    MotionFaces,
+    MotionRow,
+    prefersReducedMotion,
+    useFlip,
+    type DetailSwapMotion,
+    type MotionFace,
+} from './motion';
+export { SaveButton } from './save-button';
 export { Separator } from './separator';
 export { Skeleton } from './skeleton';
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './tooltip';

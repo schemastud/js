@@ -118,15 +118,37 @@ export function PopoverContent({
     children: React.ReactNode;
 }) {
     const { open, contentRef } = usePopover();
-    if (!open) return null;
+    // A2: stay mounted through the exit. `present` lags `open` by one exit animation; the panel's
+    // own `animationend` unmounts it, and a timer covers a host with no tw-animate-css (no
+    // animation runs, so no event fires).
+    const [present, setPresent] = React.useState(open);
+    React.useEffect(() => {
+        if (open) {
+            setPresent(true);
+            return;
+        }
+        const timer = window.setTimeout(() => setPresent(false), 400);
+        return () => window.clearTimeout(timer);
+    }, [open]);
+    if (!open && !present) return null;
 
     return (
         <div
             ref={contentRef}
             role="dialog"
+            // motion.css keys the feedback-tier timing and the 4 px travel on these hooks.
+            data-slot="popover-content"
+            data-state={open ? 'open' : 'closed'}
+            data-side={side}
+            data-align={align}
+            aria-hidden={open ? undefined : true}
+            onAnimationEnd={(event) => {
+                if (!open && event.target === event.currentTarget) setPresent(false);
+            }}
             className={cn(
                 'absolute z-50 min-w-56 rounded-md border bg-popover p-3 text-popover-foreground shadow-md',
-                'animate-in fade-in-0 zoom-in-95',
+                'data-[state=open]:animate-in data-[state=open]:fade-in-0',
+                'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:fill-mode-forwards data-[state=closed]:pointer-events-none',
                 side === 'top' ? 'bottom-full mb-1' : 'top-full mt-1',
                 align === 'end' ? 'right-0' : 'left-0',
                 className,

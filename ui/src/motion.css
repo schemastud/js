@@ -1,0 +1,320 @@
+/*
+ * @schemastud/ui — the motion vocabulary (owner-review 18, ruled 2026-11-02: A2, B1, C1 + C2, D3 + D2).
+ *
+ * One source for the tokens, the three host utilities, the state-transition classes the primitives
+ * name, and the reduced-motion guard. A host imports it AFTER tailwindcss and tw-animate-css:
+ *
+ *     @import 'tailwindcss';
+ *     @import 'tw-animate-css';
+ *     @import '@schemastud/ui/motion.css';
+ *
+ * Tokens sit under `:where(:root)` (zero specificity), so a host's own `:root` value wins without
+ * `!important`; the `--splice-motion-*` names and the two original values are kept.
+ *
+ * The overlay rules are unlayered on purpose: they set the custom properties tw-animate's `enter` /
+ * `exit` keyframes read, and must beat its `slide-*` / `zoom-*` utilities in Tailwind's utilities
+ * layer. They key on the `data-slot` / `data-state` / `data-side` hooks the primitives carry.
+ *
+ * Reduced motion is PER PIECE, never a blanket clamp: under `prefers-reduced-motion: reduce` the
+ * spatial part of each transition (translate, scale, height, FLIP) is removed and its opacity or
+ * colour part stays, shortened to `--splice-motion-reduced`. A state change still reads.
+ */
+
+:where(:root) {
+    /* Routine state change (UI-18): route swaps, list cross-fade, `motion-standard`. */
+    --splice-motion-duration: 180ms;
+    --splice-motion-ease: cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* A2 — overlays enter slower than they leave. */
+    --splice-motion-enter: 200ms;
+    --splice-motion-exit: 140ms;
+    --splice-motion-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --splice-motion-ease-in: cubic-bezier(0.3, 0, 0.8, 0.15);
+
+    /* Feedback tier — anchored popovers, save labels, the soft cut, cell rolls. */
+    --splice-motion-feedback: 120ms;
+    --splice-motion-feedback-exit: 90ms;
+
+    /* The travel an overlay makes instead of crossing the screen. */
+    --splice-motion-sheet-travel: 32px;
+    --splice-motion-popover-travel: 4px;
+
+    /* What every fade shortens to under reduced motion. */
+    --splice-motion-reduced: 100ms;
+}
+
+/* ── Host utilities (UI-18) ─────────────────────────────────────────────────────────────── */
+
+@utility motion-standard {
+    --tw-duration: var(--splice-motion-duration);
+    --tw-ease: var(--splice-motion-ease);
+}
+
+@utility route-enter {
+    animation: swc-route-enter var(--splice-motion-duration) var(--splice-motion-ease) both;
+}
+
+@utility list-cross-fade {
+    transition: opacity var(--splice-motion-duration) var(--splice-motion-ease);
+}
+
+@keyframes swc-route-enter {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes swc-fade-in {
+    from {
+        opacity: 0;
+    }
+}
+
+@keyframes swc-fade-out {
+    to {
+        opacity: 0;
+    }
+}
+
+/* ── A2 · Overlays: enter 200 ms ease-out, exit 140 ms ease-in, short travel ────────────── */
+
+:is(
+        [data-slot='sheet-overlay'],
+        [data-slot='sheet-content'],
+        [data-slot='side-panel-content'],
+        [data-slot='dialog-overlay'],
+        [data-slot='dialog-content']
+    )[data-state='open'] {
+    --tw-duration: var(--splice-motion-enter);
+    --tw-ease: var(--splice-motion-ease-out);
+}
+
+:is(
+        [data-slot='sheet-overlay'],
+        [data-slot='sheet-content'],
+        [data-slot='side-panel-content'],
+        [data-slot='dialog-overlay'],
+        [data-slot='dialog-content']
+    )[data-state='closed'] {
+    --tw-duration: var(--splice-motion-exit);
+    --tw-ease: var(--splice-motion-ease-in);
+}
+
+/* A sheet (and the side panel) arrives from 32 px off its own edge with a fade, rather than
+ * crossing its whole width. */
+:is([data-slot='sheet-content'], [data-slot='side-panel-content'])[data-state] {
+    --tw-enter-opacity: 0;
+    --tw-exit-opacity: 0;
+}
+:is([data-slot='sheet-content'], [data-slot='side-panel-content'])[data-side='right'][data-state] {
+    --tw-enter-translate-x: var(--splice-motion-sheet-travel);
+    --tw-exit-translate-x: var(--splice-motion-sheet-travel);
+}
+:is([data-slot='sheet-content'], [data-slot='side-panel-content'])[data-side='left'][data-state] {
+    --tw-enter-translate-x: calc(-1 * var(--splice-motion-sheet-travel));
+    --tw-exit-translate-x: calc(-1 * var(--splice-motion-sheet-travel));
+}
+:is([data-slot='sheet-content'], [data-slot='side-panel-content'])[data-side='top'][data-state] {
+    --tw-enter-translate-y: calc(-1 * var(--splice-motion-sheet-travel));
+    --tw-exit-translate-y: calc(-1 * var(--splice-motion-sheet-travel));
+}
+:is([data-slot='sheet-content'], [data-slot='side-panel-content'])[data-side='bottom'][data-state] {
+    --tw-enter-translate-y: var(--splice-motion-sheet-travel);
+    --tw-exit-translate-y: var(--splice-motion-sheet-travel);
+}
+
+/* The dialog is centred: no travel, a 97 % scale. */
+[data-slot='dialog-content'][data-state] {
+    --tw-enter-scale: 0.97;
+    --tw-exit-scale: 0.97;
+}
+
+/* The popover is anchored feedback: the feedback tier (120 in, 90 out), 4 px from its trigger,
+ * no zoom. */
+[data-slot='popover-content'][data-state='open'] {
+    --tw-duration: var(--splice-motion-feedback);
+    --tw-ease: var(--splice-motion-ease-out);
+}
+[data-slot='popover-content'][data-state='closed'] {
+    --tw-duration: var(--splice-motion-feedback-exit);
+    --tw-ease: var(--splice-motion-ease-in);
+}
+[data-slot='popover-content'][data-state] {
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+}
+[data-slot='popover-content'][data-side='bottom'][data-state] {
+    --tw-enter-translate-y: calc(-1 * var(--splice-motion-popover-travel));
+    --tw-exit-translate-y: calc(-1 * var(--splice-motion-popover-travel));
+}
+[data-slot='popover-content'][data-side='top'][data-state] {
+    --tw-enter-translate-y: var(--splice-motion-popover-travel);
+    --tw-exit-translate-y: var(--splice-motion-popover-travel);
+}
+
+/* ── B1 · Save states: a steady pill and button, width held, label fading up ────────────── */
+/* Every face sits in one grid cell, so the widest label sets the width and nothing reflows. */
+
+.motion-faces {
+    display: inline-grid;
+}
+.motion-faces > .motion-face {
+    grid-area: 1 / 1;
+    transition:
+        opacity var(--splice-motion-feedback) var(--splice-motion-ease-out),
+        transform var(--splice-motion-feedback) var(--splice-motion-ease-out);
+}
+.motion-faces > .motion-face[data-on='false'] {
+    opacity: 0;
+    transform: translateY(2px);
+    pointer-events: none;
+}
+
+/* ── C1 · List → detail on desktop: a 120 ms soft cut ───────────────────────────────────── */
+
+.motion-soft-cut {
+    animation: swc-fade-in var(--splice-motion-feedback) var(--splice-motion-ease-out) both;
+}
+
+/* ── C2 · List → detail on the phone stack: push in, back out ───────────────────────────── */
+
+.motion-push,
+.motion-back {
+    animation: swc-stack-move var(--splice-motion-duration) var(--splice-motion-ease-out) both;
+}
+.motion-push {
+    --swc-stack-from: 16px 0;
+}
+.motion-back {
+    --swc-stack-from: -16px 0;
+}
+
+@keyframes swc-stack-move {
+    from {
+        opacity: 0;
+        translate: var(--swc-stack-from, 0 0);
+    }
+}
+
+/* ── D3 · Rows, remote change: only the changed cell rolls ──────────────────────────────── */
+
+.motion-cell {
+    display: inline-grid;
+    overflow: hidden;
+}
+.motion-cell-roll {
+    animation: swc-cell-roll 160ms var(--splice-motion-ease-out) both;
+}
+/* A changing cell never goes blank: the new value starts at 0.4. */
+@keyframes swc-cell-roll {
+    from {
+        opacity: 0.4;
+        translate: 0 6px;
+    }
+}
+@keyframes swc-cell-in {
+    from {
+        opacity: 0.4;
+    }
+}
+
+/* ── D2 · Rows, the operator's own insert / archive: height opens and closes ────────────── */
+/* `grid-template-rows` 0fr ↔ 1fr on a wrapper: no measured heights. The wrapper clips only while
+ * it moves, so focus rings are never cut at rest. */
+
+.motion-row {
+    display: grid;
+    grid-template-rows: 1fr;
+}
+.motion-row > * {
+    min-height: 0;
+}
+.motion-row[data-motion='open'] > *,
+.motion-row[data-motion='close'] > * {
+    overflow: hidden;
+}
+.motion-row[data-motion='open'] {
+    animation: swc-row-open var(--splice-motion-enter) var(--splice-motion-ease-out) both;
+}
+.motion-row[data-motion='close'] {
+    animation:
+        swc-row-close var(--splice-motion-enter) var(--splice-motion-ease) both,
+        swc-fade-out var(--splice-motion-exit) var(--splice-motion-ease-in) both;
+}
+
+@keyframes swc-row-open {
+    from {
+        grid-template-rows: 0fr;
+        opacity: 0;
+    }
+}
+@keyframes swc-row-close {
+    to {
+        grid-template-rows: 0fr;
+    }
+}
+
+/* ── Reduced motion, per piece ──────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    /* Overlays and every tw-animate enter/exit: the travel, zoom and blur go; the fade stays. */
+    *,
+    *::before,
+    *::after {
+        --tw-enter-translate-x: 0 !important;
+        --tw-enter-translate-y: 0 !important;
+        --tw-exit-translate-x: 0 !important;
+        --tw-exit-translate-y: 0 !important;
+        --tw-enter-scale: 1 !important;
+        --tw-exit-scale: 1 !important;
+        --tw-enter-blur: 0 !important;
+        --tw-exit-blur: 0 !important;
+        --tw-duration: var(--splice-motion-reduced) !important;
+        scroll-behavior: auto !important;
+    }
+
+    /* Route swaps: the rise goes, the fade stays. */
+    .route-enter {
+        animation-name: swc-fade-in;
+        animation-duration: var(--splice-motion-reduced);
+    }
+
+    /* Looping affordances stop on a static state; spinners keep turning (progress must stay
+     * visible). */
+    .animate-pulse,
+    .animate-caret-blink {
+        animation: none;
+    }
+
+    /* B1: the label still fades; it no longer rises. */
+    .motion-faces > .motion-face[data-on='false'] {
+        transform: none;
+    }
+
+    /* C1 is opacity only already; shorten it. C2: the push and back become a fade. */
+    .motion-soft-cut,
+    .motion-push,
+    .motion-back {
+        animation-name: swc-fade-in;
+        animation-duration: var(--splice-motion-reduced);
+    }
+
+    /* D3: the cell fades from 0.4 instead of rolling. */
+    .motion-cell-roll {
+        animation-name: swc-cell-in;
+        animation-duration: var(--splice-motion-reduced);
+    }
+
+    /* D2: the row fades in or out; its height changes at once. */
+    .motion-row[data-motion='open'] {
+        animation: swc-fade-in var(--splice-motion-reduced) linear both;
+    }
+    .motion-row[data-motion='close'] {
+        animation: swc-fade-out var(--splice-motion-reduced) linear both;
+    }
+}

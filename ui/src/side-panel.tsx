@@ -2,6 +2,7 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { XIcon } from 'lucide-react';
 import * as React from 'react';
 import { cn } from './cn';
+import { MotionFaces } from './motion';
 
 /**
  * SidePanel — a reusable, edit-in-place right-hand panel.
@@ -16,9 +17,10 @@ import { cn } from './cn';
  * edit-in-place, the fragment editor). Keep the contract generic — an entity
  * label + an editor body in, save/cancel out — don't special-case a consumer.
  *
- * The motion + border classes (`motion-standard`, the `--splice-*` tokens) are
- * host-owned Tailwind utilities: the host defines them and the reduced-motion
- * guard, so the primitive stays presentational and themeable, never forking.
+ * The motion classes (`motion-standard`, the A2 overlay timing, the B1 save
+ * faces) and the reduced-motion guard ship in `@schemastud/ui/motion.css`, which
+ * the host imports; the `--splice-*` tokens stay host-overridable, so the
+ * primitive stays presentational and themeable, never forking.
  */
 
 export interface SidePanelProps {
@@ -89,12 +91,16 @@ export function SidePanel({
                     // Don't steal focus back to the trigger on close, and don't
                     // trap it — this is a non-blocking companion surface.
                     onInteractOutside={(e) => e.preventDefault()}
+                    // motion.css gives the panel the A2 sheet timing and its 32 px edge travel.
+                    data-slot="side-panel-content"
+                    data-side="right"
                     className={cn(
                         'fixed inset-y-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-card shadow-xl',
                         'border-l border-[var(--splice-ink-12)]',
-                        // Slide in/out on the shared motion standard (UI-18) — the
-                        // `motion-standard` utility binds tw-animate's duration/ease to
-                        // the app tokens; the global reduced-motion guard collapses it.
+                        // Slide in/out on the shared motion vocabulary: `motion-standard` binds
+                        // tw-animate's duration/ease to the tokens, and motion.css's A2 rule (keyed
+                        // on `data-slot`) gives it the enter/exit pair and a 32 px edge travel;
+                        // under reduced motion only the fade stays.
                         'motion-standard transition data-[state=open]:animate-in data-[state=closed]:animate-out',
                         'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right',
                         className,
@@ -139,7 +145,14 @@ export function SidePanel({
                                 disabled={saveDisabled || saving}
                                 className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
                             >
-                                {saving ? 'Saving…' : saveLabel}
+                                {/* B1: both labels in one cell, so the button holds its width. */}
+                                <MotionFaces
+                                    active={saving ? 'saving' : 'idle'}
+                                    faces={[
+                                        { key: 'idle', node: saveLabel },
+                                        { key: 'saving', node: 'Saving…' },
+                                    ]}
+                                />
                             </button>
                         </footer>
                     )}

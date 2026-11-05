@@ -14,6 +14,7 @@ function DialogOverlay({
 }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
     return (
         <DialogPrimitive.Overlay
+            data-slot="dialog-overlay"
             className={cn(
                 'fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
                 className,
@@ -32,6 +33,8 @@ function DialogContent({
         <DialogPortal>
             <DialogOverlay />
             <DialogPrimitive.Content
+                // motion.css keys the A2 enter/exit and the 97 % scale on this hook.
+                data-slot="dialog-content"
                 className={cn(
                     // ⚠️ `max-h` + `overflow-y-auto` are load-bearing, not polish. This element is
                     // `position: fixed` and centred by translate, so a dialog TALLER than the

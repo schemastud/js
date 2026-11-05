@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+/* The catalog shows motion as hosts ship it: tw-animate-css's enter/exit utilities, then the
+ * `@schemastud/ui` motion vocabulary (tokens, A2/B1/C1/C2/D3/D2, per-piece reduced motion). */
+@import 'tw-animate-css';
+@import '../ui/src/motion.css';
 
 /*
  * Scan the whole schemastud estate (every workspace's src + colocated stories) for utility
