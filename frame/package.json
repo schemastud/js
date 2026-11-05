@@ -50,9 +50,9 @@
     "zustand": ">=4"
   },
   "dependencies": {
-    "@schemastud/facets": "^0.2.2",
-    "@schemastud/seam": "^0.2.2",
-    "@schemastud/ui": "^0.1.2"
+    "@schemastud/facets": "github:schemastud/js#72e8e8086d55e285ce387cba0032e264c09939fc&path:/facets",
+    "@schemastud/seam": "github:schemastud/js#72b9e79d72e3dbd9a14113988c67b72f065a5b87&path:/seam",
+    "@schemastud/ui": "github:schemastud/js#09abbd00e4be30694dc49518ece40987b3e17086&path:/ui"
   },
   "devDependencies": {
     "@rjsf/core": "^6.0.0",
