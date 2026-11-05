@@ -13,8 +13,9 @@ import { ChangedCell, MotionRow, useFlip } from '../motion';
  * - **D2, the operator's own insert** ("New run"): the row opens its height (200 ms).
  * - **D2, the operator's own archive**: the row becomes an "Archived · Undo" stub that holds its
  *   height (so the next row's Archive never slides under the pointer), then closes when the
- *   pointer leaves the list, when focus leaves the stub, or after 4 s. A stub archived from the
- *   keyboard stays open while it holds focus (pointer-leave and the timer pass it by), and a stub
+ *   pointer leaves the list, when focus leaves the stub, or after 4 s. A stub that holds keyboard
+ *   focus (the last input was a key, however Archive was pressed) stays open: pointer-leave and the timer
+ *   pass it by, and focus leaving closes it. A stub
  *   that closes with focus inside hands focus to the next row's action first; Undo returns focus
  *   to the restored row's Archive (P2-a11y).
  * - **D2, the operator's own sort**: every row slides from its old place (FLIP, 180 ms). Remote
@@ -52,9 +53,7 @@ function Rows() {
     const timers = React.useRef(new Map<string, number>());
     const flip = useFlip<HTMLLIElement>();
     const visible = React.useMemo(() => (sorted ? [...runs].sort((a, b) => a.name.localeCompare(b.name)) : runs), [runs, sorted]);
-    // Stubs archived from the keyboard (a click with `detail === 0`), each stub's element, and a
-    // row whose Archive takes focus back after an Undo.
-    const keyboard = React.useRef(new Set<string>());
+    // Each stub's element, and a row whose Archive takes focus back after an Undo.
     const stubs = React.useRef(new Map<string, HTMLElement>());
     const refocus = React.useRef<string | null>(null);
 
@@ -65,13 +64,31 @@ function Rows() {
         document.querySelector<HTMLElement>(`[data-demo="remove-${id}"]`)?.focus();
     });
 
-    /** A keyboard-archived stub that holds focus stays open: it closes when focus leaves it. */
-    const holdsFocus = (id: string) => keyboard.current.has(id) && !!stubs.current.get(id)?.contains(document.activeElement);
+    // The last input the user reached for: a key press anywhere makes it the keyboard, a pointer
+    // press the pointer. (`:focus-visible` is the browser's own guess, but it ignores synthetic
+    // input, so the play tests could not prove it.)
+    const input = React.useRef<'keyboard' | 'pointer'>('pointer');
+    React.useEffect(() => {
+        const keyboard = () => (input.current = 'keyboard');
+        const pointer = () => (input.current = 'pointer');
+        document.addEventListener('keydown', keyboard, true);
+        document.addEventListener('pointerdown', pointer, true);
+        return () => {
+            document.removeEventListener('keydown', keyboard, true);
+            document.removeEventListener('pointerdown', pointer, true);
+        };
+    }, []);
+
+    /**
+     * A stub holding keyboard focus stays open; it closes when focus leaves it. That covers a stub
+     * archived by pointer whose user then turned to the keys, while a pointer user's auto-focused
+     * Undo still closes when the pointer leaves (focus handed to the next row first).
+     */
+    const holdsFocus = (id: string) => input.current === 'keyboard' && !!stubs.current.get(id)?.contains(document.activeElement);
 
     const close = (id: string) => {
         window.clearTimeout(timers.current.get(id));
         timers.current.delete(id);
-        keyboard.current.delete(id);
         const stub = stubs.current.get(id);
         if (stub?.contains(document.activeElement)) {
             // The closing row goes inert; hand focus to the next row's action (or the previous one's)
@@ -170,7 +187,6 @@ function Rows() {
                                             onClick={() => {
                                                 window.clearTimeout(timers.current.get(run.id));
                                                 timers.current.delete(run.id);
-                                                keyboard.current.delete(run.id);
                                                 refocus.current = run.id;
                                                 setArchived(({ [run.id]: _, ...rest }) => rest);
                                                 setAnnounce('Archive undone');
@@ -201,8 +217,7 @@ function Rows() {
                                             className="size-8"
                                             aria-label={`Archive ${run.name}`}
                                             data-demo={`remove-${run.id}`}
-                                            onClick={(event) => {
-                                                if (event.detail === 0) keyboard.current.add(run.id);
+                                            onClick={() => {
                                                 setArchived((a) => ({ ...a, [run.id]: 'stub' }));
                                                 setAnnounce(`Archived ${run.name}. Undo is available.`);
                                                 // While a keyboard user is on Undo the timer passes; focus leaving closes it.
@@ -278,6 +293,30 @@ export const UndoPointerLeave: Story = {
         await canvas.findByText('Archived · Classify · inbound tickets');
         pointerLeavesList(canvasElement);
         await waitFor(() => expect(canvas.queryByText('Archived · Classify · inbound tickets')).toBeNull(), { timeout: 2000 });
+        await expect(document.activeElement).not.toBe(document.body);
+    },
+};
+
+/**
+ * Mixed input (codex P2-a11y): Archive by pointer, then carry on from the keyboard while Undo has
+ * focus. The stub is then held by keyboard focus, so neither the pointer leaving nor the 4 s timer
+ * closes it; Tab away closes it.
+ */
+export const UndoMixedInput: Story = {
+    name: 'Undo stub · pointer archive, keyboard focus holds it (play)',
+    render: () => <Rows />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole('button', { name: 'Archive Ingest · EU contracts batch' }));
+        const undo = await canvas.findByRole('button', { name: 'Undo' });
+        await waitFor(() => expect(document.activeElement).toBe(undo));
+        await userEvent.keyboard('{Shift}'); // the user turns to the keyboard; focus is still on Undo
+        pointerLeavesList(canvasElement);
+        await new Promise((resolve) => setTimeout(resolve, 4400));
+        await expect(canvas.getByRole('button', { name: 'Undo' })).toBe(undo);
+        await expect(document.activeElement).toBe(undo);
+        await userEvent.tab();
+        await waitFor(() => expect(canvas.queryByText('Archived · Ingest · EU contracts batch')).toBeNull(), { timeout: 2000 });
         await expect(document.activeElement).not.toBe(document.body);
     },
 };

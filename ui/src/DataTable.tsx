@@ -375,6 +375,9 @@ export function DataTable<TData>({
                                                     size="sm"
                                                     className="mr-auto"
                                                     id={`${uid}-open-${row.id}`}
+                                                    // The opener's stable identity (its id changes on a remount), e.g. for
+                                                    // DetailSwap's focusOnBack on the phone stack.
+                                                    data-row-id={row.id}
                                                     aria-labelledby={`${uid}-open-${row.id} ${uid}-row-${row.id}`}
                                                     onClick={(event) => {
                                                         event.stopPropagation();
@@ -510,6 +513,7 @@ export function DataTable<TData>({
                                                     <button
                                                         type="button"
                                                         id={`${uid}-open-${row.id}`}
+                                                        data-row-id={row.id}
                                                         aria-labelledby={`${uid}-open-${row.id} ${uid}-row-${row.id}`}
                                                         onClick={(event) => {
                                                             event.stopPropagation();

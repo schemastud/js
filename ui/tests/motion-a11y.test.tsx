@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DetailSwap, SaveButton } from '../src/index';
+import { DataTable, DetailSwap, SaveButton } from '../src/index';
 
 /**
  * P2-a11y (owner-review 18, the /impeccable P1s after the P2-prod amend): focus survives the C2
@@ -231,5 +231,117 @@ describe('B1 · SaveButton keeps focus while it saves', () => {
     it('carries the disabled look on aria-disabled, so it still reads as unavailable', () => {
         render(<SaveButton saving />);
         expect(screen.getByRole('button').className).toContain('aria-disabled:opacity-100');
+    });
+});
+
+describe('amend (codex P2-a11y): async detail and identity-based Back', () => {
+    it('push into a detail still loading focuses the pane, then the heading once it arrives', async () => {
+        function Async({ ready }: { ready: boolean }) {
+            const [open, setOpen] = React.useState(false);
+            return (
+                <DetailSwap data-testid="pane" swapKey={open ? 'detail' : 'list'} motion={open ? 'push' : 'back'}>
+                    {open ? (
+                        ready ? <h2 data-swap-focus>Loaded</h2> : <p>Loading…</p>
+                    ) : (
+                        <button type="button" onClick={() => setOpen(true)}>
+                            Open
+                        </button>
+                    )}
+                </DetailSwap>
+            );
+        }
+        const { rerender } = render(<Async ready={false} />);
+        press(screen.getByRole('button', { name: 'Open' }));
+        expect(document.activeElement).toBe(screen.getByTestId('pane'));
+        rerender(<Async ready />);
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+        expect(document.activeElement).toBe(screen.getByRole('heading', { name: 'Loaded' }));
+    });
+
+    it('a heading that arrives after the user moved on does not take focus back', async () => {
+        function Async({ ready }: { ready: boolean }) {
+            const [open, setOpen] = React.useState(false);
+            return (
+                <>
+                    <input aria-label="elsewhere" />
+                    <DetailSwap swapKey={open ? 'detail' : 'list'} motion={open ? 'push' : 'back'}>
+                        {open ? (
+                            ready ? <h2>Loaded</h2> : <p>Loading…</p>
+                        ) : (
+                            <button type="button" onClick={() => setOpen(true)}>
+                                Open
+                            </button>
+                        )}
+                    </DetailSwap>
+                </>
+            );
+        }
+        const { rerender } = render(<Async ready={false} />);
+        press(screen.getByRole('button', { name: 'Open' }));
+        const elsewhere = screen.getByRole('textbox', { name: 'elsewhere' });
+        act(() => elsewhere.focus());
+        rerender(<Async ready />);
+        await act(async () => {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+        expect(document.activeElement).toBe(elsewhere);
+    });
+
+    it('focusOnBack names the opener by identity, so a changed list still returns to the right row', () => {
+        function Changing() {
+            const [rows, setRows] = React.useState(['Alpha', 'Bravo']);
+            const [open, setOpen] = React.useState<string | null>(null);
+            const [opener, setOpener] = React.useState<string | null>(null);
+            return (
+                <DetailSwap
+                    swapKey={open ?? 'list'}
+                    motion={open ? 'push' : 'back'}
+                    focusOnBack={opener ? `[data-row-id="${opener}"]` : undefined}
+                >
+                    {open ? (
+                        <div>
+                            <h2>{open}</h2>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    // A refetch lands while the detail is open: a row is inserted above.
+                                    setRows((r) => ['Aardvark', ...r]);
+                                    setOpen(null);
+                                }}
+                            >
+                                Back
+                            </button>
+                        </div>
+                    ) : (
+                        rows.map((name) => (
+                            <button
+                                key={name}
+                                type="button"
+                                data-row-id={name}
+                                onClick={() => {
+                                    setOpener(name);
+                                    setOpen(name);
+                                }}
+                            >
+                                Open {name}
+                            </button>
+                        ))
+                    )}
+                </DetailSwap>
+            );
+        }
+        render(<Changing />);
+        press(screen.getByRole('button', { name: 'Open Alpha' }));
+        press(screen.getByRole('button', { name: 'Back' }));
+        expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Open Alpha' }));
+    });
+
+    it('DataTable marks each row opener with data-row-id, in both layouts', () => {
+        const columns = [{ id: 'name', header: 'Name', cell: ({ row }: { row: { original: { id: string } } }) => row.original.id }];
+        render(<DataTable columns={columns as never} data={[{ id: 'r-1' }]} rowId={(r: { id: string }) => r.id} onRowClick={() => {}} />);
+        const opener = document.querySelector('[data-row-id="r-1"]');
+        expect(opener?.tagName).toBe('BUTTON');
     });
 });

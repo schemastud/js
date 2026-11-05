@@ -97,9 +97,12 @@ function focusables(root: HTMLElement): HTMLElement[] {
  * had it and would otherwise drop focus to `<body>`:
  * - **push** focuses the new content's `[data-swap-focus]` element, else its first heading (made
  *   programmatically focusable with `tabindex="-1"`), else the pane itself;
- * - **back** focuses the new content's `[data-swap-focus]` element (mark the row that opened the
- *   detail), else the control at the same place the push left from — the row that opened it,
- *   while the list is unchanged — else the pane.
+ *   A detail still loading (no marker or heading yet) focuses the pane, then hands focus to the
+ *   marker or heading when it renders, unless the user has moved focus on meanwhile;
+ * - **back** focuses `focusOnBack` (a selector naming the opener by identity, e.g.
+ *   `[data-row-id="…"]`, which `DataTable` puts on each row's Open control), else the new
+ *   content's `[data-swap-focus]` element, else the control at the same place the push left from
+ *   (the row that opened it, while the list is unchanged), else the pane.
  *
  * Focus moves only when it was inside the pane (or lost to `<body>`), and never into a pane that
  * is not rendered (a phone stack under `lg:hidden` on a desktop). A `soft-cut` never moves focus:
@@ -109,12 +112,13 @@ export function DetailSwap({
     swapKey,
     motion = 'soft-cut',
     manageFocus = true,
+    focusOnBack,
     className,
     children,
     onFocus,
     onPointerDownCapture,
     ...rest
-}: { swapKey: React.Key; motion?: DetailSwapMotion; manageFocus?: boolean } & React.HTMLAttributes<HTMLDivElement> & {
+}: { swapKey: React.Key; motion?: DetailSwapMotion; manageFocus?: boolean; focusOnBack?: string } & React.HTMLAttributes<HTMLDivElement> & {
         [data: `data-${string}`]: unknown;
     }) {
     // Animate from the first swap on, including a return to the first key (Back to the list).
@@ -146,13 +150,46 @@ export function DetailSwap({
         if (active && active !== document.body && !el.contains(active)) return;
         if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) return;
 
-        let target = el.querySelector<HTMLElement>('[data-swap-focus]');
-        if (!target && motion === 'push') target = el.querySelector<HTMLElement>('h1, h2, h3, h4, h5, h6');
-        if (!target && motion === 'back' && origin.current >= 0) target = focusables(el)[origin.current] ?? null;
-        target ??= el;
-        if (!target.matches(FOCUSABLE) && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
-        target.focus();
-    }, [swapKey, motion, manageFocus]);
+        const focus = (target: HTMLElement) => {
+            if (!target.matches(FOCUSABLE) && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+            target.focus();
+        };
+        const pushTarget = () =>
+            el.querySelector<HTMLElement>('[data-swap-focus]') ?? el.querySelector<HTMLElement>('h1, h2, h3, h4, h5, h6');
+
+        if (motion === 'back') {
+            const target =
+                (focusOnBack ? el.querySelector<HTMLElement>(focusOnBack) : null) ??
+                el.querySelector<HTMLElement>('[data-swap-focus]') ??
+                (origin.current >= 0 ? (focusables(el)[origin.current] ?? null) : null);
+            focus(target ?? el);
+            return;
+        }
+        const ready = pushTarget();
+        if (ready) {
+            focus(ready);
+            return;
+        }
+        // Still loading: hold focus on the pane, and hand it to the heading when it renders, unless
+        // the user has moved on (focus left the pane) by then.
+        focus(el);
+        if (typeof MutationObserver !== 'function') return;
+        const observer = new MutationObserver(() => {
+            if (document.activeElement !== el && document.activeElement !== document.body) {
+                observer.disconnect();
+                return;
+            }
+            const target = pushTarget();
+            if (!target) return;
+            observer.disconnect();
+            focus(target);
+        });
+        observer.observe(el, { childList: true, subtree: true });
+        return () => observer.disconnect();
+        // Keyed on the swap alone: the props read here are the swapping render's, and a later
+        // re-render must not cut a pending hand-off to a loading detail's heading.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [swapKey]);
 
     return (
         <div
