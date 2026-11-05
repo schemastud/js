@@ -84,7 +84,13 @@ export function SavePill() {
                     data-face={f}
                     data-on={f === face}
                     aria-hidden
-                    style={{ ...BASE, ...FACES[f].style, gridArea: '1 / 1' }}
+                    // Stacking and hiding are inline, so a host without motion.css still shows one face.
+                    style={{
+                        ...BASE,
+                        ...FACES[f].style,
+                        gridArea: '1 / 1',
+                        ...(f === face ? null : { opacity: 0, pointerEvents: 'none' as const }),
+                    }}
                 >
                     {FACES[f].label}
                 </span>

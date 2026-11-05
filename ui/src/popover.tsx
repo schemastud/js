@@ -117,7 +117,7 @@ export function PopoverContent({
     className?: string;
     children: React.ReactNode;
 }) {
-    const { open, contentRef } = usePopover();
+    const { open, contentRef, triggerRef } = usePopover();
     // A2: stay mounted through the exit. `present` lags `open` by one exit animation; the panel's
     // own `animationend` unmounts it, and a timer covers a host with no tw-animate-css (no
     // animation runs, so no event fires).
@@ -130,6 +130,14 @@ export function PopoverContent({
         const timer = window.setTimeout(() => setPresent(false), 400);
         return () => window.clearTimeout(timer);
     }, [open]);
+    // A closing panel is inert at once (its controls take no keys during the exit). If focus was
+    // inside it, focus returns to the trigger; an outside click keeps its own destination.
+    const focusInside = React.useRef(false);
+    React.useLayoutEffect(() => {
+        if (open || !focusInside.current) return;
+        focusInside.current = false;
+        triggerRef.current?.focus();
+    }, [open, triggerRef]);
     if (!open && !present) return null;
 
     return (
@@ -142,6 +150,13 @@ export function PopoverContent({
             data-side={side}
             data-align={align}
             aria-hidden={open ? undefined : true}
+            inert={!open || undefined}
+            onFocusCapture={() => {
+                focusInside.current = true;
+            }}
+            onBlurCapture={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) focusInside.current = false;
+            }}
             onAnimationEnd={(event) => {
                 if (!open && event.target === event.currentTarget) setPresent(false);
             }}

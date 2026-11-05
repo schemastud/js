@@ -10,6 +10,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ChevronsUpDown } from 'l
 import { Fragment, useId, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { Button } from './button';
 import { cn } from './cn';
+import { useFlip } from './motion';
 import { useIsMobile } from './use-mobile';
 import { parseSort, serializeSort, sortStateFor, toggleSortKey } from './sort';
 
@@ -138,6 +139,7 @@ export function DataTable<TData>({
     renderExpanded,
     expandedRows,
     rowId,
+    flipOnSort = true,
 }: {
     columns: ColumnDef<TData, unknown>[];
     data: TData[];
@@ -167,12 +169,33 @@ export function DataTable<TData>({
      * open menu) stays on its own row instead of following the index.
      */
     rowId?: (row: TData) => string;
+    /**
+     * D2 (owner-review 18): when the operator sorts by a header, rows slide from their old place
+     * (FLIP). Only the header click captures, so a remote reorder still cuts. On by default.
+     */
+    flipOnSort?: boolean;
 }) {
     const isMobile = useIsMobile();
     const uid = useId();
     const stacked = stackOnMobile && isMobile;
     // Headers share one sort model whether the order is resolved server- or client-side.
-    const headerSort = sorting ?? clientSort;
+    const flip = useFlip<HTMLElement>();
+    const captureFlip = flip.capture;
+    const baseSort = sorting ?? clientSort;
+    // The operator's own sort is the one place rows travel: capture before the order changes.
+    const headerSort = useMemo<DataTableSort | undefined>(
+        () =>
+            baseSort && flipOnSort
+                ? {
+                      ...baseSort,
+                      onSortChange: (value) => {
+                          captureFlip();
+                          baseSort.onSortChange(value);
+                      },
+                  }
+                : baseSort,
+        [baseSort, flipOnSort, captureFlip],
+    );
 
     const sortedData = useMemo(
         () => (clientSort ? clientSortRows(data, clientSort.sort, columns) : data),
@@ -206,7 +229,11 @@ export function DataTable<TData>({
     const refetching = loading && data.length > 0;
     // Source positions key TanStack rows when expansion is enabled; membership is
     // still by object identity, independent of sorting, paging or duplicate domain ids.
-    const rowKeys = useMemo(() => new Map(data.map((row, index) => [row, String(index)])), [data]);
+    // An explicit `rowId` wins here too, so expandable rows keep their identity across inserts.
+    const rowKeys = useMemo(
+        () => new Map(data.map((row, index) => [row, rowId ? rowId(row) : String(index)])),
+        [data, rowId],
+    );
     const expanded = Object.fromEntries(
         renderExpanded
             ? data.filter((row) => expandedRows?.has(row)).map((row) => [rowKeys.get(row)!, true])
@@ -305,6 +332,7 @@ export function DataTable<TData>({
                             return (
                                 <li
                                     key={row.id}
+                                    ref={flip.register(row.id)}
                                     data-testid={`stacked-row-${row.id}`}
                                     className={cn(
                                         'min-w-0 space-y-2.5 rounded-lg border bg-card p-3',
@@ -445,6 +473,7 @@ export function DataTable<TData>({
                             table.getRowModel().rows.map((row) => (
                                 <Fragment key={row.id}>
                                     <tr
+                                        ref={flip.register(row.id)}
                                         className={cn(
                                             'border-b last:border-0',
                                             onRowClick &&

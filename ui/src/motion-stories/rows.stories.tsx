@@ -116,7 +116,11 @@ function Rows() {
                             >
                                 {archived[run.id] ? (
                                     <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-border bg-muted/50 px-4 py-2.5">
-                                        <span className="truncate text-sm text-muted-foreground">Archived · {run.name}</span>
+                                        {/* Two lines, like the row it replaces, so the stub holds the row's height. */}
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-sm text-muted-foreground">Archived · {run.name}</span>
+                                            <span className="block font-mono text-[10.5px] text-muted-foreground">{run.id}</span>
+                                        </span>
                                         <Button
                                             variant="ghost"
                                             size="sm"

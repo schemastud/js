@@ -102,18 +102,49 @@ describe('motion.css', () => {
         expect(ruleFor(css, '.motion-soft-cut {')).toContain('var(--splice-motion-feedback)');
     });
 
-    it('guards reduced motion per piece: travel goes, fades stay — no blanket 0.01ms clamp', () => {
+    it('reads the D3 roll and the D2 FLIP from tokens', () => {
+        expect(css).toContain('--splice-motion-roll: 160ms;');
+        expect(css).toContain('--splice-motion-flip: 180ms;');
+        expect(ruleFor(css, '.motion-cell-roll {')).toContain('var(--splice-motion-roll)');
+    });
+
+    it('collapses motion it does not know to instant, and keeps a short fade for every vocabulary piece', () => {
         const reduced = reducedBlock();
-        expect(css).not.toContain('0.01ms');
+        // The fallback for a switch thumb, a rotating chevron or a host's own keyframes.
+        expect(reduced).toContain('animation-duration: 0.01ms !important');
+        expect(reduced).toContain('transition-duration: 0.01ms !important');
+        // The allow-list that re-opens a short fade for the vocabulary, after the fallback.
+        const allow = reduced.indexOf('transition-duration: var(--splice-motion-reduced) !important');
+        expect(allow).toBeGreaterThan(reduced.indexOf('transition-duration: 0.01ms !important'));
+        const allowList = reduced.slice(0, allow);
+        for (const piece of [
+            "[data-slot='popover-content']",
+            "[data-slot='side-panel-content']",
+            '.route-enter',
+            '.list-cross-fade',
+            '.motion-faces > .motion-face',
+            '.motion-soft-cut',
+            '.motion-push',
+            '.motion-back',
+            '.motion-cell-roll',
+            '.motion-row[data-motion]',
+        ]) {
+            expect(allowList).toContain(piece);
+        }
+        expect(ruleFor(reduced, '.animate-spin {')).toContain('animation-iteration-count: infinite !important');
+    });
+
+    it('guards reduced motion per piece: travel goes, fades stay', () => {
+        const reduced = reducedBlock();
         expect(reduced).toContain('--tw-enter-translate-x: 0 !important');
         expect(reduced).toContain('--tw-enter-scale: 1 !important');
         expect(reduced).toContain('--tw-duration: var(--splice-motion-reduced) !important');
         // B1: the label fades without rising.
         expect(ruleFor(reduced, ".motion-face[data-on='false']")).toContain('transform: none');
         // C1/C2: a fade.
-        expect(ruleFor(reduced, '.motion-back')).toContain('animation-name: swc-fade-in');
+        expect(ruleFor(reduced, '.motion-back {')).toContain('animation-name: swc-fade-in');
         // D3: fades from 0.4 instead of rolling.
-        expect(ruleFor(reduced, '.motion-cell-roll')).toContain('animation-name: swc-cell-in');
+        expect(ruleFor(reduced, '.motion-cell-roll {')).toContain('animation-name: swc-cell-in');
         // D2: no height animation.
         expect(ruleFor(reduced, ".motion-row[data-motion='open']")).toContain('swc-fade-in');
         expect(ruleFor(reduced, ".motion-row[data-motion='close']")).toContain('swc-fade-out');

@@ -15,9 +15,11 @@
  * `exit` keyframes read, and must beat its `slide-*` / `zoom-*` utilities in Tailwind's utilities
  * layer. They key on the `data-slot` / `data-state` / `data-side` hooks the primitives carry.
  *
- * Reduced motion is PER PIECE, never a blanket clamp: under `prefers-reduced-motion: reduce` the
- * spatial part of each transition (translate, scale, height, FLIP) is removed and its opacity or
- * colour part stays, shortened to `--splice-motion-reduced`. A state change still reads.
+ * Reduced motion is PER PIECE: under `prefers-reduced-motion: reduce` the spatial part of each
+ * vocabulary transition (translate, scale, height, FLIP) is removed and its opacity or colour part
+ * stays, shortened to `--splice-motion-reduced`, so a state change still reads. Motion this file
+ * does not know (a switch thumb, a rotating chevron, a host's own keyframes) collapses to instant,
+ * as the hosts' old global guard did.
  */
 
 :where(:root) {
@@ -38,6 +40,10 @@
     /* The travel an overlay makes instead of crossing the screen. */
     --splice-motion-sheet-travel: 32px;
     --splice-motion-popover-travel: 4px;
+
+    /* D3's cell roll, and D2's FLIP for the operator's own sort. */
+    --splice-motion-roll: 160ms;
+    --splice-motion-flip: 180ms;
 
     /* What every fade shortens to under reduced motion. */
     --splice-motion-reduced: 100ms;
@@ -208,7 +214,7 @@
     overflow: hidden;
 }
 .motion-cell-roll {
-    animation: swc-cell-roll 160ms var(--splice-motion-ease-out) both;
+    animation: swc-cell-roll var(--splice-motion-roll) var(--splice-motion-ease-out) both;
 }
 /* A changing cell never goes blank: the new value starts at 0.4. */
 @keyframes swc-cell-roll {
@@ -262,6 +268,43 @@
 /* ── Reduced motion, per piece ──────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
+    /* Motion outside the vocabulary collapses to instant (a switch thumb, a rotating chevron, a
+     * host's own keyframes, the dark-mode colour flip), as the hosts' old global guard did. */
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+
+    /* The vocabulary's own pieces keep a short fade (their spatial parts are removed below). */
+    :is(
+            [data-slot='sheet-overlay'],
+            [data-slot='sheet-content'],
+            [data-slot='side-panel-content'],
+            [data-slot='dialog-overlay'],
+            [data-slot='dialog-content'],
+            [data-slot='popover-content']
+        )[data-state],
+    .route-enter,
+    .list-cross-fade,
+    .motion-faces > .motion-face,
+    .motion-soft-cut,
+    .motion-push,
+    .motion-back,
+    .motion-cell-roll,
+    .motion-row[data-motion] {
+        animation-duration: var(--splice-motion-reduced) !important;
+        transition-duration: var(--splice-motion-reduced) !important;
+    }
+
+    /* Progress stays visible: spinners keep turning. */
+    .animate-spin {
+        animation-duration: 1s !important;
+        animation-iteration-count: infinite !important;
+    }
+
     /* Overlays and every tw-animate enter/exit: the travel, zoom and blur go; the fade stays. */
     *,
     *::before,

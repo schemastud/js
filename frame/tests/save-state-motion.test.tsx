@@ -35,6 +35,9 @@ describe('SavePill (B1)', () => {
         expect(root.classList.contains('motion-faces')).toBe(true);
         expect(root.querySelectorAll('.motion-face')).toHaveLength(4);
         expect(root.querySelectorAll('.motion-face[aria-hidden="true"]')).toHaveLength(4);
+        // One face visible without motion.css: the rest are hidden inline.
+        const visible = Array.from(root.querySelectorAll<HTMLElement>('.motion-face')).filter((f) => f.style.opacity !== '0');
+        expect(visible).toHaveLength(1);
     });
 
     it('announces the state once, politely, by its label', () => {
@@ -95,6 +98,10 @@ describe('Save bars (B1)', () => {
             );
             const save = screen.getByRole('button', { name: 'Save' });
             expect(save.querySelectorAll('.motion-faces > .motion-face')).toHaveLength(2);
+            // Without motion.css (a standalone frame host) exactly one label shows: the hiding is inline.
+            const [idle, busy] = Array.from(save.querySelectorAll<HTMLElement>('.motion-face'));
+            expect(idle.style.opacity).toBe('');
+            expect(busy.style.opacity).toBe('0');
             rerender(
                 <Frame>
                     <Bar {...props} saving />

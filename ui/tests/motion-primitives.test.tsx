@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -388,5 +389,182 @@ describe('D3 · DataTable rowId keeps a changed cell on its own row', () => {
         const rolled = container.querySelectorAll('.motion-cell-roll');
         expect(rolled).toHaveLength(1);
         expect(rolled[0].textContent).toBe('finalized');
+    });
+});
+
+describe('amend (codex P2-prod)', () => {
+    it('B1 faces show exactly one label without motion.css (inline base)', () => {
+        render(<SaveButton saving={false} />);
+        const button = screen.getByRole('button', { name: 'Save' });
+        const wrapper = button.querySelector('.motion-faces') as HTMLElement;
+        expect(wrapper.style.display).toBe('inline-grid');
+        const [idle, saving] = Array.from(button.querySelectorAll<HTMLElement>('.motion-face'));
+        expect(idle.style.opacity).toBe('');
+        expect(saving.style.opacity).toBe('0');
+        expect(saving.style.gridArea).toContain('1');
+    });
+
+    it('a closing Popover is inert at once and hands focus back to its trigger', () => {
+        render(
+            <Popover>
+                <PopoverTrigger asChild>
+                    <button type="button">Filters</button>
+                </PopoverTrigger>
+                <PopoverContent>
+                    <input aria-label="Search" />
+                </PopoverContent>
+            </Popover>,
+        );
+        fireEvent.click(screen.getByText('Filters'));
+        const input = screen.getByLabelText('Search');
+        act(() => input.focus());
+        expect(document.activeElement).toBe(input);
+        fireEvent.keyDown(document, { key: 'Escape' });
+        const closing = screen.getByRole('dialog', { hidden: true });
+        expect(closing.getAttribute('data-state')).toBe('closed');
+        expect(closing.hasAttribute('inert')).toBe(true);
+        expect(document.activeElement).toBe(screen.getByText('Filters'));
+    });
+
+    it('a Popover closed by an outside click does not pull focus back', () => {
+        render(
+            <>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <button type="button">Filters</button>
+                    </PopoverTrigger>
+                    <PopoverContent>panel</PopoverContent>
+                </Popover>
+                <button type="button">Elsewhere</button>
+            </>,
+        );
+        fireEvent.click(screen.getByText('Filters'));
+        const elsewhere = screen.getByText('Elsewhere');
+        act(() => elsewhere.focus());
+        fireEvent.pointerDown(elsewhere);
+        expect(document.activeElement).toBe(elsewhere);
+    });
+
+    it('DataTable honours rowId with expandable rows, so an insert keeps each record’s cell state', () => {
+        type Row = { tenantId: string; status: string };
+        const columns = [
+            {
+                header: 'Status',
+                cell: ({ row }: { row: { original: Row } }) => (
+                    <ChangedCell value={row.original.status}>{row.original.status}</ChangedCell>
+                ),
+            },
+        ];
+        const a = { tenantId: 't-a', status: 'draft' };
+        const b = { tenantId: 't-b', status: 'paid' };
+        const props = { columns, rowId: (r: Row) => r.tenantId, renderExpanded: () => <span>more</span> };
+        const { container, rerender } = render(<DataTable {...props} data={[a, b]} expandedRows={new Set([b])} />);
+        const z = { tenantId: 't-0', status: 'none' };
+        rerender(<DataTable {...props} data={[z, a, b]} expandedRows={new Set([b])} />);
+        expect(container.querySelectorAll('.motion-cell-roll')).toHaveLength(0);
+        expect(screen.getAllByText('more')).toHaveLength(1);
+    });
+
+    describe('useFlip on a sort still loading, and a sort interrupted', () => {
+        afterEach(() => vi.restoreAllMocks());
+
+        function rig() {
+            const tops: Record<string, number> = { a: 0, b: 40 };
+            const cancel = vi.fn();
+            const animate = vi.fn(() => ({ cancel, finished: new Promise(() => {}) }));
+            Object.defineProperty(HTMLElement.prototype, 'animate', { value: animate, configurable: true });
+            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+                return { top: tops[this.dataset.id ?? ''] ?? 0 } as DOMRect;
+            });
+            return { tops, animate, cancel };
+        }
+
+        function List({ order, onFlip }: { order: string[]; onFlip: (f: ReturnType<typeof useFlip>) => void }) {
+            const flip = useFlip();
+            onFlip(flip);
+            return (
+                <ul>
+                    {order.map((id) => (
+                        <li key={id} ref={flip.register(id)} data-id={id}>
+                            {id}
+                        </li>
+                    ))}
+                </ul>
+            );
+        }
+
+        it('keeps its capture through a render where nothing moved, then slides when the order lands', () => {
+            const { tops, animate } = rig();
+            let flip!: ReturnType<typeof useFlip>;
+            const { rerender } = render(<List order={['a', 'b']} onFlip={(f) => (flip = f)} />);
+            flip.capture();
+            rerender(<List order={['a', 'b']} onFlip={(f) => (flip = f)} />); // the sort param changed; data not yet
+            expect(animate).not.toHaveBeenCalled();
+            tops.a = 40;
+            tops.b = 0;
+            rerender(<List order={['b', 'a']} onFlip={(f) => (flip = f)} />);
+            expect(animate).toHaveBeenCalledTimes(2);
+        });
+
+        it('cancels its running slides before measuring a second sort', () => {
+            const { tops, animate, cancel } = rig();
+            let flip!: ReturnType<typeof useFlip>;
+            const { rerender } = render(<List order={['a', 'b']} onFlip={(f) => (flip = f)} />);
+            flip.capture();
+            tops.a = 40;
+            tops.b = 0;
+            rerender(<List order={['b', 'a']} onFlip={(f) => (flip = f)} />);
+            expect(animate).toHaveBeenCalledTimes(2);
+            flip.capture();
+            tops.a = 0;
+            tops.b = 40;
+            rerender(<List order={['a', 'b']} onFlip={(f) => (flip = f)} />);
+            expect(cancel).toHaveBeenCalledTimes(2);
+            expect(animate).toHaveBeenCalledTimes(4);
+        });
+
+        it('takes its duration from --splice-motion-flip', () => {
+            const { tops, animate } = rig();
+            document.documentElement.style.setProperty('--splice-motion-flip', '240ms');
+            try {
+                let flip!: ReturnType<typeof useFlip>;
+                const { rerender } = render(<List order={['a', 'b']} onFlip={(f) => (flip = f)} />);
+                flip.capture();
+                tops.a = 40;
+                tops.b = 0;
+                rerender(<List order={['b', 'a']} onFlip={(f) => (flip = f)} />);
+                expect((animate.mock.calls[0] as unknown[])[1]).toMatchObject({ duration: 240 });
+            } finally {
+                document.documentElement.style.removeProperty('--splice-motion-flip');
+            }
+        });
+    });
+
+    it('DataTable slides rows when the operator sorts by a header, and not when data reorders on its own', () => {
+        type Row = { id: string; name: string };
+        const animate = vi.fn(() => ({ cancel() {}, finished: new Promise(() => {}) }));
+        Object.defineProperty(HTMLElement.prototype, 'animate', { value: animate, configurable: true });
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+            const tr = this.closest('tr');
+            const index = tr ? Array.from(tr.parentElement?.children ?? []).indexOf(tr) : 0;
+            return { top: index * 40 } as DOMRect;
+        });
+        const columns = [{ accessorKey: 'name', header: 'Name', meta: { sortField: 'name' } }];
+        function Table({ data }: { data: Row[] }) {
+            const [sort, setSort] = React.useState<string | null>(null);
+            return <DataTable columns={columns} data={data} clientSort={{ sortableFields: new Set(['name']), sort, onSortChange: setSort }} />;
+        }
+        const rows = [
+            { id: '1', name: 'b' },
+            { id: '2', name: 'a' },
+        ];
+        const { rerender } = render(<Table data={rows} />);
+        // A remote reorder: no capture, so no slide.
+        rerender(<Table data={[rows[1], rows[0]]} />);
+        rerender(<Table data={rows} />);
+        expect(animate).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: /Name/ }));
+        expect(animate).toHaveBeenCalled();
+        vi.restoreAllMocks();
     });
 });

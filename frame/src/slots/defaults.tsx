@@ -474,6 +474,12 @@ export function DefaultToggle({
     );
 }
 
+// B1 faces (owner-review 18): the inline base that keeps one label visible without motion.css.
+const FACES = { display: 'inline-grid' } as const;
+const FACE_ON = { gridArea: '1 / 1' } as const;
+const FACE_OFF = { gridArea: '1 / 1', opacity: 0, pointerEvents: 'none' } as const;
+
+
 export function DefaultSaveBar({
     saving,
     canSubmit,
@@ -513,12 +519,25 @@ export function DefaultSaveBar({
                     onClick={onSave}
                     data-frame-action="save"
                 >
-                    {/* B1: both labels in one cell (motion.css), so Save holds its width while saving. */}
-                    <span className="motion-faces">
-                        <span className="motion-face" data-face="idle" data-on={!saving} aria-hidden={saving || undefined}>
+                    {/* B1: both labels in one cell, so Save holds its width while saving. Stacking and hiding
+                        are inline (a host without motion.css still shows one label); motion.css adds the fade. */}
+                    <span className="motion-faces" style={FACES}>
+                        <span
+                            className="motion-face"
+                            style={saving ? FACE_OFF : FACE_ON}
+                            data-face="idle"
+                            data-on={!saving}
+                            aria-hidden={saving || undefined}
+                        >
                             Save
                         </span>
-                        <span className="motion-face" data-face="saving" data-on={saving} aria-hidden={!saving || undefined}>
+                        <span
+                            className="motion-face"
+                            style={saving ? FACE_ON : FACE_OFF}
+                            data-face="saving"
+                            data-on={saving}
+                            aria-hidden={!saving || undefined}
+                        >
                             Saving…
                         </span>
                     </span>
