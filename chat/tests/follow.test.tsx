@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { type ChatMessage, type ChatSnapshot, emptySnapshot } from '../src/core/index';
 import { ChatView, type ChatSlots, useChat } from '../src/react/index';
 
@@ -47,5 +47,36 @@ describe('follow + jumpToLatest', () => {
         geometry(list, { scrollHeight: 1000, clientHeight: 400, scrollTop: 0 });
         fireEvent.scroll(list);
         expect(container.querySelector('[data-chat-jump]')).toBeNull();
+    });
+
+    it('follows growth while at the end, and marks unseen growth while away', () => {
+        const snap = (content: string) => ({ ...emptySnapshot(), messages: [msgs[0], { ...msgs[1], content }] });
+        const { container, rerender, getByText } = render(<View snapshot={snap('two')} />);
+        const list = container.querySelector('[data-chat-messages]')! as HTMLElement;
+        // At the end: growth pins the list to its new end.
+        geometry(list, { scrollHeight: 1000, clientHeight: 400, scrollTop: 600 });
+        fireEvent.scroll(list);
+        geometry(list, { scrollHeight: 1200, clientHeight: 400, scrollTop: 600 });
+        rerender(<View snapshot={snap('two and more')} />);
+        expect(list.scrollTop).toBe(1200);
+        // Away: growth leaves the reader where they are and flags it.
+        geometry(list, { scrollHeight: 1200, clientHeight: 400, scrollTop: 100 });
+        fireEvent.scroll(list);
+        expect(getByText('Jump to latest')).toBeTruthy();
+        geometry(list, { scrollHeight: 1400, clientHeight: 400, scrollTop: 100 });
+        rerender(<View snapshot={snap('two and more and more')} />);
+        expect(list.scrollTop).toBe(100);
+        expect(getByText('New messages')).toBeTruthy();
+    });
+
+    it('the jump scrolls the list to its end', () => {
+        const { container, getByText } = render(<View snapshot={{ ...emptySnapshot(), messages: msgs }} />);
+        const list = container.querySelector('[data-chat-messages]')! as HTMLElement;
+        const scrollTo = vi.fn();
+        list.scrollTo = scrollTo as unknown as HTMLElement['scrollTo'];
+        geometry(list, { scrollHeight: 1000, clientHeight: 400, scrollTop: 0 });
+        fireEvent.scroll(list);
+        fireEvent.click(getByText('Jump to latest'));
+        expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 1000 }));
     });
 });

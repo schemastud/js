@@ -51,7 +51,7 @@ The package stays headless: it ships no CSS. It records its state as `data-*` at
 |---|---|---|---|
 | `frame` | `'bleed'` · `'contained'` | `[data-chat-view][data-frame]` | `bleed`: no box of its own. The view fills its container edge to edge, the list scrolls at the container's edge, and turns and composer share one centred column capped by `--chat-column`. `contained`: draw a box, for a mount that sits beside other content. |
 | `identity` | `'byline'` · `'avatar'` | `[data-chat-view][data-identity]`, and `MessageMetaApi.identity` | `byline`: name and time above each same-author run. `avatar`: an author mark in a gutter beside the turn. |
-| `follow` | `true` · `false` | `[data-chat-messages][data-following]` | The list stays on the latest turn while the reader is within 48px of the end. Once they scroll away, `[data-chat-jump]` renders the `jumpToLatest` slot (unfilled: a plain `[data-chat-jump-latest]` button). The jump is instant under `prefers-reduced-motion`. Make `[data-chat-messages]` the scroll container. |
+| `follow` | `true` · `false` | `[data-chat-messages][data-following]` | The list stays on the latest turn while the reader is within 48px of the end. Once they scroll away, `[data-chat-jump]` renders the `jumpToLatest` slot (unfilled: a plain `[data-chat-jump-latest]` button). The jump is instant under `prefers-reduced-motion`. Make `[data-chat-messages]` the scroll container, and key the view by conversation (`<ChatView key={threadId}>`) so follow state never carries into another thread. |
 
 **The `--chat-column` convention.** Under `frame="bleed"` the host sets `--chat-column` on the mount (the
 flagship uses `46rem`) and pads the list and the composer to it. For example,
