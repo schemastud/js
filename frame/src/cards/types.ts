@@ -18,10 +18,9 @@ import type { Row } from '../types';
  * draws as the dashed segment. Absent or null means measured, so every summary that predates the
  * field reads exactly as it did.
  *
- * ⚠️ The PHP side does not carry it yet. `schemastud/laravel-frame`'s `SummaryFigureData` (and
- * `splicewire/laravel-beam-exec`'s `BoardFigureData::toSummaryFigure()`) must declare
- * `?bool $forecast = null` before any producer sends it (exec-board tickets 06 and 19). Until
- * then no server sends the field and every period reads as measured.
+ * The PHP side is `schemastud/laravel-frame`'s `SummaryFigureData::$forecast`
+ * (`bool|null|Optional`, sent only when a producer sets it), which
+ * `splicewire/laravel-beam-exec`'s `BoardFigureData::toSummaryFigure()` passes through.
  */
 export interface SummaryFigure {
     key: string;
