@@ -7,6 +7,7 @@ import { RecentList } from './RecentList';
 import { RecordLine } from './RecordLine';
 import { NavTile } from './NavTile';
 import { DashboardCard } from './DashboardCard';
+import { TrendCard } from './TrendCard';
 import type { CardLinkRenderer, IconResolver } from './types';
 
 export { StatRow } from './StatRow';
@@ -16,6 +17,8 @@ export { RecordLine, formatRecordTime } from './RecordLine';
 export { NavTile } from './NavTile';
 export { WelcomePanel } from './WelcomePanel';
 export { DashboardCard, dashboardRowRenders, resolveDashboardCard } from './DashboardCard';
+export { TrendCard, trendSeries, trendSegments, forecastBoundary, describeTrend } from './TrendCard';
+export type { TrendPoint, TrendSegment } from './TrendCard';
 export type {
     SummaryFigure,
     SummaryPayload,
@@ -30,9 +33,13 @@ export type {
     CardWidgetProps,
 } from './types';
 
-/** The six default card widgets, by the `x-widget` name a declaration binds. */
+/**
+ * The seven default card widgets, by the `x-widget` name a declaration binds. `trend-card`
+ * (exec-board ticket 06) is a named entry only, like `record-line`: a summary draws as a series
+ * only where its declaration asks for one.
+ */
 export const CARD_WIDGETS: Record<
-    'stat-row' | 'figure-card' | 'recent-list' | 'record-line' | 'nav-tile' | 'dashboard-card',
+    'stat-row' | 'figure-card' | 'recent-list' | 'record-line' | 'nav-tile' | 'dashboard-card' | 'trend-card',
     ComponentType<any>
 > = {
     'stat-row': StatRow,
@@ -41,6 +48,7 @@ export const CARD_WIDGETS: Record<
     'record-line': RecordLine,
     'nav-tile': NavTile,
     'dashboard-card': DashboardCard,
+    'trend-card': TrendCard,
 };
 
 export interface RegisterCardWidgetsOptions {
@@ -70,7 +78,7 @@ const installed = new WeakSet<WidgetRegistry>();
  *     (`!s['x-widget']`), so a declared name always wins: one registered by the host before
  *     this call is not shadowed, and one the registry does not know stays honestly unbound
  *     (`ResolvedForContext.unbound`) rather than silently taking the default.
- *  2. NAMED widgets — the six names a declaration (`#[WidgetIn('summary', 'stat-row')]`)
+ *  2. NAMED widgets — the seven names a declaration (`#[WidgetIn('summary', 'stat-row')]`)
  *     binds. Registered AFTER the defaults so they sit ahead of them in the registry (later
  *     registrations are consulted first).
  *

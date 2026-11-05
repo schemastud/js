@@ -141,7 +141,7 @@ describe('registerCardWidgets', () => {
             expect(registry.resolveWidget({ 'x-widget': name })).toBe(widget);
         }
         expect(Object.keys(CARD_WIDGETS).sort()).toEqual(
-            ['dashboard-card', 'figure-card', 'nav-tile', 'recent-list', 'record-line', 'stat-row'],
+            ['dashboard-card', 'figure-card', 'nav-tile', 'recent-list', 'record-line', 'stat-row', 'trend-card'],
         );
     });
 

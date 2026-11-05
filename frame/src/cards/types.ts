@@ -10,12 +10,25 @@ import type { Row } from '../types';
 // client never invents a field the server did not send.
 // =============================================================================
 
-/** One figure of a summary: `{ key, label, value, tone? }`. */
+/**
+ * One figure of a summary: `{ key, label, value, tone?, forecast? }`.
+ *
+ * `forecast` marks a figure as a projected period rather than a measured one. Only a series
+ * widget (`trend-card`) reads it: the figures are its periods, in order, and a forecast period
+ * draws as the dashed segment. Absent or null means measured, so every summary that predates the
+ * field reads exactly as it did.
+ *
+ * ⚠️ The PHP side does not carry it yet. `schemastud/laravel-frame`'s `SummaryFigureData` (and
+ * `splicewire/laravel-beam-exec`'s `BoardFigureData::toSummaryFigure()`) must declare
+ * `?bool $forecast = null` before any producer sends it (exec-board tickets 06 and 19). Until
+ * then no server sends the field and every period reads as measured.
+ */
 export interface SummaryFigure {
     key: string;
     label: string;
     value: number | string;
     tone?: StatTone | null;
+    forecast?: boolean | null;
 }
 
 /**

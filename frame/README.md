@@ -23,8 +23,8 @@ Decision: `schemastud/laravel-frame docs/adr/0003-summary-and-overview-are-colle
 
 ## Cards
 
-`src/cards/` ships the six default card widgets by `x-widget` name: `stat-row`, `figure-card`,
-`recent-list`, `record-line`, `nav-tile`, `dashboard-card`. A host installs them with one call on
+`src/cards/` ships the seven default card widgets by `x-widget` name: `stat-row`, `figure-card`,
+`recent-list`, `record-line`, `nav-tile`, `dashboard-card`, `trend-card`. A host installs them with one call on
 its seam registry:
 
 ```ts
@@ -37,6 +37,10 @@ unbound rather than silently taking the default. `record-line` is a named entry 
 picks it by name for a row whose target resource declared no `list-item` widget, and it is never
 registered as a `list-item` context default (that predicate would resolve a component for every
 participates-but-unbound root and flip tabular list-items into card grids; see `cards/index.ts`).
+`trend-card` is also named-only: it draws a summary's figures as a period series (each figure one
+period, in order), with every figure marked `forecast: true` drawn as a dashed segment, and a
+visually hidden table as its text alternative. Values plot when they are numbers or plain decimal
+strings; a formatted string is a gap in the line and keeps its value in the table.
 `iconFor` maps icon names to glyphs;
 `renderLink` is the host's navigation primitive (absent, a card draws a plain `<a href>`).
 A realm dashboard is one read-only resource of card rows rendered through these widgets:
