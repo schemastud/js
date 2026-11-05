@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Archive, ArrowDownUp, Play, Plus } from 'lucide-react';
 import * as React from 'react';
+import { expect, fireEvent, userEvent, waitFor, within } from 'storybook/test';
 import { Badge } from '../badge';
 import { Button } from '../button';
 import { ChangedCell, MotionRow, useFlip } from '../motion';
@@ -12,7 +13,10 @@ import { ChangedCell, MotionRow, useFlip } from '../motion';
  * - **D2, the operator's own insert** ("New run"): the row opens its height (200 ms).
  * - **D2, the operator's own archive**: the row becomes an "Archived · Undo" stub that holds its
  *   height (so the next row's Archive never slides under the pointer), then closes when the
- *   pointer leaves the list or after 4 s.
+ *   pointer leaves the list, when focus leaves the stub, or after 4 s. A stub archived from the
+ *   keyboard stays open while it holds focus (pointer-leave and the timer pass it by), and a stub
+ *   that closes with focus inside hands focus to the next row's action first; Undo returns focus
+ *   to the restored row's Archive (P2-a11y).
  * - **D2, the operator's own sort**: every row slides from its old place (FLIP, 180 ms). Remote
  *   reorders cut.
  * Reduced motion: fades only — no roll, no height, no slide.
@@ -48,11 +52,36 @@ function Rows() {
     const timers = React.useRef(new Map<string, number>());
     const flip = useFlip<HTMLLIElement>();
     const visible = React.useMemo(() => (sorted ? [...runs].sort((a, b) => a.name.localeCompare(b.name)) : runs), [runs, sorted]);
+    // Stubs archived from the keyboard (a click with `detail === 0`), each stub's element, and a
+    // row whose Archive takes focus back after an Undo.
+    const keyboard = React.useRef(new Set<string>());
+    const stubs = React.useRef(new Map<string, HTMLElement>());
+    const refocus = React.useRef<string | null>(null);
+
+    React.useLayoutEffect(() => {
+        const id = refocus.current;
+        if (!id) return;
+        refocus.current = null;
+        document.querySelector<HTMLElement>(`[data-demo="remove-${id}"]`)?.focus();
+    });
+
+    /** A keyboard-archived stub that holds focus stays open: it closes when focus leaves it. */
+    const holdsFocus = (id: string) => keyboard.current.has(id) && !!stubs.current.get(id)?.contains(document.activeElement);
 
     const close = (id: string) => {
         window.clearTimeout(timers.current.get(id));
         timers.current.delete(id);
-        setArchived((a) => ({ ...a, [id]: 'closing' }));
+        keyboard.current.delete(id);
+        const stub = stubs.current.get(id);
+        if (stub?.contains(document.activeElement)) {
+            // The closing row goes inert; hand focus to the next row's action (or the previous one's)
+            // before it does, so it never falls to <body>.
+            const li = stub.closest('li');
+            const next = li?.nextElementSibling ?? li?.previousElementSibling;
+            (next?.querySelector<HTMLElement>('button') ?? document.querySelector<HTMLElement>('[data-demo="add"]'))?.focus();
+        }
+        // An Undo may have restored the row already: never close a row that is no longer archived.
+        setArchived((a) => (a[id] ? { ...a, [id]: 'closing' } : a));
     };
 
     return (
@@ -101,7 +130,7 @@ function Rows() {
             </span>
             <div
                 className="overflow-hidden rounded-lg border border-border bg-card"
-                onPointerLeave={() => Object.entries(archived).forEach(([id, s]) => s === 'stub' && close(id))}
+                onPointerLeave={() => Object.entries(archived).forEach(([id, s]) => s === 'stub' && !holdsFocus(id) && close(id))}
             >
                 <ul>
                     {visible.map((run) => (
@@ -115,7 +144,19 @@ function Rows() {
                                 }}
                             >
                                 {archived[run.id] ? (
-                                    <div className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-border bg-muted/50 px-4 py-2.5">
+                                    <div
+                                        ref={(el) => {
+                                            if (el) stubs.current.set(run.id, el);
+                                            else stubs.current.delete(run.id);
+                                        }}
+                                        data-demo={`stub-${run.id}`}
+                                        className="grid grid-cols-[1fr_auto] items-center gap-3 border-b border-border bg-muted/50 px-4 py-2.5"
+                                        onBlur={(event) => {
+                                            if (archived[run.id] !== 'stub') return;
+                                            if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+                                            close(run.id);
+                                        }}
+                                    >
                                         {/* Two lines, like the row it replaces, so the stub holds the row's height. */}
                                         <span className="min-w-0">
                                             <span className="block truncate text-sm text-muted-foreground">Archived · {run.name}</span>
@@ -128,6 +169,9 @@ function Rows() {
                                             autoFocus
                                             onClick={() => {
                                                 window.clearTimeout(timers.current.get(run.id));
+                                                timers.current.delete(run.id);
+                                                keyboard.current.delete(run.id);
+                                                refocus.current = run.id;
                                                 setArchived(({ [run.id]: _, ...rest }) => rest);
                                                 setAnnounce('Archive undone');
                                             }}
@@ -157,10 +201,15 @@ function Rows() {
                                             className="size-8"
                                             aria-label={`Archive ${run.name}`}
                                             data-demo={`remove-${run.id}`}
-                                            onClick={() => {
+                                            onClick={(event) => {
+                                                if (event.detail === 0) keyboard.current.add(run.id);
                                                 setArchived((a) => ({ ...a, [run.id]: 'stub' }));
                                                 setAnnounce(`Archived ${run.name}. Undo is available.`);
-                                                timers.current.set(run.id, window.setTimeout(() => close(run.id), 4000));
+                                                // While a keyboard user is on Undo the timer passes; focus leaving closes it.
+                                                timers.current.set(
+                                                    run.id,
+                                                    window.setTimeout(() => !holdsFocus(run.id) && close(run.id), 4000),
+                                                );
                                             }}
                                         >
                                             <Archive className="size-4" />
@@ -177,3 +226,58 @@ function Rows() {
 }
 
 export const RowUpdates: Story = { name: 'Cell roll · open/close · own sort', render: () => <Rows /> };
+
+const list = (canvasElement: HTMLElement) => canvasElement.querySelector('ul')!.parentElement!;
+/** React builds onPointerLeave from pointerout, so the pointer leaves by a pointerout to outside the list. */
+const pointerLeavesList = (canvasElement: HTMLElement) =>
+    fireEvent.pointerOut(list(canvasElement), { relatedTarget: document.body, bubbles: true });
+
+/**
+ * P2-a11y: a stub archived from the keyboard stays open while Undo holds focus — the pointer
+ * leaving the list and the 4 s timer both pass it by — and closes once focus leaves it, handing
+ * focus to the next row. Undo from the keyboard puts focus back on the row's Archive.
+ */
+export const UndoKeepsFocus: Story = {
+    name: 'Undo stub · held open under keyboard focus (play)',
+    render: () => <Rows />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const archive = canvas.getByRole('button', { name: 'Archive Summarise · Q3 board pack' });
+        archive.focus();
+        await userEvent.keyboard('{Enter}');
+        const undo = await canvas.findByRole('button', { name: 'Undo' });
+        await waitFor(() => expect(document.activeElement).toBe(undo));
+
+        pointerLeavesList(canvasElement);
+        await new Promise((resolve) => setTimeout(resolve, 4400)); // past the 4 s timer and the close
+        await expect(canvas.getByRole('button', { name: 'Undo' })).toBe(undo);
+        await expect(document.activeElement).toBe(undo);
+
+        // Undo from the keyboard: the row is back, and focus is on its Archive.
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() =>
+            expect(document.activeElement).toBe(canvas.getByRole('button', { name: 'Archive Summarise · Q3 board pack' })),
+        );
+
+        // Archive again, then Tab away: focus leaving the stub closes it, and focus is never <body>.
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() => expect(document.activeElement).toBe(canvas.getByRole('button', { name: 'Undo' })));
+        await userEvent.tab();
+        await waitFor(() => expect(canvas.queryByText('Archived · Summarise · Q3 board pack')).toBeNull(), { timeout: 2000 });
+        await expect(document.activeElement).not.toBe(document.body);
+    },
+};
+
+/** The pointer path is unchanged: a stub archived by a click closes when the pointer leaves the list. */
+export const UndoPointerLeave: Story = {
+    name: 'Undo stub · closes on pointer leave (play)',
+    render: () => <Rows />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole('button', { name: 'Archive Classify · inbound tickets' }));
+        await canvas.findByText('Archived · Classify · inbound tickets');
+        pointerLeavesList(canvasElement);
+        await waitFor(() => expect(canvas.queryByText('Archived · Classify · inbound tickets')).toBeNull(), { timeout: 2000 });
+        await expect(document.activeElement).not.toBe(document.body);
+    },
+};

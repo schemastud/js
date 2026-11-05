@@ -79,20 +79,42 @@ const SWAP_CLASS: Record<DetailSwapMotion, string | undefined> = {
     none: undefined,
 };
 
+const FOCUSABLE =
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function focusables(root: HTMLElement): HTMLElement[] {
+    return Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE));
+}
+
 /**
  * C1 / C2 — the detail pane of a list → detail layout. The first content renders as is (the
  * route enter already covers it); each later `swapKey` re-keys the element so its motion runs
  * once: `soft-cut` (C1, desktop: 120 ms opacity), `push` / `back` (C2, the phone stack: 16 px
  * from the side the content came from). Re-keying remounts the subtree, which is the point: the
  * old record's local state does not leak into the new one.
+ *
+ * Focus follows the phone stack (`push` / `back`), because the re-key removes the control that
+ * had it and would otherwise drop focus to `<body>`:
+ * - **push** focuses the new content's `[data-swap-focus]` element, else its first heading (made
+ *   programmatically focusable with `tabindex="-1"`), else the pane itself;
+ * - **back** focuses the new content's `[data-swap-focus]` element (mark the row that opened the
+ *   detail), else the control at the same place the push left from — the row that opened it,
+ *   while the list is unchanged — else the pane.
+ *
+ * Focus moves only when it was inside the pane (or lost to `<body>`), and never into a pane that
+ * is not rendered (a phone stack under `lg:hidden` on a desktop). A `soft-cut` never moves focus:
+ * the list keeps it. `manageFocus={false}` opts out.
  */
 export function DetailSwap({
     swapKey,
     motion = 'soft-cut',
+    manageFocus = true,
     className,
     children,
+    onFocus,
+    onPointerDownCapture,
     ...rest
-}: { swapKey: React.Key; motion?: DetailSwapMotion } & React.HTMLAttributes<HTMLDivElement> & {
+}: { swapKey: React.Key; motion?: DetailSwapMotion; manageFocus?: boolean } & React.HTMLAttributes<HTMLDivElement> & {
         [data: `data-${string}`]: unknown;
     }) {
     // Animate from the first swap on, including a return to the first key (Back to the list).
@@ -103,8 +125,53 @@ export function DetailSwap({
         setSwapped(true);
     }
     const animate = swapped || previous !== swapKey;
+
+    const pane = React.useRef<HTMLDivElement>(null);
+    // Where focus last was inside the pane (its index among the pane's focusables), and where the
+    // latest push left from, so Back can return to the row that opened the detail.
+    const lastFocus = React.useRef(-1);
+    const origin = React.useRef(-1);
+    const handled = React.useRef(swapKey);
+
+    React.useLayoutEffect(() => {
+        if (handled.current === swapKey) return;
+        handled.current = swapKey;
+        if (motion !== 'push' && motion !== 'back') return;
+        const from = lastFocus.current;
+        lastFocus.current = -1;
+        if (motion === 'push') origin.current = from;
+        const el = pane.current;
+        if (!manageFocus || !el) return;
+        const active = document.activeElement;
+        if (active && active !== document.body && !el.contains(active)) return;
+        if (typeof el.checkVisibility === 'function' && !el.checkVisibility()) return;
+
+        let target = el.querySelector<HTMLElement>('[data-swap-focus]');
+        if (!target && motion === 'push') target = el.querySelector<HTMLElement>('h1, h2, h3, h4, h5, h6');
+        if (!target && motion === 'back' && origin.current >= 0) target = focusables(el)[origin.current] ?? null;
+        target ??= el;
+        if (!target.matches(FOCUSABLE) && !target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus();
+    }, [swapKey, motion, manageFocus]);
+
     return (
-        <div key={swapKey} {...rest} className={cn(animate && SWAP_CLASS[motion], className)}>
+        <div
+            key={swapKey}
+            ref={pane}
+            {...rest}
+            className={cn(animate && SWAP_CLASS[motion], className)}
+            onFocus={(event) => {
+                if (pane.current) lastFocus.current = focusables(pane.current).indexOf(event.target as HTMLElement);
+                onFocus?.(event);
+            }}
+            // A pointer press on a control that does not take focus on click (Safari's buttons) still
+            // marks where the push left from.
+            onPointerDownCapture={(event) => {
+                const control = (event.target as Element).closest?.(FOCUSABLE);
+                if (pane.current && control) lastFocus.current = focusables(pane.current).indexOf(control as HTMLElement);
+                onPointerDownCapture?.(event);
+            }}
+        >
             {children}
         </div>
     );

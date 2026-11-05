@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ArrowLeft } from 'lucide-react';
 import * as React from 'react';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Badge } from '../badge';
 import { Button } from '../button';
 import { cn } from '../cn';
@@ -11,7 +12,8 @@ import { useIsMobile } from '../use-mobile';
  * Motion/C1 + C2 List → detail (owner-review 18, ruled 2026-11-02). Desktop (C1): the detail pane
  * re-keys on each selection and fades in over 120 ms, opacity only — rapid stepping never fights
  * it. Phone (C2): list and detail stack; opening pushes the detail in 16 px from the right, Back
- * returns the list from the left, and focus moves with the view. Reduced motion: both are a fade.
+ * returns the list from the left, and focus moves with the view: `DetailSwap` focuses the detail
+ * heading on push and the row that opened it on Back (P2-a11y). Reduced motion: both are a fade.
  */
 const meta = {
     title: 'Motion/C1 + C2 List → detail',
@@ -29,7 +31,7 @@ const CONCEPTS = [
     { id: 'c-105', name: 'Vendor onboarding', status: 'failed', owner: 'Procurement', summary: 'The checks a new vendor clears before any tenant data is shared with them.' },
 ];
 
-function Detail({ concept, onBack, headingRef }: { concept: (typeof CONCEPTS)[number]; onBack?: () => void; headingRef?: React.Ref<HTMLHeadingElement> }) {
+function Detail({ concept, onBack }: { concept: (typeof CONCEPTS)[number]; onBack?: () => void }) {
     return (
         <article className="grid gap-3 p-5">
             {onBack ? (
@@ -38,7 +40,8 @@ function Detail({ concept, onBack, headingRef }: { concept: (typeof CONCEPTS)[nu
                 </Button>
             ) : null}
             <div className="flex items-center gap-2">
-                <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold outline-none" data-demo="detail-title">
+                {/* DetailSwap focuses this on a phone push; tabIndex -1 keeps it out of the tab order. */}
+                <h2 tabIndex={-1} data-swap-focus className="text-lg font-semibold outline-none" data-demo="detail-title">
                     {concept.name}
                 </h2>
                 <Badge variant="outline" className="font-mono">
@@ -53,21 +56,12 @@ function Detail({ concept, onBack, headingRef }: { concept: (typeof CONCEPTS)[nu
     );
 }
 
-function ListDetail() {
-    const mobile = useIsMobile();
+function ListDetail({ phone = false }: { phone?: boolean }) {
+    const mobile = useIsMobile() || phone;
     const [selected, setSelected] = React.useState(0);
     const [view, setView] = React.useState<'list' | 'detail'>('list');
     const [direction, setDirection] = React.useState<'push' | 'back'>('push');
-    const heading = React.useRef<HTMLHeadingElement>(null);
-    const rows = React.useRef<(HTMLButtonElement | null)[]>([]);
     const concept = CONCEPTS[selected];
-
-    // Focus follows the stack on a phone: the heading on push, the row it came from on back.
-    React.useEffect(() => {
-        if (!mobile) return;
-        if (view === 'detail') heading.current?.focus();
-        else rows.current[selected]?.focus();
-    }, [mobile, view, selected]);
 
     const list = (
         <ul className="divide-y divide-border">
@@ -75,10 +69,9 @@ function ListDetail() {
                 <li key={c.id}>
                     <button
                         type="button"
-                        ref={(el) => {
-                            rows.current[i] = el;
-                        }}
                         data-demo={`row-${i}`}
+                        // Back returns focus here: the row that opened the detail.
+                        data-swap-focus={(mobile && i === selected) || undefined}
                         aria-current={!mobile && i === selected ? 'true' : undefined}
                         onClick={() => {
                             setSelected(i);
@@ -105,7 +98,6 @@ function ListDetail() {
                     {view === 'detail' ? (
                         <Detail
                             concept={concept}
-                            headingRef={heading}
                             onBack={() => {
                                 setDirection('back');
                                 setView('list');
@@ -136,4 +128,31 @@ export const ListToDetail: Story = {
             <ListDetail />
         </div>
     ),
+};
+
+/**
+ * The C2 phone stack at any viewport, with the focus contract as a play test: push focuses the
+ * detail heading, Back returns focus to the row that opened it — never `<body>`.
+ */
+export const PhoneStackFocus: Story = {
+    name: 'Phone push/back · focus follows (play)',
+    render: () => (
+        <div className="max-w-[390px] p-4">
+            <ListDetail phone />
+        </div>
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const row = canvas.getByRole('button', { name: /Escalation path/ });
+        row.focus();
+        await userEvent.keyboard('{Enter}');
+        const heading = await canvas.findByRole('heading', { name: 'Escalation path' });
+        await waitFor(() => expect(document.activeElement).toBe(heading));
+
+        await userEvent.click(canvas.getByRole('button', { name: /Concepts/ }));
+        await waitFor(() =>
+            expect(document.activeElement).toBe(canvas.getByRole('button', { name: /Escalation path/ })),
+        );
+        await expect(document.activeElement).not.toBe(document.body);
+    },
 };

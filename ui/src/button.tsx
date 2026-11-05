@@ -4,7 +4,7 @@ import { cn } from './cn';
 import { hitTargetFloor } from './hit-target';
 
 const buttonVariants = cva(
-    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
     {
         variants: {
             variant: {
@@ -14,17 +14,19 @@ const buttonVariants = cva(
                 // pending). A tint rather than `bg-muted`, which matched the light page and lost the
                 // button's shape there.
                 default:
-                    'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none',
+                    'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90 disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none aria-disabled:opacity-100 aria-disabled:bg-foreground/10 aria-disabled:text-foreground/55 aria-disabled:shadow-none',
                 destructive:
                     'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90',
                 // Outline and secondary follow the same rule, adapted: a disabled outline keeps its
                 // frame as a faint foreground hairline with a dimmed label (half opacity greyed the
                 // hairline into the page), and a disabled secondary takes the primary's tint so the
-                // pair reads as one disabled treatment in both schemes.
+                // pair reads as one disabled treatment in both schemes. Each `disabled:` look has an
+                // `aria-disabled:` twin: a control that stays focusable while unavailable (SaveButton
+                // while saving) reads exactly as a natively disabled one.
                 outline:
-                    'border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground disabled:opacity-100 disabled:border-foreground/15 disabled:text-foreground/55 disabled:shadow-none',
+                    'border border-input bg-transparent shadow-xs hover:bg-accent hover:text-accent-foreground disabled:opacity-100 disabled:border-foreground/15 disabled:text-foreground/55 disabled:shadow-none aria-disabled:opacity-100 aria-disabled:border-foreground/15 aria-disabled:text-foreground/55 aria-disabled:shadow-none',
                 secondary:
-                    'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none',
+                    'bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80 disabled:opacity-100 disabled:bg-foreground/10 disabled:text-foreground/55 disabled:shadow-none aria-disabled:opacity-100 aria-disabled:bg-foreground/10 aria-disabled:text-foreground/55 aria-disabled:shadow-none',
                 ghost: 'hover:bg-accent hover:text-accent-foreground',
                 link: 'text-primary underline-offset-4 hover:underline',
             },

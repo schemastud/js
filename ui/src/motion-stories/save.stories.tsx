@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import * as React from 'react';
+import { expect, userEvent, waitFor, within } from 'storybook/test';
 import { Input } from '../input';
 import { Label } from '../label';
 import { MotionFaces } from '../motion';
@@ -85,7 +86,31 @@ function SaveDemo() {
     );
 }
 
-export const SaveStates: Story = { name: 'Steady pill and button', render: () => <SaveDemo /> };
+export const SaveStates: Story = {
+    name: 'Steady pill and button',
+    render: () => <SaveDemo />,
+    // P2-a11y: the button keeps keyboard focus through Saving… and Saved (aria-disabled, never
+    // native disabled), announces itself busy, ignores a second Enter, and holds its width.
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.type(canvas.getByLabelText('Name'), ' v2');
+        const button = canvas.getByRole('button', { name: 'Save' });
+        const width = button.getBoundingClientRect().width;
+        button.focus();
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() => expect(button.getAttribute('aria-busy')).toBe('true'));
+        await expect(button).toHaveAttribute('aria-disabled', 'true');
+        await expect(button).not.toBeDisabled();
+        await expect(document.activeElement).toBe(button);
+        await expect(button.getBoundingClientRect().width).toBe(width);
+        await userEvent.keyboard('{Enter}'); // a second press while saving does nothing
+        await waitFor(() => expect(button.getAttribute('aria-busy')).toBeNull(), { timeout: 3000 });
+        // Saved: the form is clean, so the button is unavailable again, and still focused.
+        await expect(button).toHaveAttribute('aria-disabled', 'true');
+        await expect(document.activeElement).toBe(button);
+        await expect(canvas.getByRole('heading', { name: 'Retention policy v2' })).toBeTruthy();
+    },
+};
 
 /** The button's two faces side by side at rest and saving — same width. */
 export const ButtonFaces: Story = {

@@ -154,14 +154,16 @@ describe('B1 · SaveButton', () => {
 
         rerender(<SaveButton saving />);
         const saving = screen.getByRole('button', { name: 'Saving…' });
-        expect(saving.hasAttribute('disabled')).toBe(true);
+        // Unavailable is aria-disabled, never native disabled, so the focus it holds survives (P2-a11y).
+        expect(saving.hasAttribute('disabled')).toBe(false);
+        expect(saving.getAttribute('aria-disabled')).toBe('true');
         expect(saving.getAttribute('aria-busy')).toBe('true');
         expect(saving.querySelectorAll('.motion-face')[1].getAttribute('data-on')).toBe('true');
     });
 
-    it('takes its own labels and stays disabled when the caller disables it', () => {
+    it('takes its own labels and stays unavailable (aria-disabled) when the caller disables it', () => {
         render(<SaveButton saving={false} label="Save subscription" disabled />);
-        expect(screen.getByRole('button', { name: 'Save subscription' }).hasAttribute('disabled')).toBe(true);
+        expect(screen.getByRole('button', { name: 'Save subscription' }).getAttribute('aria-disabled')).toBe('true');
     });
 });
 
