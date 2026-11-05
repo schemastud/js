@@ -513,7 +513,15 @@ export function DefaultSaveBar({
                     onClick={onSave}
                     data-frame-action="save"
                 >
-                    {saving ? 'Saving…' : 'Save'}
+                    {/* B1: both labels in one cell (motion.css), so Save holds its width while saving. */}
+                    <span className="motion-faces">
+                        <span className="motion-face" data-face="idle" data-on={!saving} aria-hidden={saving || undefined}>
+                            Save
+                        </span>
+                        <span className="motion-face" data-face="saving" data-on={saving} aria-hidden={!saving || undefined}>
+                            Saving…
+                        </span>
+                    </span>
                 </Button>
             ) : null}
         </div>

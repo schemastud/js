@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { useState } from 'react';
 import { SavePill } from './SavePill';
 import { MockMount, makeMount } from './story-harness';
 
@@ -67,3 +68,29 @@ export const AllStates: Story = {
         </div>
     ),
 };
+
+/**
+ * B1 (owner-review 18): the steady pill in motion — edit, save, settle. The pill holds its width,
+ * the label fades up, and a settled save is green for a beat before it rests neutral. Needs the
+ * catalog's `@schemastud/ui/motion.css` (imported by the preview).
+ */
+function AutosaveCycle() {
+    const [state, setState] = useState({ dirty: false, saving: false });
+    const step = () => {
+        setState({ dirty: true, saving: false });
+        window.setTimeout(() => setState({ dirty: true, saving: true }), 700);
+        window.setTimeout(() => setState({ dirty: false, saving: false }), 1600);
+    };
+    return (
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <MockMount value={makeMount(state)}>
+                <SavePill />
+            </MockMount>
+            <button type="button" onClick={step} data-demo="cycle">
+                Edit and save
+            </button>
+        </div>
+    );
+}
+
+export const AutosaveCycleStory: Story = { name: 'Autosave cycle (B1)', render: () => <AutosaveCycle /> };
