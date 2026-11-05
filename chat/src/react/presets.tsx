@@ -29,6 +29,7 @@
 import type { ReactNode } from 'react';
 import type { Participant } from '../core/index';
 import { Composer } from './composer';
+import { renderMessageMeta } from './default-render';
 import type { ChatSlots } from './slots';
 
 /** A preset: a layout tag + a partial slot fill a host spreads and overrides. */
@@ -70,6 +71,8 @@ export const viewport: ChatPreset = {
     slots: {
         composer: (api) => <Composer {...api} />,
         participants: (roster) => rosterLine(roster),
+        // The author-label column of the table above: who said it, and when.
+        messageMeta: renderMessageMeta,
         emptyState: () => <div data-chat-empty>No messages yet. Ask anything.</div>,
         loadingState: () => <div data-chat-loading-indicator>Thinking…</div>,
         // Wired, ships UNFILLED — the verdict shell is a downstream capability.

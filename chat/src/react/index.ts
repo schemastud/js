@@ -25,10 +25,10 @@ export type { ThreadViewProps } from './thread-view';
 export { ThreadView } from './thread-view';
 
 // The fixed slot inventory + composer render-prop contract.
-export type { ChatSlots, ComposerApi, RenderSegmentMap, ThreadRowApi, Verdict } from './slots';
+export type { ChatFrame, ChatIdentity, ChatSlots, ComposerApi, JumpToLatestApi, MessageMetaApi, RenderSegmentMap, ThreadRowApi, Verdict } from './slots';
 
 // The default render primitives (for presets/hosts that compose on top).
-export { renderMessageBody, renderSegment } from './default-render';
+export { authorKey, formatMessageTime, initials, renderMessageBody, renderMessageMeta, renderSegment } from './default-render';
 
 // The standard <Composer> — a PRESET FILL for the flat `composer(api)` slot,
 // never baked into <ChatView>; swapping it out is a one-slot override.

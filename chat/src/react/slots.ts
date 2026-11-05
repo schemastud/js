@@ -57,6 +57,13 @@ export interface ChatSlots {
     header?: () => ReactNode;
     /** The standing "who's here" roster (multi-party is first-class — 04). */
     participants?: (roster: Participant[]) => ReactNode;
+    /**
+     * The per-turn identity line (author + time). Rendered ABOVE the body as
+     * `[data-chat-message-meta]`. `continued` is true when this turn comes from
+     * the same author as the turn before it, so a fill (or host CSS) can show
+     * the identity once per run instead of on every turn. Unfilled ⇒ no meta.
+     */
+    messageMeta?: (message: ChatMessage, api: MessageMetaApi) => ReactNode;
     /** Per-message actions (copy / cite / revise / retry). */
     messageToolbar?: (message: ChatMessage) => ReactNode;
     /** Per-segment renderers (tool_call / tool_result / custom). Keyed by type. */
@@ -72,6 +79,11 @@ export interface ChatSlots {
     participantBanner?: (who: Participant | undefined) => ReactNode;
     /** The input UX. FLAT render-prop `(api) => ReactNode` — maximally swappable. */
     composer?: (api: ComposerApi) => ReactNode;
+    /**
+     * Shown while the reader has scrolled away from the latest turn (`<ChatView follow>`).
+     * `unseen` is true once new content has arrived below. Unfilled ⇒ a plain button.
+     */
+    jumpToLatest?: (api: JumpToLatestApi) => ReactNode;
     /** Shown when there are no messages. */
     emptyState?: () => ReactNode;
     /** Shown while a turn is streaming (in addition to the streamed content). */
@@ -88,6 +100,40 @@ export interface ChatSlots {
      * and call `toggle()` without owning the collapse set.
      */
     threadRowChrome?: (row: ThreadRowApi) => ReactNode;
+}
+
+/** What a `jumpToLatest` fill receives. */
+export interface JumpToLatestApi {
+    /** Scroll the message list to its end (instant under reduced motion). */
+    jump: () => void;
+    /** True when content arrived while the reader was scrolled up. */
+    unseen: boolean;
+}
+
+/** How a turn shows who wrote it (owner ruling 2026-11-02, owner-review-20261026 ticket 17, item 1). */
+export type ChatIdentity = 'byline' | 'avatar';
+
+/**
+ * How the view sits in its container (owner ruling 2026-11-02, owner-review-20261026 ticket 17, item 3C). `bleed` (the
+ * default): the view fills its container edge to edge with no frame of its own, the message list
+ * scrolls at the container's edge, and the turns and composer share one centred reading column
+ * (host CSS caps it, conventionally via `--chat-column`). `contained`: the view draws its own
+ * box, for a mount that sits beside other content. Recorded as `data-frame`.
+ */
+export type ChatFrame = 'bleed' | 'contained';
+
+/** What a `messageMeta` fill receives beside the message. */
+export interface MessageMetaApi {
+    /** True when the previous turn has the same author (`author.id`, else `role`). */
+    continued: boolean;
+    /**
+     * The view's identity layout (`<ChatView identity>`): `byline` (name + time above the turn,
+     * the default) or `avatar` (an author mark in a gutter beside the turn). A fill renders the
+     * mark only for `avatar`; host CSS keys the gutter layout off `[data-identity='avatar']`.
+     */
+    identity: ChatIdentity;
+    /** True while this turn is still streaming. */
+    streaming: boolean;
 }
 
 /**

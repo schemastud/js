@@ -1,8 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, waitFor, within } from 'storybook/test';
 import { ChatView } from './chat-view';
+import { Composer } from './composer';
 import { popover, siteAsk, support, viewport } from './presets';
+import type { ChatSlots, ComposerApi } from './slots';
 import {
     ChatChrome,
+    StoryActions,
+    THREAD_AGENT,
+    THREAD_AWAITING,
+    THREAD_MESSAGES,
+    THREAD_STREAMING,
+    ThreadsChrome,
     DEMO_ESCALATION,
     DEMO_MESSAGES,
     DEMO_ROSTER,
@@ -186,4 +195,118 @@ export const Support: Story = {
             />
         </ChatChrome>
     ),
+};
+
+// ── The ruled Threads experience (owner-review-20261026 ticket 17, 2026-11-02) ────────────────
+// The view options (`identity`, `frame`, `follow`) and the row anchors, rendered in the harness's
+// reference Threads skin (`ThreadsChrome`), which keys only off the documented data-* contract.
+// Rulings: identity is an option, byline by default; actions reveal on hover or focus (2A), the
+// latest reply and touch keep them; edge to edge (`frame="bleed"`) is the default; the list follows
+// the latest turn with a jump pill (4A), the arriving reply ends in a live caret (4B), and the
+// composer speaks only until the first token (4C).
+
+/** The Threads slots: the viewport preset, a 2A action row, nothing drawn in the list before the
+ *  first token, and a composer that names who is replying only while no token has arrived. */
+function threadSlots(awaitingFirstToken: boolean): ChatSlots {
+    return {
+        ...viewport.slots,
+        messageToolbar: (m) => <StoryActions message={m} />,
+        loadingState: () => null,
+        composer: (api: ComposerApi) => (
+            <div>
+                <div data-story-status aria-live="polite">
+                    {api.streaming && awaitingFirstToken ? (
+                        <>
+                            <span data-story-inflight aria-hidden />
+                            {THREAD_AGENT} is replying…
+                        </>
+                    ) : null}
+                </div>
+                <Composer {...api} />
+            </div>
+        ),
+    };
+}
+
+const threadsMeta = { parameters: { layout: 'fullscreen' } } as const;
+
+/** `identity="byline"` (the default) and `frame="bleed"` (the default): name and time once per
+ *  same-author run, edge to edge with a `--chat-column` reading column. The latest reply keeps
+ *  its actions; hover or focus reveals the rest. */
+export const ThreadByline: Story = {
+    ...threadsMeta,
+    render: () => (
+        <ThreadsChrome>
+            <ChatView chat={fakeChat(snapshotOf({ messages: THREAD_MESSAGES }))} {...viewport} slots={threadSlots(false)} />
+        </ThreadsChrome>
+    ),
+};
+
+/** `identity="avatar"`: the author's initials in a gutter beside each run, then the byline. */
+export const ThreadAvatar: Story = {
+    ...threadsMeta,
+    render: () => (
+        <ThreadsChrome>
+            <ChatView chat={fakeChat(snapshotOf({ messages: THREAD_MESSAGES }))} {...viewport} identity="avatar" slots={threadSlots(false)} />
+        </ThreadsChrome>
+    ),
+};
+
+/** Mid-reply: the list follows the arriving text, which ends in the live caret (static under
+ *  reduced motion). The composer status has gone quiet: the caret is the one moving signal. */
+export const ThreadStreaming: Story = {
+    ...threadsMeta,
+    render: () => (
+        <ThreadsChrome>
+            <ChatView chat={fakeChat(THREAD_STREAMING)} {...viewport} slots={threadSlots(false)} />
+        </ThreadsChrome>
+    ),
+};
+
+/** Mid-reply with `identity="avatar"`. */
+export const ThreadStreamingAvatar: Story = {
+    ...threadsMeta,
+    render: () => (
+        <ThreadsChrome>
+            <ChatView chat={fakeChat(THREAD_STREAMING)} {...viewport} identity="avatar" slots={threadSlots(false)} />
+        </ThreadsChrome>
+    ),
+};
+
+/** Before the first token: nothing in the list; the composer says who is replying. */
+export const ThreadAwaiting: Story = {
+    ...threadsMeta,
+    render: () => (
+        <ThreadsChrome>
+            <ChatView chat={fakeChat(THREAD_AWAITING)} {...viewport} slots={threadSlots(true)} />
+        </ThreadsChrome>
+    ),
+};
+
+/** `frame="contained"`: the view draws its own box, for a mount beside other content. */
+export const ThreadContained: Story = {
+    ...threadsMeta,
+    render: () => (
+        <ThreadsChrome>
+            <ChatView chat={fakeChat(snapshotOf({ messages: THREAD_MESSAGES }))} {...viewport} frame="contained" slots={threadSlots(false)} />
+        </ThreadsChrome>
+    ),
+};
+
+/** 4A: scrolled away from the latest turn, the jump pill appears. The play scrolls the list to its
+ *  top and waits for the pill, so VR captures the settled state. */
+export const ThreadJumpToLatest: Story = {
+    ...threadsMeta,
+    render: () => (
+        <ThreadsChrome height="22rem">
+            <ChatView chat={fakeChat(snapshotOf({ messages: THREAD_MESSAGES }))} {...viewport} slots={threadSlots(false)} />
+        </ThreadsChrome>
+    ),
+    play: async ({ canvasElement }) => {
+        const list = canvasElement.querySelector<HTMLElement>('[data-chat-messages]');
+        await waitFor(() => expect(list && list.scrollHeight > list.clientHeight).toBe(true));
+        list!.scrollTop = 0;
+        list!.dispatchEvent(new Event('scroll'));
+        await waitFor(() => expect(within(canvasElement).getByRole('button', { name: 'Jump to latest' })).toBeTruthy());
+    },
 };
