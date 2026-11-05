@@ -99,6 +99,12 @@ export interface ResourceRecordPickerProps {
     noun?: [string, string];
     /** The typeahead's second line for a row. */
     describe?: (row: Row) => ReactNode;
+    /**
+     * May a `multi` picker be promoted to a set ("Select all N matching")? Default true. A form field
+     * whose value is an id ARRAY passes false: a set is an object, and the field's schema (and the PHP
+     * reference contract) would refuse it. A `set` picker is always a set.
+     */
+    allowSet?: boolean;
     /** Expanded only: renders a confirm bar whose button hands back the selection. */
     onConfirm?: (selection: ResourceSelection) => void;
     confirmLabel?: string;
@@ -127,9 +133,17 @@ function nounFor(props: ResourceRecordPickerProps, manifest: ContextManifest | u
  * `useUrlState`; on a host page that is the page URL, which would mix the picker's `filter[…]` and
  * `page` into the host's own list (and the host's params into the picker's request — facets'
  * `requestParams` is every entry). A picker is a nested surface, so it gets its own.
+ *
+ * `fixed` params are ENFORCED, not seeded: they are re-applied after every write, so no facet
+ * clear, saved view or vocabulary change can drop a reference field's scope. On a collision the
+ * scope wins — a scoped field never browses records outside its scope.
  */
-export function createMemoryUrlState(initial = ''): UseUrlState {
-    let current = new URLSearchParams(initial);
+export function createMemoryUrlState(initial = '', fixed: Record<string, string> = {}): UseUrlState {
+    const enforce = (params: URLSearchParams) => {
+        for (const [key, value] of Object.entries(fixed)) params.set(key, value);
+        return params;
+    };
+    let current = enforce(new URLSearchParams(initial));
     const listeners = new Set<() => void>();
     const snapshot = () => current;
     const subscribe = (notify: () => void) => {
@@ -143,7 +157,7 @@ export function createMemoryUrlState(initial = ''): UseUrlState {
         return [
             params,
             (updater: (previous: URLSearchParams) => URLSearchParams) => {
-                current = updater(new URLSearchParams(current));
+                current = enforce(updater(new URLSearchParams(current)));
                 listeners.forEach((notify) => notify());
             },
         ] as const;
@@ -171,9 +185,9 @@ function EnsureQueryClient({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={own}>{children}</QueryClientProvider>;
 }
 
-function PickerScope({ children, initialSearch }: { children: ReactNode; initialSearch: string }) {
+function PickerScope({ children, initialSearch, fixed }: { children: ReactNode; initialSearch: string; fixed?: Record<string, string> }) {
     const outer = useFrameInjection();
-    const [useUrlState] = useState(() => createMemoryUrlState(initialSearch));
+    const [useUrlState] = useState(() => createMemoryUrlState(initialSearch, fixed));
     const injection = useMemo<FrameInjection>(
         () => ({
             ...outer,
@@ -344,7 +358,11 @@ function SelectionBar({
     retry,
     describeFilter,
     disabled,
+    address,
+    allowSet,
 }: Pick<BodyProps, 'select' | 'selection' | 'onChange' | 'noun'> & {
+    address: { collection: string | null; filterVariant: string | null };
+    allowSet: boolean;
     rows: Row[];
     total: number | null;
     liveExcluded: number;
@@ -422,8 +440,10 @@ function SelectionBar({
                         Selection cleared.{' '}
                         <button
                             type="button"
+                            disabled={disabled}
                             className="font-medium text-primary underline-offset-2 hover:underline"
                             onClick={() => {
+                                if (disabled) return;
                                 onChange(undo);
                                 setUndo(null);
                             }}
@@ -441,7 +461,7 @@ function SelectionBar({
                     </span>
                 )}
             </span>
-            {select !== 'single' && !isSet && total !== null && total > rows.length ? (
+            {allowSet && select !== 'single' && !isSet && total !== null && total > rows.length ? (
                 <Button
                     type="button"
                     variant="outline"
@@ -449,7 +469,7 @@ function SelectionBar({
                     disabled={disabled}
                     onClick={() => {
                         setUndo(null);
-                        onChange(selectAllMatching(filterValues, sort));
+                        onChange(selectAllMatching(filterValues, sort, address));
                     }}
                 >
                     Select all {fmt(total)} matching
@@ -464,7 +484,14 @@ function SelectionBar({
     );
 }
 
-function Tray({ selection, onChange, labels, select, noun }: Pick<BodyProps, 'selection' | 'onChange' | 'labels' | 'select' | 'noun'>) {
+function Tray({
+    selection,
+    onChange,
+    labels,
+    select,
+    noun,
+    disabled,
+}: Pick<BodyProps, 'selection' | 'onChange' | 'labels' | 'select' | 'noun'> & { disabled?: boolean }) {
     const isMobile = useIsMobile();
     const [expanded, setExpanded] = useState(false);
     const ids = selection.mode === 'set' ? selection.exclude : selection.ids;
@@ -487,8 +514,11 @@ function Tray({ selection, onChange, labels, select, noun }: Pick<BodyProps, 'se
                         <span className="truncate">{name}</span>
                         <button
                             type="button"
+                            disabled={disabled}
                             aria-label={isSet ? `Include ${name} again` : `Remove ${name}`}
-                            onClick={() => onChange(togglePick(selection, id, 'multi'))}
+                            onClick={() => {
+                                if (!disabled) onChange(togglePick(selection, id, 'multi'));
+                            }}
                             className="grid size-7 place-items-center rounded sm:size-5 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             <X className="size-3" />
@@ -508,12 +538,25 @@ function Tray({ selection, onChange, labels, select, noun }: Pick<BodyProps, 'se
 /** Must render INSIDE a PickerScope: it reads the picker's own URL state through facets. */
 function BrowseBody(body: BodyProps) {
     const { props, select, selection, onChange, labels, manifest, noun, valueField, labelField } = body;
-    const filters = useListFilters(props.resource);
-    const page = useResourceList(props.resource, filters.requestParams);
+    // The SAME effective query ListShell builds (ListShell.tsx: the selected Collection, defaulting to
+    // the first offered, threaded into the filter schema and the list request), so the count and the
+    // serialized set describe exactly the rows on screen.
+    const { useUrlState } = useFrameInjection();
+    const [urlParams] = useUrlState();
+    const collections = manifest?.collections ?? [];
+    const requested = urlParams.get('collection');
+    const collection = collections.find((c) => c.stem === requested)?.stem ?? collections[0]?.stem;
+    const filters = (useListFilters as (resource: string, collection?: string) => ReturnType<typeof useListFilters>)(
+        props.resource,
+        collection,
+    );
+    const requestParams = collection ? { ...filters.requestParams, collection } : filters.requestParams;
+    const page = useResourceList(props.resource, requestParams);
     const data = page.data as ResourcePage<Row> | undefined;
     const rows: Row[] = data?.data ?? [];
     const total = data && 'total' in data ? data.total : null;
-    const filterKey = filterKeyOf(filters.filterValues);
+    const address = { collection: collection ?? null, filterVariant: filters.filterVariant };
+    const filterKey = `${filterKeyOf(filters.filterValues)}|${collection ?? ''}|${filters.filterVariant ?? ''}`;
 
     // Which ids have been SEEN matching each filter — so a set subtracts only exclusions known to
     // still match, and says "up to" while any are unverified.
@@ -537,7 +580,7 @@ function BrowseBody(body: BodyProps) {
 
     // A set FOLLOWS the facets, keeping its exclusions.
     useEffect(() => {
-        const next = followFilters(selection, filters.filterValues, filters.sort);
+        const next = followFilters(selection, filters.filterValues, filters.sort, address);
         if (next !== selection) onChange(next);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filterKey, filters.sort]);
@@ -595,8 +638,10 @@ function BrowseBody(body: BodyProps) {
                     retry={() => void page.refetch()}
                     describeFilter={describeFilter}
                     disabled={props.disabled}
+                    address={address}
+                    allowSet={select === 'set' || props.allowSet !== false}
                 />
-                <Tray selection={selection} onChange={onChange} labels={labels} select={select} noun={noun} />
+                <Tray selection={selection} onChange={onChange} labels={labels} select={select} noun={noun} disabled={props.disabled} />
                 <ListShell resource={props.resource} manifest={shellManifest} columns={columns} paginationPlacement="bottom" />
             </div>
         </PickContext.Provider>
@@ -846,7 +891,7 @@ function BrowseSheet({ body, open, onOpenChange }: { body: BodyProps; open: bool
                     <SheetDescription>Filter and sort with the {noun[1]} list’s own columns and facets.</SheetDescription>
                 </SheetHeader>
                 <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
-                    <PickerScope initialSearch={new URLSearchParams({ ...(body.props.scope ?? {}) }).toString() + (draft.mode === 'set' ? `&${selectionToSearch(draft)}` : '')}>
+                    <PickerScope initialSearch={selectionToSearch(draft)} fixed={body.props.scope}>
                         <BrowseBody {...body} selection={draft} onChange={setDraft} onCount={setCount} />
                     </PickerScope>
                 </div>
@@ -970,7 +1015,7 @@ function CompactPicker(body: BodyProps) {
                 </Popover>
             )}
             {select !== 'single' && selection.mode === 'ids' && selection.ids.length > 0 ? (
-                <Tray selection={selection} onChange={onChange} labels={labels} select={select} noun={noun} />
+                <Tray selection={selection} onChange={onChange} labels={labels} select={select} noun={noun} disabled={props.disabled} />
             ) : null}
             <BrowseSheet body={body} open={browse} onOpenChange={setBrowse} />
         </div>
@@ -980,8 +1025,7 @@ function CompactPicker(body: BodyProps) {
 function ExpandedPicker(body: BodyProps) {
     const { props, select, selection, noun } = body;
     const initial = useMemo(
-        () =>
-            [new URLSearchParams(props.scope ?? {}).toString(), selectionToSearch(selection)].filter(Boolean).join('&'),
+        () => selectionToSearch(selection),
         // Seeded once: afterwards the picker's own facets are the source of truth.
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [],
@@ -990,7 +1034,7 @@ function ExpandedPicker(body: BodyProps) {
     const [count, setCount] = useState<number | null>(null);
     return (
         <div className="min-w-0 space-y-3" data-resource-picker="records" data-density="expanded" id={props.id}>
-            <PickerScope initialSearch={initial}>
+            <PickerScope initialSearch={initial} fixed={props.scope}>
                 <BrowseBody {...body} onCount={setCount} />
             </PickerScope>
             {props.onConfirm ? (

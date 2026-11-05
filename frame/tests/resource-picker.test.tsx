@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry } from '@schemastud/seam';
@@ -18,6 +18,7 @@ import {
     type ResourceSelection,
 } from '../src/resource-picker/selection';
 import { resolveKindPlacement, resolveRecordPlacement } from '../src/resource-picker/placement';
+import { createMemoryUrlState } from '../src/resource-picker/RecordPicker';
 import { PICKER_KINDS, PICKER_MANIFESTS, PICKER_SECTIONS, createPickerTransport } from '../src/resource-picker/fixtures';
 import { mockPrimitives } from '../src/story-harness';
 import type { FrameInjection, FrameTransport } from '../src/types';
@@ -411,5 +412,72 @@ describe('ResourcePicker — revision (impeccable critique)', () => {
             </Providers>,
         );
         expect(await screen.findByRole('button', { name: 'Use 29 threads (all matching)' })).toBeTruthy();
+    });
+});
+
+describe('ResourcePicker — codex amend (RP)', () => {
+    it('a set carries the Collection it was read from, and re-opens on it', async () => {
+        const transport = createPickerTransport({ threads: 30 });
+        const injection = makeInjection(transport);
+        const manifest = { ...PICKER_MANIFESTS.threads, collections: [{ stem: 'inbox', label: 'Inbox' }, { stem: 'archive', label: 'Archive' }] };
+        function Harness({ initial }: { initial: ResourceSelection }) {
+            const [value, setValue] = useState<ResourceSelection>(initial);
+            return <ResourcePicker resource="threads" placement="bulk" labelField="title" manifest={manifest} value={value} onChange={(n) => { spy(n); setValue(n); }} />;
+        }
+        const spy = vi.fn();
+        const first = render(
+            <Providers injection={injection}>
+                <Harness initial={EMPTY_SELECTION} />
+            </Providers>,
+        );
+        fireEvent.click(await screen.findByRole('button', { name: 'Select all 30 matching' }));
+        // The default Collection (the first offered, exactly as ListShell defaults) is part of the address.
+        expect(last(spy)).toEqual({ mode: 'set', filter: {}, sort: null, exclude: [], collection: 'inbox' });
+        first.unmount();
+
+        transport.calls.length = 0;
+        render(
+            <Providers injection={injection}>
+                <Harness initial={{ mode: 'set', filter: {}, sort: null, exclude: [], collection: 'archive' }} />
+            </Providers>,
+        );
+        await checkbox('Invoice dispute #0001');
+        expect(transport.calls.some((c) => c.params.collection === 'archive')).toBe(true);
+        expect(transport.calls.every((c) => c.params.collection !== 'inbox')).toBe(true);
+    });
+
+    it('a fixed scope is enforced on every write, not merely seeded', () => {
+        const useUrl = createMemoryUrlState('', { 'filter[status]': 'open' });
+        let api: ReturnType<typeof useUrl> | undefined;
+        function Probe() {
+            api = useUrl();
+            return null;
+        }
+        render(<Probe />);
+        expect(api![0].get('filter[status]')).toBe('open');
+        // A facet clear (or a saved view / vocabulary change) deletes the key…
+        act(() =>
+            api![1]((prev) => {
+                prev.delete('filter[status]');
+                prev.set('filter[keywords]', 'x');
+                return prev;
+            }),
+        );
+        // …and the scope comes straight back; the user's own facet survives beside it.
+        expect(api![0].get('filter[status]')).toBe('open');
+        expect(api![0].get('filter[keywords]')).toBe('x');
+    });
+
+    it('scope rides every embedded-shell request', async () => {
+        const transport = createPickerTransport({ threads: 60 });
+        render(
+            <Providers injection={makeInjection(transport)}>
+                <ResourcePicker resource="threads" placement="bulk" labelField="title" scope={{ 'filter[status]': 'open' }} value={EMPTY_SELECTION} onChange={() => undefined} />
+            </Providers>,
+        );
+        await screen.findByRole('button', { name: 'Select all 20 matching' });
+        const lists = transport.calls.filter((c) => c.resource === 'threads');
+        expect(lists.length).toBeGreaterThan(0);
+        expect(lists.every((c) => c.params['filter[status]'] === 'open')).toBe(true);
     });
 });

@@ -24,6 +24,26 @@ export interface SetSelection {
     filter: Record<string, string>;
     sort: string | null;
     exclude: string[];
+    /**
+     * The rest of the query ADDRESS, present only when the browse surface used it: the Collection a
+     * multi-Collection resource was read from, and the filter vocabulary (`filterVariant`) the facets
+     * were chosen in. Without them two different server queries could serialize to the same set.
+     */
+    collection?: string;
+    filterVariant?: string;
+}
+
+/** Where a set's query is addressed, beyond its facets. */
+export interface SetAddress {
+    collection?: string | null;
+    filterVariant?: string | null;
+}
+
+function addressOf(address: SetAddress = {}): Pick<SetSelection, 'collection' | 'filterVariant'> {
+    return {
+        ...(address.collection ? { collection: address.collection } : {}),
+        ...(address.filterVariant ? { filterVariant: address.filterVariant } : {}),
+    };
 }
 
 export type ResourceSelection = IdsSelection | SetSelection;
@@ -31,8 +51,8 @@ export type ResourceSelection = IdsSelection | SetSelection;
 export const EMPTY_SELECTION: IdsSelection = Object.freeze({ mode: 'ids', ids: [] }) as IdsSelection;
 
 /** A set over the given facets with no exceptions — what "Select all N matching" produces. */
-export function selectAllMatching(filter: Record<string, string>, sort: string | null): SetSelection {
-    return { mode: 'set', filter: { ...filter }, sort, exclude: [] };
+export function selectAllMatching(filter: Record<string, string>, sort: string | null, address?: SetAddress): SetSelection {
+    return { mode: 'set', filter: { ...filter }, sort, exclude: [], ...addressOf(address) };
 }
 
 /** Is this record named by the selection? A set names everything it does not exclude. */
@@ -90,10 +110,20 @@ export function followFilters(
     selection: ResourceSelection,
     filter: Record<string, string>,
     sort: string | null,
+    address?: SetAddress,
 ): ResourceSelection {
     if (selection.mode !== 'set') return selection;
-    if (sameFilter(selection.filter, filter) && selection.sort === sort) return selection;
-    return { ...selection, filter: { ...filter }, sort };
+    const next = addressOf(address);
+    if (
+        sameFilter(selection.filter, filter) &&
+        selection.sort === sort &&
+        (address === undefined ||
+            (selection.collection === next.collection && selection.filterVariant === next.filterVariant))
+    ) {
+        return selection;
+    }
+    const { collection: _c, filterVariant: _v, ...rest } = selection;
+    return { ...(address === undefined ? selection : rest), filter: { ...filter }, sort, ...(address === undefined ? {} : next) };
 }
 
 export function sameFilter(a: Record<string, string>, b: Record<string, string>): boolean {
@@ -133,6 +163,8 @@ export function selectionToSearch(selection: ResourceSelection): string {
         if (value !== '') params.set(`filter[${name}]`, value);
     }
     if (selection.sort) params.set('sort', selection.sort);
+    if (selection.collection) params.set('collection', selection.collection);
+    if (selection.filterVariant) params.set('filterVariant', selection.filterVariant);
     return params.toString();
 }
 
@@ -142,13 +174,14 @@ export function selectionToSearch(selection: ResourceSelection): string {
  */
 export function selectionFromValue(value: unknown): ResourceSelection {
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-        const bag = value as { mode?: unknown; filter?: Record<string, string>; sort?: string | null; exclude?: unknown[]; ids?: unknown[] };
+        const bag = value as { mode?: unknown; filter?: Record<string, string>; sort?: string | null; exclude?: unknown[]; ids?: unknown[]; collection?: string; filterVariant?: string };
         if (bag.mode === 'set') {
             return {
                 mode: 'set',
                 filter: { ...(bag.filter ?? {}) },
                 sort: bag.sort ?? null,
                 exclude: Array.isArray(bag.exclude) ? bag.exclude.map(String) : [],
+                ...addressOf({ collection: bag.collection, filterVariant: bag.filterVariant }),
             };
         }
         if (bag.mode === 'ids') return { mode: 'ids', ids: Array.isArray(bag.ids) ? bag.ids.map(String) : [] };

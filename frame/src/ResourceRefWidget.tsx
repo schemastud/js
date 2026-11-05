@@ -136,6 +136,9 @@ export function ResourceRefWidget(props: ResourceRefWidgetProps) {
                 resource={cfg.resource}
                 density="compact"
                 select={select}
+                // A `multi` field stores an id ARRAY: never offer the set promotion that would turn it
+                // into an object. Only an explicit `select: 'set'` field stores a selection object.
+                allowSet={select === 'set'}
                 valueField={cfg.value}
                 labelField={cfg.label}
                 searchFacet={cfg.searchFacet}

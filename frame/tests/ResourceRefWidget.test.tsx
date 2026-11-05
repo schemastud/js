@@ -157,3 +157,39 @@ describe('both registry populations (research 10-S1 ii)', () => {
         expect(registry.resolveWidget({ ...(planSchema() as object), 'x-widget': 'silo-tree-select' } as never)).toBe(SiloTree);
     });
 });
+
+describe('ResourceRefWidget — codex amend (RP)', () => {
+    const multiSchema = {
+        type: 'array',
+        [STUD_RESOURCE_REF_KEYWORD]: { resource: 'plans', value: 'slug', label: 'name', multiple: true },
+    };
+
+    it('a legacy multiple field never offers the set promotion that would store an object in an array', async () => {
+        const many = Array.from({ length: 30 }, (_, i) => ({ id: String(i), slug: `p${i}`, name: `Plan ${i}` }));
+        const transport = makeTransport({
+            list: vi.fn(async (): Promise<Paginated<Row>> => ({ data: many.slice(0, 8), total: 30, page: 1, perPage: 8 })),
+        });
+        render(<ResourceRefWidget id="plans" schema={multiSchema} value={[]} onChange={vi.fn()} />, {
+            wrapper: wrap(makeInjection(transport)),
+        });
+        fireEvent.click(screen.getByRole('button', { name: /Add plans/ }));
+        fireEvent.click(await screen.findByRole('button', { name: /Browse all 30 with filters/ }));
+        await screen.findByRole('dialog', { name: 'Choose plans' });
+        await screen.findAllByRole('checkbox', { name: /^Select Plan/ });
+        expect(screen.queryByRole('button', { name: /Select all .* matching/ })).toBeNull();
+    });
+
+    it('disabled and read-only multiple fields cannot change through their tray', () => {
+        for (const flag of [{ disabled: true }, { readonly: true }]) {
+            const onChange = vi.fn();
+            const view = render(<ResourceRefWidget id="plans" schema={multiSchema} value={['pro', 'lite']} onChange={onChange} {...flag} />, {
+                wrapper: wrap(makeInjection(makeTransport())),
+            });
+            const remove = screen.getByRole('button', { name: 'Remove pro' }) as HTMLButtonElement;
+            expect(remove.disabled).toBe(true);
+            fireEvent.click(remove);
+            expect(onChange).not.toHaveBeenCalled();
+            view.unmount();
+        }
+    });
+});
