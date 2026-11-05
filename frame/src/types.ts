@@ -257,6 +257,13 @@ export interface FrameColumn {
     sortField?: string;
     cell?: (record: Row) => ReactNode;
     /**
+     * A control rendered in the column's header BEFORE its label — a host statement, like
+     * `cell`, passed through by `resolveColumns` for the field it names. The ResourcePicker puts
+     * its tri-state "select all on this page" checkbox here; the header's own sort button still
+     * renders beside it. The shadcn Table reads it; the plain default ignores it.
+     */
+    headerControl?: () => ReactNode;
+    /**
      * Who produced `cell` — set by `resolveColumns`, never by a host (a host that sets it
      * is describing its own column, which is always `'host'` anyway).
      *

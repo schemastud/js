@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { FacetsProvider } from '@schemastud/facets';
-import { WidgetRegistryContext, type WidgetRegistry } from '@schemastud/seam';
+import { WidgetRegistryContext, defaultRegistry, type WidgetRegistry } from '@schemastud/seam';
 import { registerResourceRefWidget } from './ResourceRefWidget';
 import type { FrameInjection } from './types';
 
@@ -10,6 +10,15 @@ const FrameContext = createContext<FrameInjection | null>(null);
 // a registry that goes out of scope is not retained. Guards double-registration under
 // React strict-mode double-invoke and across re-renders.
 const installedRegistries = new WeakSet<WidgetRegistry>();
+
+/**
+ * Install frame's built-in widgets (the ResourcePicker field widget) into a registry exactly once.
+ * Idempotent per registry. A host that resolves forms through a registry no FrameProvider is handed
+ * calls this itself; FrameProvider calls it for its own registry AND seam's `defaultRegistry`.
+ */
+export function registerFrameWidgets(registry: WidgetRegistry): void {
+    ensureBuiltinWidgets(registry);
+}
 
 /** Install frame's built-in widgets into a registry exactly once (idempotent). */
 function ensureBuiltinWidgets(registry: WidgetRegistry | undefined | null): void {
@@ -42,7 +51,14 @@ export function FrameProvider({ value, children }: { value: FrameInjection; chil
     // registry once — a frame capability available everywhere, not per-surface. Runs in
     // a useMemo keyed on registry identity so it is side-effect-safe under strict mode
     // (the WeakSet guard makes a repeat call a no-op regardless).
-    useMemo(() => ensureBuiltinWidgets(value.registry), [value.registry]);
+    //
+    // BOTH registry populations (research 10-S1 ii): the host's own registry (usually a fresh
+    // `createWidgetRegistry()`, which does not inherit the singleton), and seam's `defaultRegistry`
+    // singleton, which a hand-rolled form walker or a bare `SchemaForm` resolves through.
+    useMemo(() => {
+        ensureBuiltinWidgets(value.registry);
+        ensureBuiltinWidgets(defaultRegistry);
+    }, [value.registry]);
 
     const facetsValue = useMemo(
         () => ({
@@ -63,6 +79,11 @@ export function FrameProvider({ value, children }: { value: FrameInjection; chil
             </FacetsProvider>
         </FrameContext.Provider>
     );
+}
+
+/** The injection bundle, or null outside a provider — for widgets that must degrade, not throw. */
+export function useOptionalFrameInjection(): FrameInjection | null {
+    return useContext(FrameContext);
 }
 
 /** Read the injection bundle; throws if a frame shell renders outside a provider. */

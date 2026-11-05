@@ -46,8 +46,14 @@ export function ShadcnTable(props: {
     Cell: ComponentType<CellSlotProps>;
     RowActions?: ComponentType<{ record: Row }>;
     sort?: TableSort;
+    /**
+     * Row state: a row this answers `true` for is SELECTED — tinted, and marked `aria-selected`
+     * and `data-selected` for assistive tech and tests. A picker or a bulk-select surface passes
+     * it through a Table slot; a plain list never sets it and renders byte-identically.
+     */
+    rowSelected?: (record: Row) => boolean;
 }) {
-    const { columns, rows, onOpen, Cell, RowActions, sort } = props;
+    const { columns, rows, onOpen, Cell, RowActions, sort, rowSelected } = props;
     // X shot-review follow-up (b): below 768px a wide list never clips. Each record is a stacked card carrying the same
     // cells (the first column is its heading, the others labelled fields, RowActions its footer); at desktop width the
     // table scrolls sideways instead of hiding its right edge behind overflow-hidden.
@@ -55,16 +61,21 @@ export function ShadcnTable(props: {
     const uid = useId();
     if (isMobile) {
         const [first, ...rest] = columns;
+        // A SELECTABLE card's tap toggles it, so the record has no separate "Open" control to name.
+        const showOpen = Boolean(onOpen) && !rowSelected;
         return (
             <ul data-frame-slot="Table" data-frame-stacked className="space-y-2">
-                {rows.map((row, i) => (
+                {rows.map((row, i) => {
+                    const selected = rowSelected?.(row);
+                    return (
                     <li
                         key={(row.id as string) ?? i}
                         data-frame-row
+                        {...selectedAttrs(selected, 'card')}
                         onClick={() => onOpen?.(row)}
-                        className={`min-w-0 space-y-2.5 rounded-lg border border-border bg-card p-3 text-sm ${
-                            onOpen ? 'cursor-pointer hover:bg-muted/40' : ''
-                        }`}
+                        className={`min-w-0 space-y-2.5 rounded-lg border p-3 text-sm ${
+                            selected ? SELECTED_CARD : 'border-border bg-card'
+                        } ${onOpen ? 'cursor-pointer hover:bg-muted/40' : ''}`}
                     >
                         {first ? (
                             <div id={`${uid}-row-${i}`} className="min-w-0 font-medium text-foreground">
@@ -83,9 +94,9 @@ export function ShadcnTable(props: {
                                 ))}
                             </dl>
                         ) : null}
-                        {onOpen || RowActions ? (
+                        {showOpen || RowActions ? (
                             <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-border pt-2">
-                                {onOpen ? (
+                                {showOpen ? (
                                     // The record's own open control (review-r1 recheck): a native button named "Open
                                     // <heading>", a sibling of the row actions. A pointer may still open from anywhere.
                                     <button
@@ -95,7 +106,7 @@ export function ShadcnTable(props: {
                                         className="mr-auto rounded px-2 py-1 text-xs font-medium hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            onOpen(row);
+                                            onOpen?.(row);
                                         }}
                                     >
                                         Open
@@ -109,7 +120,8 @@ export function ShadcnTable(props: {
                             </div>
                         ) : null}
                     </li>
-                ))}
+                    );
+                })}
             </ul>
         );
     }
@@ -128,14 +140,17 @@ export function ShadcnTable(props: {
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row, i) => (
+                    {rows.map((row, i) => {
+                        const selected = rowSelected?.(row);
+                        return (
                         <tr
                             key={(row.id as string) ?? i}
                             data-frame-row
+                            {...selectedAttrs(selected)}
                             onClick={() => onOpen?.(row)}
                             className={`border-b border-border/60 last:border-0 ${
-                                onOpen ? 'cursor-pointer hover:bg-muted/40' : ''
-                            }`}
+                                selected ? SELECTED_ROW : ''
+                            } ${onOpen ? 'cursor-pointer hover:bg-muted/40' : ''}`}
                         >
                             {columns.map((c) => (
                                 <td
@@ -154,11 +169,30 @@ export function ShadcnTable(props: {
                                 </td>
                             ) : null}
                         </tr>
-                    ))}
+                        );
+                    })}
                 </tbody>
             </table>
         </div>
     );
+}
+
+// The selected-row tint: the primary at a low alpha, so it reads in both schemes and stays
+// distinct from the hover wash (`bg-muted/40`). A selected card also takes a primary hairline.
+const SELECTED_ROW = 'bg-primary/[0.07] hover:bg-primary/[0.1]';
+const SELECTED_CARD = 'border-primary/40 bg-primary/[0.07]';
+
+/**
+ * Only when the row-state hook is wired — a plain list emits neither attribute. `aria-selected` is a
+ * state of a table ROW; a stacked card is a list item, where it is not allowed, so a card carries
+ * `data-selected` alone (its pick control already announces the state).
+ */
+function selectedAttrs(selected: boolean | undefined, element: 'row' | 'card' = 'row') {
+    if (selected === undefined) return {};
+    return {
+        ...(element === 'row' ? { 'aria-selected': selected } : {}),
+        ...(selected ? { 'data-selected': '' } : {}),
+    };
 }
 
 /**
@@ -172,8 +206,21 @@ function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
     const sortable =
         Boolean(sort) && Boolean(column.sortField) && sort!.sortableFields.has(column.sortField!);
 
+    const control = column.headerControl?.();
+
     if (!sortable) {
-        return <th className="px-4 py-3 font-medium">{label}</th>;
+        return (
+            <th className="px-4 py-3 font-medium">
+                {control ? (
+                    <span className="inline-flex items-center gap-3">
+                        {control}
+                        <span>{label}</span>
+                    </span>
+                ) : (
+                    label
+                )}
+            </th>
+        );
     }
 
     const keys = parseSort(sort!.sort);
@@ -186,6 +233,7 @@ function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
 
     return (
         <th className="px-4 py-3 font-medium">
+            {control ? <span className="mr-3 inline-flex align-middle">{control}</span> : null}
             <button
                 type="button"
                 onClick={onClick}

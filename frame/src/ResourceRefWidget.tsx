@@ -1,15 +1,26 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { widgetFormContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
-import { useFrameInjection } from './context';
+import { useOptionalFrameInjection } from './context';
 import { STUD_RESOURCE_REF_KEYWORD } from './raw-mode';
-import type { Row } from './types';
+import { ResourceRecordPicker } from './resource-picker/RecordPicker';
+import {
+    selectionFromValue,
+    selectionToValue,
+    type ResourceSelectMode,
+} from './resource-picker/selection';
 
 // =============================================================================
-// FC-04 — the `x-stud-resource-ref` picker widget. A property that references rows
-// of another registered frame resource renders as a select whose options are fetched
-// from that resource's index through the injected transport. The wire shape (pinned
-// on BOTH sides — the PHP ResourceRefStrategy emits exactly this):
-//   x-stud-resource-ref: { resource, value, label, multiple?, scope? }
+// FC-04 — the `x-stud-resource-ref` field widget, now the ResourcePicker's compact
+// face (owner-review-20261102 RP). It replaced a plain `<select>` over ONE unfiltered
+// `transport.list` page, which had no search and no paging and so silently truncated
+// any kind larger than a page. The wire shape (pinned on BOTH sides — the PHP
+// ResourceRefStrategy emits the first five keys):
+//
+//   x-stud-resource-ref: { resource, value, label, multiple?, scope?, select?, searchFacet? }
+//
+// `select` (single | multi | set) supersedes `multiple`; absent, `multiple: true` reads
+// as `multi`. A field's form value is one id (single), an id array (multi), or the
+// selection object itself (set, or a multi field promoted to "all matching").
 // =============================================================================
 
 /** The config bag frame reads off the schema node (mirror of the PHP-emitted shape). */
@@ -19,13 +30,13 @@ export interface ResourceRefConfig {
     label: string;
     multiple?: boolean;
     scope?: Record<string, string | number | boolean>;
+    /** The selection model; defaults from `multiple`. */
+    select?: ResourceSelectMode;
+    /** The `filter[<name>]` the typeahead searches; defaults to `keywords`. */
+    searchFacet?: string;
 }
 
-/** A resolved picker option. */
-interface RefOption {
-    value: string;
-    label: string;
-}
+const SELECT_MODES: ResourceSelectMode[] = ['single', 'multi', 'set'];
 
 /** Read the picker config off a schema node; undefined when the keyword is absent. */
 export function readResourceRefConfig(schema: SchemaNode | undefined): ResourceRefConfig | undefined {
@@ -33,12 +44,20 @@ export function readResourceRefConfig(schema: SchemaNode | undefined): ResourceR
     if (cfg == null || typeof cfg !== 'object') return undefined;
     const bag = cfg as Record<string, unknown>;
     if (typeof bag.resource !== 'string') return undefined;
+    const multiple = bag.multiple === true;
+    const select = SELECT_MODES.includes(bag.select as ResourceSelectMode)
+        ? (bag.select as ResourceSelectMode)
+        : multiple
+          ? 'multi'
+          : 'single';
     return {
         resource: bag.resource,
         value: typeof bag.value === 'string' ? bag.value : 'id',
         label: typeof bag.label === 'string' ? bag.label : 'name',
-        multiple: bag.multiple === true,
+        multiple: select !== 'single',
         scope: (bag.scope as ResourceRefConfig['scope']) ?? undefined,
+        select,
+        ...(typeof bag.searchFacet === 'string' ? { searchFacet: bag.searchFacet } : {}),
     };
 }
 
@@ -66,106 +85,80 @@ interface ResourceRefWidgetProps {
 }
 
 /**
- * An RJSF widget: on mount it lists the referenced resource (scope → query params),
- * maps rows to `{ value, label }`, and renders a controlled select. `multiple:true`
- * renders a multi-select whose value is a string[]; else a single select. It emits
- * through RJSF `onChange`. Loading/empty are minimal, accessible states. If the
- * injected transport is somehow absent it degrades to an empty control rather than
- * hard-crashing (this is a package-internal widget; a host's shadcn wrapper is out of
- * scope here).
+ * An RJSF widget: a resource-reference field renders the ResourcePicker's compact body — a
+ * server typeahead (`filter[<searchFacet>]`, `per_page=8`) with "Browse all N with filters"
+ * opening the embedded list shell in a sheet. It emits through RJSF `onChange`.
+ *
+ * Outside a FrameProvider (seam's `defaultRegistry` resolving on a hand-rolled form walker with
+ * no transport in reach) it degrades to a read-only readout of the stored value instead of
+ * throwing, because there is nothing to search.
  */
 export function ResourceRefWidget(props: ResourceRefWidgetProps) {
     // widgetFormContext is read for RJSF-version-insulated form context; frame widgets
     // that ride a formContext sidecar read it through here.
     widgetFormContext(props);
 
-    const injection = useFrameInjection();
-    const transport = injection.transport;
+    const injection = useOptionalFrameInjection();
     const cfg = useMemo(() => readResourceRefConfig(props.schema), [props.schema]);
-
-    const [options, setOptions] = useState<RefOption[]>([]);
-    const [loading, setLoading] = useState<boolean>(Boolean(cfg));
-
-    useEffect(() => {
-        if (!cfg || !transport) {
-            setLoading(false);
-            return;
-        }
-        let cancelled = false;
-        setLoading(true);
-        transport
-            .list(cfg.resource, stringifyScope(cfg.scope))
-            .then((page) => {
-                if (cancelled) return;
-                const rows = (page?.data ?? []) as Row[];
-                setOptions(
-                    rows.map((row) => ({
-                        value: String(row[cfg.value]),
-                        label: String(row[cfg.label]),
-                    })),
-                );
-            })
-            .catch(() => {
-                if (!cancelled) setOptions([]);
-            })
-            .finally(() => {
-                if (!cancelled) setLoading(false);
-            });
-        return () => {
-            cancelled = true;
-        };
-        // Re-fetch only when the resource identity or its scope changes.
-    }, [transport, cfg?.resource, cfg?.value, cfg?.label, JSON.stringify(cfg?.scope)]);
+    const scopeKey = JSON.stringify(cfg?.scope ?? {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const scope = useMemo(() => stringifyScope(cfg?.scope), [scopeKey]);
 
     if (!cfg) return null;
+    const select = cfg.select ?? 'single';
 
-    const disabled = props.disabled || props.readonly;
-    const multiple = cfg.multiple === true;
-
-    if (multiple) {
-        const selected = Array.isArray(props.value) ? props.value.map((v) => String(v)) : [];
+    if (!injection) {
+        const isSet = typeof props.value === 'object' && props.value !== null && !Array.isArray(props.value);
+        const shown = isSet
+            ? 'A dynamic set'
+            : Array.isArray(props.value)
+              ? props.value.join(', ')
+              : props.value == null
+                ? ''
+                : String(props.value);
         return (
-            <select
+            <input
                 id={props.id}
                 data-frame-widget="resource-ref"
-                multiple
-                disabled={disabled}
-                value={selected}
-                aria-busy={loading || undefined}
-                onChange={(e) => {
-                    const next = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    props.onChange(next);
-                }}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            >
-                {options.map((o) => (
-                    <option key={o.value} value={o.value}>
-                        {o.label}
-                    </option>
-                ))}
-            </select>
+                readOnly
+                disabled
+                value={shown}
+                title="Resource search needs a FrameProvider"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+            />
         );
     }
 
-    const single = props.value == null ? '' : String(props.value);
     return (
-        <select
-            id={props.id}
-            data-frame-widget="resource-ref"
-            disabled={disabled}
-            value={single}
-            aria-busy={loading || undefined}
-            onChange={(e) => props.onChange(e.target.value === '' ? undefined : e.target.value)}
-            className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        >
-            <option value="">{loading ? 'Loading…' : `Select ${cfg.resource}…`}</option>
-            {options.map((o) => (
-                <option key={o.value} value={o.value}>
-                    {o.label}
-                </option>
-            ))}
-        </select>
+        <div data-frame-widget="resource-ref" className="min-w-0">
+            <ResourceRecordPicker
+                id={props.id}
+                resource={cfg.resource}
+                density="compact"
+                select={select}
+                valueField={cfg.value}
+                labelField={cfg.label}
+                searchFacet={cfg.searchFacet}
+                scope={scope}
+                disabled={props.disabled || props.readonly}
+                value={selectionFromValue(props.value)}
+                onChange={(next) => props.onChange(selectionToValue(next, select))}
+            />
+        </div>
     );
+}
+
+/** The ResourcePicker's form-field face — the same component under its new name. */
+export const ResourcePickerWidget = ResourceRefWidget;
+
+/**
+ * Does this node resolve to the picker? Any node carrying `x-stud-resource-ref`, EXCEPT one that
+ * also names an explicit `x-widget`: that is the host's declared choice (a silo tree, a tag
+ * input), and frame installs late — into a host's fresh registry and into seam's singleton at
+ * provider mount — so without this a built-in would silently shadow the declaration.
+ */
+export function isResourceRefNode(schema: SchemaNode): boolean {
+    return schema[STUD_RESOURCE_REF_KEYWORD] != null && schema['x-widget'] == null;
 }
 
 /**
@@ -175,5 +168,5 @@ export function ResourceRefWidget(props: ResourceRefWidgetProps) {
  * registrations first, so a re-register would merely shadow itself harmlessly.
  */
 export function registerResourceRefWidget(registry: WidgetRegistry): void {
-    registry.registerWidget((s) => s[STUD_RESOURCE_REF_KEYWORD] != null, ResourceRefWidget);
+    registry.registerWidget(isResourceRefNode, ResourceRefWidget);
 }

@@ -83,6 +83,7 @@ export const resolveColumns: ResolveColumns = (
             field,
             header: host?.header ?? displayLabel({ title: cm.label }, field, { property: true }),
             ...(host?.sortField ? { sortField: host.sortField } : {}),
+            ...(host?.headerControl ? { headerControl: host.headerControl } : {}),
             ...(host?.cell ? { cell: host.cell, cellSource: 'host' as const } : {}),
             ...(declared ? { cell: declared, cellSource: 'declared' as const } : {}),
         };

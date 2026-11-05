@@ -1,20 +1,20 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { within } from 'storybook/test';
+import { userEvent, within } from 'storybook/test';
 import type { SchemaNode } from '@schemastud/seam';
 import { ResourceRefWidget } from './ResourceRefWidget';
 import { STUD_RESOURCE_REF_KEYWORD } from './raw-mode';
 import { MockFrameProvider } from './story-harness';
 
 /**
- * Frame/ResourceRefWidget (component-seams ticket 15). The `x-stud-resource-ref` picker
- * (FC-04): a property that references rows of another registered resource renders as a
- * select whose options are fetched from that resource's index through the injected
- * transport. Frame's built-in widget (a host normally wraps it in its own shadcn
- * select); catalogued here over the workbench transport (`members` fixture).
+ * Frame/ResourceRefWidget (component-seams ticket 15; owner-review-20261102 RP). The
+ * `x-stud-resource-ref` field (FC-04): a property that references rows of another registered
+ * resource renders the ResourcePicker's compact face — a server typeahead with "Browse all N
+ * with filters" — replacing the plain one-page select. Catalogued over the workbench
+ * transport (`members` fixture); the full placement matrix lives in Frame/ResourcePicker.
  *
  * TREATMENT axes (treatment-axes.md): the **states** axis — single vs. multiple
- * (`multiple:true`), loading (transport parked), and disabled. Ambient token +
- * light⊗dark wired globally; the populated stories `play`-await their options.
+ * (`multiple:true`), open, loading (transport parked), and disabled. Ambient token +
+ * light⊗dark wired globally; the populated stories `play`-await their stored labels.
  */
 const meta = {
     title: 'Frame/ResourceRefWidget',
@@ -30,11 +30,12 @@ const refSchema = (multiple = false): SchemaNode =>
         [STUD_RESOURCE_REF_KEYWORD]: { resource: 'members', value: 'id', label: 'name', multiple },
     }) as SchemaNode;
 
-const awaitOptions: Story['play'] = async ({ canvasElement }) => {
-    await within(canvasElement).findByText('Ada Lovelace');
+// A stored value's label is fetched by id, so a settled story shows the name, never the raw id.
+const awaitLabel: Story['play'] = async ({ canvasElement }) => {
+    await within(canvasElement).findByText('Grace Hopper');
 };
 
-/** Single select — fetches `members` and maps rows to id/name options. */
+/** Single — the trigger names the stored pick (`2` → Grace Hopper). */
 export const Single: Story = {
     render: () => (
         <MockFrameProvider>
@@ -43,10 +44,25 @@ export const Single: Story = {
             </div>
         </MockFrameProvider>
     ),
-    play: awaitOptions,
+    play: awaitLabel,
 };
 
-/** Multiple select — `multiple:true` renders a multi-select whose value is a string[]. */
+/** Open — the typeahead over `members`, with its "Browse all" escape hatch. */
+export const Open: Story = {
+    render: () => (
+        <MockFrameProvider>
+            <div style={{ width: 320, minHeight: 360 }}>
+                <ResourceRefWidget id="ref-open" schema={refSchema()} value="" onChange={() => {}} />
+            </div>
+        </MockFrameProvider>
+    ),
+    play: async ({ canvasElement }) => {
+        await userEvent.click(within(canvasElement).getByRole('button', { name: /Choose a member/ }));
+        await within(canvasElement).findByText('Ada Lovelace');
+    },
+};
+
+/** Multiple — `multiple:true`: the value is a string[] and the picks sit in a tray. */
 export const Multiple: Story = {
     render: () => (
         <MockFrameProvider>
@@ -60,10 +76,12 @@ export const Multiple: Story = {
             </div>
         </MockFrameProvider>
     ),
-    play: awaitOptions,
+    play: async ({ canvasElement }) => {
+        await within(canvasElement).findByText('Alan Turing');
+    },
 };
 
-/** Loading — the transport parks, so the control shows its "Loading…" placeholder. */
+/** Loading — the transport parks; the closed trigger still reads as an empty field. */
 export const Loading: Story = {
     render: () => (
         <MockFrameProvider fixtures={{ loading: true }}>
@@ -89,5 +107,5 @@ export const Disabled: Story = {
             </div>
         </MockFrameProvider>
     ),
-    play: awaitOptions,
+    play: awaitLabel,
 };

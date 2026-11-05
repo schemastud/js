@@ -2,7 +2,7 @@
 // @schemastud/frame — the batteries-UX schema-driven admin editor rung.
 // =============================================================================
 
-export { FrameProvider, useFrameInjection } from './context';
+export { FrameProvider, useFrameInjection, useOptionalFrameInjection, registerFrameWidgets } from './context';
 export { ListShell, listItemRendersCards } from './ListShell';
 export { EditShell } from './EditShell';
 export { WidgetShell, WidgetSurface } from './WidgetShell';
@@ -110,10 +110,60 @@ export {
 } from './raw-mode';
 export {
     ResourceRefWidget,
+    ResourcePickerWidget,
     registerResourceRefWidget,
     readResourceRefConfig,
+    isResourceRefNode,
     type ResourceRefConfig,
 } from './ResourceRefWidget';
+// ResourcePicker (owner-review-20261102 RP): stage 1 kinds, stage 2 records, one selection model.
+export { ResourcePicker, type ResourcePickerProps } from './resource-picker/ResourcePicker';
+export {
+    ResourceKindPicker,
+    kindsInScope,
+    type ResourceKindPickerProps,
+    type ResourceKindOption,
+    type ResourceKindSection,
+    type ResourceKindIcon,
+    type ResourceKindScopeInput,
+} from './resource-picker/KindPicker';
+export {
+    ResourceRecordPicker,
+    createMemoryUrlState,
+    type ResourceRecordPickerProps,
+} from './resource-picker/RecordPicker';
+export {
+    KIND_PLACEMENTS,
+    RECORD_PLACEMENTS,
+    KIND_VARIANT_FOR,
+    resolveKindPlacement,
+    resolveRecordPlacement,
+    type KindPlacement,
+    type RecordPlacement,
+    type ResolvedKindPlacement,
+    type ResolvedRecordPlacement,
+    type ResourceKindScope,
+    type ResourceKindVariant,
+    type ResourcePickerDensity,
+} from './resource-picker/placement';
+export {
+    EMPTY_SELECTION,
+    followFilters,
+    isEmptySelection,
+    isPicked,
+    pageState,
+    selectAllMatching,
+    selectionCount,
+    selectionFromValue,
+    selectionToSearch,
+    selectionToValue,
+    setPagePicked,
+    togglePick,
+    type IdsSelection,
+    type ResourceSelectMode,
+    type ResourceSelection,
+    type SetSelection,
+} from './resource-picker/selection';
 export {
     createFrameHooks,
     type FrameHooks,
