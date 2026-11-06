@@ -164,7 +164,12 @@ export const ResponsiveLevelTwoBoundary: Story = {
     render: () => (
         <MockFrameProvider registerWidgets={registerDemoEditor()}>
             <div style={{ width: '100vw', height: 520, minWidth: 0 }}>
-                <FiveRegionEditShell schema={schema} record={record} widget="demo-editor" />
+                <FiveRegionEditShell
+                    schema={schema}
+                    record={record}
+                    widget="demo-editor"
+                    palette={<button type="button">Insert paragraph</button>}
+                />
             </div>
         </MockFrameProvider>
     ),
@@ -175,8 +180,18 @@ export const ResponsiveLevelTwoBoundary: Story = {
         await waitFor(() => expect(host.getAttribute('data-collapse-level')).toBe('2'));
         await expect(window.innerWidth).toBe(LEVEL_ONE_MIN_WIDTH - 1);
         await expect(host.querySelector('[data-frame-region="canvas"]')?.getBoundingClientRect().width).toBeGreaterThan(0);
-        await expect(canvas.getByRole('button', { name: 'Open block palette' })).toBeVisible();
+        const paletteToggle = canvas.getByRole('button', { name: 'Open block palette' });
+        await expect(paletteToggle).toBeVisible();
         await expect(canvas.getByRole('button', { name: 'Open inspector' })).toBeVisible();
+        await userEvent.click(paletteToggle);
+        const insert = canvas.getByRole('button', { name: 'Insert paragraph' });
+        await expect(insert).toBeVisible();
+        insert.focus();
+        await expect(document.activeElement).toBe(insert);
+        await userEvent.keyboard('{Escape}');
+        await expect((host.querySelector('[data-frame-region="palette"]') as HTMLElement).hidden).toBe(true);
+        await expect(paletteToggle.getAttribute('aria-expanded')).toBe('false');
+        await expect(document.activeElement).toBe(paletteToggle);
     },
 };
 

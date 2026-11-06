@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { EditShellMountProvider, useEditShellMountController } from './EditShellMount';
 import { collapseModes, deriveCollapseLevel, type CollapseLevel } from './responsive';
@@ -76,6 +76,12 @@ export function FiveRegionEditShell({
     const [mode, setMode] = useState<'rich' | 'source'>('rich');
     const [paletteOpen, setPaletteOpen] = useState(false);
     const [inspectorOpen, setInspectorOpen] = useState(false);
+    const regionId = useId();
+    const paletteRegionId = `${regionId}-palette-region`;
+    const inspectorRegionId = `${regionId}-inspector-region`;
+    const paletteToggleRef = useRef<HTMLButtonElement>(null);
+    const inspectorToggleRef = useRef<HTMLButtonElement>(null);
+    const lastOpenedDrawerRef = useRef<'palette' | 'inspector' | null>(null);
 
     // Responsive collapse: measured from the shell width unless a level is forced.
     const shellRef = useRef<HTMLDivElement>(null);
@@ -100,6 +106,28 @@ export function FiveRegionEditShell({
     const paletteRail = regions.palette === 'rail';
     const paletteDrawer = regions.palette === 'drawer';
     const inspectorDrawer = regions.inspector === 'drawer';
+
+    useEffect(() => {
+        const paletteIsOpen = paletteDrawer && paletteOpen;
+        const inspectorIsOpen = inspectorDrawer && inspectorOpen;
+        if (!paletteIsOpen && !inspectorIsOpen) {
+            return;
+        }
+
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape') {
+                return;
+            }
+            event.preventDefault();
+            setPaletteOpen(false);
+            setInspectorOpen(false);
+            const activeDrawer = lastOpenedDrawerRef.current ?? (inspectorIsOpen ? 'inspector' : 'palette');
+            (activeDrawer === 'palette' ? paletteToggleRef.current : inspectorToggleRef.current)?.focus();
+        };
+
+        document.addEventListener('keydown', onKeyDown);
+        return () => document.removeEventListener('keydown', onKeyDown);
+    }, [inspectorDrawer, inspectorOpen, paletteDrawer, paletteOpen]);
 
     // ED-11's min-width arithmetic yields at 820px, then 640px. The owner-approved
     // reading overlays a 48px palette rail at level 1 so the 360px canvas + 280px
@@ -145,6 +173,24 @@ export function FiveRegionEditShell({
         ...(narrow ? { width: '100%' } : {}),
         ...(paletteRail ? { paddingInlineStart: 48 } : {}),
     };
+    const togglePalette = () => {
+        if (paletteOpen) {
+            setPaletteOpen(false);
+            lastOpenedDrawerRef.current = inspectorOpen ? 'inspector' : null;
+        } else {
+            lastOpenedDrawerRef.current = 'palette';
+            setPaletteOpen(true);
+        }
+    };
+    const toggleInspector = () => {
+        if (inspectorOpen) {
+            setInspectorOpen(false);
+            lastOpenedDrawerRef.current = paletteOpen ? 'palette' : null;
+        } else {
+            lastOpenedDrawerRef.current = 'inspector';
+            setInspectorOpen(true);
+        }
+    };
 
     const shell = (
         <EditShellMountProvider value={mount}>
@@ -188,17 +234,19 @@ export function FiveRegionEditShell({
                         <span data-frame-region="drawer-toggles" role="group" aria-label="Editor panels">
                             <button
                                 type="button"
-                                aria-controls="frame-palette-region"
+                                ref={paletteToggleRef}
+                                aria-controls={paletteRegionId}
                                 aria-expanded={paletteOpen}
-                                onClick={() => setPaletteOpen((open) => !open)}
+                                onClick={togglePalette}
                             >
                                 {paletteOpen ? 'Close block palette' : 'Open block palette'}
                             </button>
                             <button
                                 type="button"
-                                aria-controls="frame-inspector-region"
+                                ref={inspectorToggleRef}
+                                aria-controls={inspectorRegionId}
                                 aria-expanded={inspectorOpen}
-                                onClick={() => setInspectorOpen((open) => !open)}
+                                onClick={toggleInspector}
                             >
                                 {inspectorOpen ? 'Close inspector' : 'Open inspector'}
                             </button>
@@ -208,7 +256,7 @@ export function FiveRegionEditShell({
                 </div>
                 <div data-frame-region="body" style={REGION_BODY}>
                     <div
-                        id="frame-palette-region"
+                        id={paletteRegionId}
                         data-frame-region="palette"
                         data-palette-mode={regions.palette}
                         style={paletteStyle}
@@ -217,13 +265,14 @@ export function FiveRegionEditShell({
                         {paletteRail && (
                             <button
                                 type="button"
+                                ref={paletteToggleRef}
                                 aria-label={paletteOpen ? 'Close block palette' : 'Open block palette'}
-                                aria-controls="frame-palette-region"
+                                aria-controls={paletteRegionId}
                                 aria-expanded={paletteOpen}
-                                onClick={() => setPaletteOpen((open) => !open)}
-                                style={{ width: paletteRail ? 47 : '100%', minHeight: 44, zIndex: 1 }}
+                                onClick={togglePalette}
+                                style={{ width: 47, minHeight: 44, zIndex: 1 }}
                             >
-                                {paletteRail ? '▦' : paletteOpen ? 'Close blocks' : 'Open blocks'}
+                                {'▦'}
                             </button>
                         )}
                         {paletteRail && paletteOpen ? (
@@ -272,7 +321,7 @@ export function FiveRegionEditShell({
                         )}
                     </div>
                     <div
-                        id="frame-inspector-region"
+                        id={inspectorRegionId}
                         data-frame-region="inspector-region"
                         data-inspector-mode={regions.inspector}
                         style={inspectorStyle}
