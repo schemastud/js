@@ -45,6 +45,21 @@ type StructuralAxes = { canvas?: boolean; density?: boolean };
 type Scheme = 'light' | 'dark';
 
 const config: TestRunnerConfig = {
+    async preVisit(page, context) {
+        // The shell's responsive stories run at actual browser viewport sizes, not jsdom
+        // measurements or a fixed-width child pretending to be a narrow device.
+        // preVisit runs before the story iframe is initialized, so use the runner's stable story id
+        // rather than querying Storybook's in-page story store here.
+        const responsiveViewports: Record<string, { width: number; height: number }> = {
+            'frame-fiveregioneditshell--responsive-level-one-boundary': { width: 640, height: 844 },
+            'frame-fiveregioneditshell--responsive-level-two-boundary': { width: 639, height: 844 },
+            'frame-fiveregioneditshell--responsive-wide': { width: 1440, height: 900 },
+        };
+        const viewportSize = responsiveViewports[context.id];
+        if (viewportSize) {
+            await page.setViewportSize(viewportSize);
+        }
+    },
     async postVisit(page, context) {
         if (!process.env.VR_SNAPSHOTS) return;
         const { toMatchImageSnapshot } = await import('jest-image-snapshot');

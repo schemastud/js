@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { EditShellMountProvider, useEditShellMountController } from './EditShellMount';
 import { collapseModes, deriveCollapseLevel, type CollapseLevel } from './responsive';
@@ -18,10 +18,10 @@ import type { Row } from './types';
 // the canvas drives the inspector. Palette + status are stubs this ticket (they
 // fill in ED-09/13/14).
 
-const REGION_BODY = { display: 'flex', alignItems: 'stretch', minHeight: 0 } as const;
-const PALETTE_STYLE = { flex: '0 0 200px', borderRight: '1px solid var(--stud-line)' } as const;
+const REGION_BODY = { display: 'flex', alignItems: 'stretch', minHeight: 0, position: 'relative' } as const;
+const PALETTE_STYLE = { flex: '0 0 180px', borderRight: '1px solid var(--stud-line)' } as const;
 const CANVAS_STYLE = { flex: '1 1 auto', minWidth: 0, overflow: 'auto' } as const;
-const INSPECTOR_STYLE = { flex: '0 0 300px', borderLeft: '1px solid var(--stud-line)' } as const;
+const INSPECTOR_STYLE = { flex: '0 0 280px', borderLeft: '1px solid var(--stud-line)' } as const;
 const BAR_STYLE = { padding: '6px 12px', borderBottom: '1px solid var(--stud-line)' } as const;
 const STATUS_STYLE = { padding: '4px 12px', borderTop: '1px solid var(--stud-line)', fontSize: 12, color: 'var(--stud-ink-muted)' } as const;
 
@@ -74,6 +74,8 @@ export function FiveRegionEditShell({
     const mount = useEditShellMountController();
     // The editor always opens in Rich; Source is an opt-in view.
     const [mode, setMode] = useState<'rich' | 'source'>('rich');
+    const [paletteOpen, setPaletteOpen] = useState(false);
+    const [inspectorOpen, setInspectorOpen] = useState(false);
 
     // Responsive collapse: measured from the shell width unless a level is forced.
     const shellRef = useRef<HTMLDivElement>(null);
@@ -94,6 +96,55 @@ export function FiveRegionEditShell({
     }, [collapseLevel]);
 
     const regions = collapseModes(collapseLevel ?? autoLevel);
+    const narrow = regions.canvasFullBleed;
+    const paletteRail = regions.palette === 'rail';
+    const paletteDrawer = regions.palette === 'drawer';
+    const inspectorDrawer = regions.inspector === 'drawer';
+
+    // ED-11's min-width arithmetic yields at 820px, then 640px. The owner-approved
+    // reading overlays a 48px palette rail at level 1 so the 360px canvas + 280px
+    // inspector still fit; this overlay is the interpretation in orch-peer's row
+    // 47a8485f, not an explicit ED-11 rule.
+    const paletteStyle: CSSProperties = paletteRail
+        ? {
+              position: 'absolute',
+              insetBlock: 0,
+              insetInlineStart: 0,
+              zIndex: 20,
+              width: 48,
+              flex: '0 0 48px',
+              background: 'var(--stud-surface)',
+              borderRight: '1px solid var(--stud-line)',
+          }
+        : paletteDrawer
+          ? {
+                position: 'absolute',
+                insetBlock: 0,
+                insetInlineStart: 0,
+                zIndex: 20,
+                width: 'min(240px, 85vw)',
+                background: 'var(--stud-surface)',
+                borderRight: '1px solid var(--stud-line)',
+                boxShadow: '0 8px 24px rgb(0 0 0 / 18%)',
+            }
+          : PALETTE_STYLE;
+    const inspectorStyle: CSSProperties = inspectorDrawer
+        ? {
+              position: 'absolute',
+              insetBlock: 0,
+              insetInlineEnd: 0,
+              zIndex: 20,
+              width: 'min(300px, 85vw)',
+              background: 'var(--stud-surface)',
+              borderLeft: '1px solid var(--stud-line)',
+              boxShadow: '0 8px 24px rgb(0 0 0 / 18%)',
+          }
+        : INSPECTOR_STYLE;
+    const canvasStyle: CSSProperties = {
+        ...CANVAS_STYLE,
+        ...(narrow ? { width: '100%' } : {}),
+        ...(paletteRail ? { paddingInlineStart: 48 } : {}),
+    };
 
     const shell = (
         <EditShellMountProvider value={mount}>
@@ -105,7 +156,7 @@ export function FiveRegionEditShell({
             >
                 <div
                     data-frame-region="top-bar"
-                    style={{ ...BAR_STYLE, display: 'flex', alignItems: 'center', gap: 8 }}
+                    style={{ ...BAR_STYLE, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}
                 >
                     <SavePill />
                     {! autosave && (
@@ -133,16 +184,73 @@ export function FiveRegionEditShell({
                             </button>
                         </span>
                     )}
+                    {narrow && (
+                        <span data-frame-region="drawer-toggles" role="group" aria-label="Editor panels">
+                            <button
+                                type="button"
+                                aria-controls="frame-palette-region"
+                                aria-expanded={paletteOpen}
+                                onClick={() => setPaletteOpen((open) => !open)}
+                            >
+                                {paletteOpen ? 'Close block palette' : 'Open block palette'}
+                            </button>
+                            <button
+                                type="button"
+                                aria-controls="frame-inspector-region"
+                                aria-expanded={inspectorOpen}
+                                onClick={() => setInspectorOpen((open) => !open)}
+                            >
+                                {inspectorOpen ? 'Close inspector' : 'Open inspector'}
+                            </button>
+                        </span>
+                    )}
                     {topBar ?? null}
                 </div>
                 <div data-frame-region="body" style={REGION_BODY}>
-                    <div data-frame-region="palette" data-palette-mode={regions.palette} style={PALETTE_STYLE}>
-                        {palette ?? <PalettePane />}
+                    <div
+                        id="frame-palette-region"
+                        data-frame-region="palette"
+                        data-palette-mode={regions.palette}
+                        style={paletteStyle}
+                        hidden={paletteDrawer && !paletteOpen}
+                    >
+                        {paletteRail && (
+                            <button
+                                type="button"
+                                aria-label={paletteOpen ? 'Close block palette' : 'Open block palette'}
+                                aria-controls="frame-palette-region"
+                                aria-expanded={paletteOpen}
+                                onClick={() => setPaletteOpen((open) => !open)}
+                                style={{ width: paletteRail ? 47 : '100%', minHeight: 44, zIndex: 1 }}
+                            >
+                                {paletteRail ? '▦' : paletteOpen ? 'Close blocks' : 'Open blocks'}
+                            </button>
+                        )}
+                        {paletteRail && paletteOpen ? (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    insetBlock: 0,
+                                    insetInlineStart: 48,
+                                    zIndex: 21,
+                                    width: 200,
+                                    background: 'var(--stud-surface)',
+                                    border: '1px solid var(--stud-line)',
+                                    boxShadow: '0 8px 24px rgb(0 0 0 / 18%)',
+                                }}
+                            >
+                                {palette ?? <PalettePane />}
+                            </div>
+                        ) : paletteDrawer && paletteOpen ? (
+                            palette ?? <PalettePane />
+                        ) : !paletteRail && !paletteDrawer ? (
+                            palette ?? <PalettePane />
+                        ) : null}
                     </div>
                     <div
                         data-frame-region="canvas"
                         data-full-bleed={regions.canvasFullBleed ? '' : undefined}
-                        style={CANVAS_STYLE}
+                        style={canvasStyle}
                     >
                         {mode === 'source' ? (
                             <pre data-frame-source-view="" style={{ margin: 0, padding: 12, fontSize: 12 }}>
@@ -164,9 +272,11 @@ export function FiveRegionEditShell({
                         )}
                     </div>
                     <div
+                        id="frame-inspector-region"
                         data-frame-region="inspector-region"
                         data-inspector-mode={regions.inspector}
-                        style={INSPECTOR_STYLE}
+                        style={inspectorStyle}
+                        hidden={inspectorDrawer && !inspectorOpen}
                     >
                         {inspector ?? <Inspector />}
                     </div>
