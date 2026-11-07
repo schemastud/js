@@ -120,7 +120,7 @@ function FallbackValue({ value, node }: { value: unknown; node?: SchemaNode }): 
 
 /**
  * Mount a single resolved node read-only. A resolved COMPONENT gets the value +
- * read-only hints; everything else (miss, string widget name, non-participating)
+ * read-only hints; everything else (miss, string widget name, no entry)
  * renders the read-only labeled structured/scalar fallback.
  */
 function ViewNode({
@@ -198,6 +198,10 @@ export function SchemaView({ schema, record, manifest, context, registry: regist
         <div data-frame-view="detail">
             {Object.keys(properties).map((key) => {
                 const cm = manifest.byNode[key]?.detail;
+                // An explicit opt-out is a declaration that the field is not in this surface, the same
+                // thing it means to `list-column`. A field with no entry was never declared either way,
+                // so it keeps the read-only fallback below.
+                if (cm?.participates === false) return null;
                 return (
                     <ViewNode
                         key={key}

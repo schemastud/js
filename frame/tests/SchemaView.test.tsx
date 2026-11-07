@@ -25,14 +25,21 @@ const record = { email: 'a@b.co', name: 'Ada' };
 const manifest: ContextManifest = {
     byNode: {
         email: { detail: { participates: true, widget: 'email-badge' } },
-        name: { detail: { participates: false } },
     },
     inherits: {},
     known: ['detail'],
 };
 
 describe('SchemaView (detail)', () => {
-    it('mounts a participating registered widget and defaults a non-participating field', () => {
+    it('omits a field that explicitly opts out of detail, label and value both', () => {
+        const optOut: ContextManifest = { byNode: { name: { detail: { participates: false } } }, inherits: {}, known: ['detail'] };
+        const { container } = render(<SchemaView schema={schema} record={record} manifest={optOut} context="detail" registry={createWidgetRegistry()} />);
+        expect(container.querySelectorAll('[data-frame-view="field"]').length).toBe(Object.keys(schema.properties as object).length - 1);
+        expect(container.textContent).not.toContain(String((record as Record<string, unknown>).name));
+    });
+
+
+    it('mounts a participating registered widget and defaults a field with no entry', () => {
         const registry = createWidgetRegistry();
         registry.registerWidget('email-badge', EmailBadge);
 
@@ -40,7 +47,7 @@ describe('SchemaView (detail)', () => {
 
         // Participating + bound → the resolved widget renders read-only.
         expect(screen.getByTestId('email-widget').textContent).toBe('a@b.co');
-        // Non-participating → read-only scalar default carries the value.
+        // No entry → read-only scalar default carries the value.
         expect(screen.getByText('Ada')).toBeTruthy();
     });
 });
@@ -61,7 +68,7 @@ describe('SchemaView fallback presentation (C03)', () => {
     // A machine-field object sitting on a non-participating node → the read fallback.
     const structuredRecord = { profile: { first_name: 'Ada', retryCount: 3, note: 'KEEP_me' } };
     const structuredManifest: ContextManifest = {
-        byNode: { profile: { detail: { participates: false } } },
+        byNode: {},
         inherits: {},
         known: ['detail'],
     };
