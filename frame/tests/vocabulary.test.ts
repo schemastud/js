@@ -127,4 +127,36 @@ describe('frame vocabulary', () => {
         expect(refused.status).toBe(2);
         expect(refused.stderr).toContain('ERR_PACKAGE_PATH_NOT_EXPORTED');
     }, 60_000);
+
+    it("the bin picks an overlapping exports pattern as Node does: the more specific one, as the host's own import", () => {
+        // review-r1's repro (33 amend): './widgets/*' is more specific than './*' for 'widgets/rating'.
+        const host = tmpHost();
+        writeFileSync(join(host, 'package.json'), JSON.stringify({ name: 'pattern-host', type: 'module' }));
+        const pkg = join(host, 'node_modules/@fixture/pattern');
+        mkdirSync(join(pkg, 'generic/widgets'), { recursive: true });
+        mkdirSync(join(pkg, 'special'), { recursive: true });
+        writeFileSync(
+            join(pkg, 'package.json'),
+            JSON.stringify({ name: '@fixture/pattern', type: 'module', exports: { './*': './generic/*.mjs', './widgets/*': './special/*.mjs' } }),
+        );
+        writeFileSync(join(pkg, 'generic/widgets/rating.mjs'), "export default function generic(r) { r.registerWidget('generic-answer', 'textarea'); }\n");
+        writeFileSync(join(pkg, 'special/rating.mjs'), "export default function specific(r) { r.registerWidget('specific-answer', 'textarea'); }\n");
+
+        // What the host's own Node import loads.
+        writeFileSync(join(host, 'probe.mjs'), "import kit from '@fixture/pattern/widgets/rating'; console.log(kit.name);\n");
+        const imported = spawnSync(process.execPath, [join(host, 'probe.mjs')], { cwd: host, encoding: 'utf8' });
+        expect(imported.status, imported.stderr).toBe(0);
+        expect(imported.stdout.trim()).toBe('specific');
+
+        const written = join(host, 'vocabulary.json');
+        const result = spawnSync(
+            process.execPath,
+            [join(FRAME, 'bin/frame-vocabulary.mjs'), '--widgets', '@fixture/pattern/widgets/rating', '--out', written, '--write'],
+            { cwd: host, encoding: 'utf8' },
+        );
+        expect(result.status, result.stderr).toBe(0);
+        const widgets = (JSON.parse(readFileSync(written, 'utf8')) as FrameVocabulary).widgets;
+        expect(widgets['specific-answer']).toBeDefined();
+        expect(widgets['generic-answer']).toBeUndefined();
+    }, 60_000);
 });

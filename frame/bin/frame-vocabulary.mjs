@@ -70,6 +70,17 @@ function pickTarget(entry) {
     return undefined;
 }
 
+/** Node's PATTERN_KEY_COMPARE: negative when `a` is more specific than `b` (sorts first). */
+function patternKeyCompare(a, b) {
+    const baseA = a.indexOf('*') + 1;
+    const baseB = b.indexOf('*') + 1;
+    if (baseA > baseB) return -1;
+    if (baseB > baseA) return 1;
+    if (a.length > b.length) return -1;
+    if (b.length > a.length) return 1;
+    return 0;
+}
+
 function exportsTarget(exportsField, subpath, spec, root) {
     const conditionsOnly =
         exportsField && typeof exportsField === 'object' && !Array.isArray(exportsField) &&
@@ -78,19 +89,26 @@ function exportsTarget(exportsField, subpath, spec, root) {
         ? { '.': exportsField }
         : exportsField;
 
-    let entry = map[subpath];
+    // An exact key wins over any pattern. Among patterns, Node's PACKAGE_EXPORTS_RESOLVE takes the most specific
+    // match by PATTERN_KEY_COMPARE: the longest base before the '*', then the longest key. Never insertion order.
+    let entry = Object.hasOwn(map, subpath) && !subpath.includes('*') ? map[subpath] : undefined;
     let star;
     if (entry === undefined) {
+        let best;
         for (const key of Object.keys(map)) {
             const at = key.indexOf('*');
             if (at < 0 || key.indexOf('*', at + 1) >= 0) continue;
             const head = key.slice(0, at);
             const tail = key.slice(at + 1);
-            if (subpath.startsWith(head) && subpath.endsWith(tail) && subpath.length >= head.length + tail.length) {
-                entry = map[key];
-                star = subpath.slice(head.length, subpath.length - tail.length);
-                break;
-            }
+            // Node's own condition: the base is a prefix, the subpath is at least as long as the key, and it ends with
+            // the trailer.
+            const matches = subpath.startsWith(head) && subpath.length >= key.length && subpath.endsWith(tail);
+            if (matches && (best === undefined || patternKeyCompare(best, key) > 0)) best = key;
+        }
+        if (best !== undefined) {
+            const at = best.indexOf('*');
+            entry = map[best];
+            star = subpath.slice(at, subpath.length - (best.length - at - 1));
         }
     }
     if (entry === undefined) {
