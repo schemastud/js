@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { ResourceKey } from './resources';
 import { useFrameInjection } from './context';
 import { DefaultContainer, DefaultNotFound } from './slots/defaults';
-import { useEditShell, type EditShellOptions } from './useEditShell';
+import { useEditShellOf, type EditShellOptionsOf } from './useEditShell';
 import type { EditShellProps, EditShellPropsOf } from './types';
 
 /**
@@ -29,7 +29,7 @@ function EditShellRecord({
     onCancel,
     ...options
 }: EditShellPropsOf<string>) {
-    const edit = useEditShell(options as unknown as EditShellOptions<string>);
+    const edit = useEditShellOf(options as EditShellOptionsOf<string>);
     const { editSlots, primitives } = useFrameInjection();
     const { FormBody, Toggle, SaveBar } = edit.slots;
     const slots = options.slots;

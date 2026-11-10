@@ -3,7 +3,7 @@ import type { ResourceKey } from './resources';
 import { ListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
 import { listItemRendersCards } from './listItemRendersCards';
-import { useListShell, type ListShellOptions } from './useListShell';
+import { useListShellOf, type ListShellOptionsOf } from './useListShell';
 import type { ListShellProps, ListShellPropsOf, Row } from './types';
 
 /**
@@ -17,7 +17,7 @@ import type { ListShellProps, ListShellPropsOf, Row } from './types';
  */
 export function ListShell<K extends ResourceKey = ResourceKey>(props: ListShellProps<K>) {
     const { paginationPlacement = 'both', ...options } = props as unknown as ListShellPropsOf<string>;
-    const list = useListShell(options as unknown as ListShellOptions<string>);
+    const list = useListShellOf(options as ListShellOptionsOf<string>);
     const { manifest, filters, collection, rows, pagination, slots, create, notice, ResourceActions } = list;
     const { SimpleSelect } = useFrameInjection().primitives;
     const { Toolbar, Filters: FiltersSlot, Table, Cards, Cell, Empty, ErrorState, Loading, Pagination } = slots;

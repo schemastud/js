@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type ComponentType, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, type ComponentType, type ReactNode } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import { useListFilters, type ListFiltersState } from '@schemastud/facets';
 import { useFrameInjection } from './context';
@@ -39,7 +39,13 @@ import type {
 const NO_COLUMNS: FrameColumn[] = [];
 
 /** What `useListShell` takes: `ListShell`'s behaviour props. */
-export interface ListShellOptions<K extends ResourceKey = ResourceKey> {
+/** What `useListShell` takes, typed by the resource key (ruling 03). */
+export interface ListShellOptions<K extends ResourceKey = ResourceKey> extends ListShellOptionsOf<K> {}
+/** What `useListShell` returns, typed by the resource key (ruling 03). */
+export interface ListShellState<K extends ResourceKey = ResourceKey> extends ListShellStateOf<K> {}
+
+/** @internal `ListShellOptions` over any string key: frame's own untyped view. Not a root export. */
+export interface ListShellOptionsOf<K extends string> {
     resource: K;
     /** Per-field overrides on the columns. With a manifest the columns are its `list-column` set. */
     columns?: FrameColumn<RowOf<K>>[];
@@ -52,7 +58,8 @@ export interface ListShellOptions<K extends ResourceKey = ResourceKey> {
 }
 
 /** A list's behaviour: the request, the rows and their state, and what renders them. `ListShell` renders it. */
-export interface ListShellState<K extends ResourceKey = ResourceKey> {
+/** @internal `ListShellState` over any string key: frame's own untyped view. Not a root export. */
+export interface ListShellStateOf<K extends string> {
     resource: K;
     manifest: ContextManifest | undefined;
     /** Facets' filter state: values, sort, sortable fields, the filter schema. */
@@ -99,6 +106,11 @@ export interface ListShellState<K extends ResourceKey = ResourceKey> {
  * a kit's `useManifest()`, so it works under any provider.
  */
 export function useListShell<K extends ResourceKey = ResourceKey>(options: ListShellOptions<K>): ListShellState<K> {
+    return useListShellOf(options);
+}
+
+/** @internal `useListShell` over any string key, which the shell calls (ruling 03: typed at the boundary). Not a root export. */
+export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>): ListShellStateOf<K> {
     // Typed by the key at the boundary (ruling 03); the behaviour itself reads rows as `Row`.
     const {
         resource,
@@ -179,7 +191,7 @@ export function useListShell<K extends ResourceKey = ResourceKey>(options: ListS
     // provider), then frame's plain-HTML default. A page overriding `Table` therefore still
     // inherits the host's `Cell`/`Empty`/`Pagination` instead of dropping back to bare HTML
     // for every key it did not restate.
-    const resolvedSlots: ListShellState['slots'] = {
+    const resolvedSlots: ListShellStateOf<string>['slots'] = {
         Toolbar: slots?.Toolbar ?? listSlots?.Toolbar ?? DefaultToolbar,
         // Absent here means facets' own bar, which the renderer draws INLINE (see ListShell).
         Filters: slots?.Filters ?? listSlots?.Filters,
@@ -240,6 +252,10 @@ export function useListShell<K extends ResourceKey = ResourceKey>(options: ListS
         [notify, inline.onNotice],
     );
     const notice = { element: inline.element, onNotice };
+    // The bound action components read the manifest through a ref: a refreshed but equal manifest must not change
+    // their component type, which would remount them and close an open action dialog.
+    const manifestRef = useRef(manifest);
+    manifestRef.current = manifest;
     const navigate = onOpen ? (record: Row) => onOpen(record) : undefined;
     // Bind the three resource-level props once. Memoized because the Table receives a COMPONENT
     // TYPE: a fresh closure every render remounts the button, which drops the delete mutation's
@@ -262,7 +278,7 @@ export function useListShell<K extends ResourceKey = ResourceKey>(options: ListS
                           {recordActions.length > 0 ? (
                               <RecordActionButtons
                                   resource={resource}
-                                  manifest={manifest}
+                                  manifest={manifestRef.current}
                                   record={record}
                                   compact
                                   onNavigate={navigate}
@@ -289,7 +305,6 @@ export function useListShell<K extends ResourceKey = ResourceKey>(options: ListS
             recordActions.map((a) => a.key).join(','),
             onNotice,
             onOpen,
-            manifest,
         ],
     );
 
@@ -300,10 +315,10 @@ export function useListShell<K extends ResourceKey = ResourceKey>(options: ListS
             resourceActionKeys === ''
                 ? undefined
                 : () => (
-                      <ResourceActionBar resource={resource} manifest={manifest} onNavigate={navigate} onNotice={onNotice} />
+                      <ResourceActionBar resource={resource} manifest={manifestRef.current} onNavigate={navigate} onNotice={onNotice} />
                   ),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        [resourceActionKeys, resource, manifest, onOpen, onNotice],
+        [resourceActionKeys, resource, onOpen, onNotice],
     );
 
     const rows: Row[] = query.data?.data ?? [];
@@ -341,7 +356,7 @@ export function useListShell<K extends ResourceKey = ResourceKey>(options: ListS
         notice,
         navigate,
         slots: resolvedSlots,
-    } as unknown as ListShellState<K>;
+    } as unknown as ListShellStateOf<K>;
 }
 
 /**

@@ -1,5 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, keepPreviousData } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ContextManifest } from '../src/contexts';
 import { useEditShell, useListShell } from '../src';
 import { KNOWN_CONTEXTS } from '../src/contexts';
 import { createFrameKit } from '../src/kit';
@@ -84,12 +86,13 @@ const MEMBERS: Row[] = [
 ];
 
 /** A custom form over the hook: the draft, an edit, a save, the bound record actions and the notice region. */
-function HookForm({ id, onSaved }: { id: string | null; onSaved?: (record: unknown) => void }) {
-    const edit = useEditShell({ resource: 'members', id, onSaved });
+function HookForm({ id, onSaved, manifest }: { id: string | null; onSaved?: (record: unknown) => void; manifest?: ContextManifest }) {
+    const edit = useEditShell({ resource: 'members', id, onSaved, manifest });
     const { RecordActions } = edit.actions;
     return (
         <div>
             <span data-testid="draft">{String(edit.draft.name ?? '')}</span>
+            <span data-testid="status">{edit.status}</span>
             <span data-testid="actions">{RecordActions ? 'bound' : 'none'}</span>
             <button type="button" onClick={() => edit.setDraft({ ...edit.draft, name: 'Edited' })}>
                 Edit
@@ -195,5 +198,105 @@ describe('useEditShell', () => {
             </frame.Provider>,
         );
         await waitFor(() => expect(screen.getByTestId('actions').textContent).toBe('none'));
+    });
+});
+
+/** frame-foundation 30 amend: the two defects the reviews found. */
+describe('useEditShell and useListShell: amend regressions', () => {
+    it('with a host keepPreviousData default, the previous record is never ready or saved under the new id', async () => {
+        let second: (row: Row) => void = () => {};
+        const save = vi.fn(async (_resource: string, id: string | null, data: unknown) => ({ id, ...(data as object) }) as Row);
+        const transport = createMemoryTransport(
+            {},
+            {
+                get: async (_resource: string, id: string) =>
+                    id === '1' ? { id: '1', name: 'Ada Lovelace' } : new Promise<Row>((resolve) => (second = resolve)),
+                save,
+            },
+        );
+        const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, placeholderData: keepPreviousData } } });
+        const frame = createFrameKit({ transport, queryClient, urlState: 'memory', can: () => true });
+        const view = render(
+            <frame.Provider>
+                <HookForm id="1" />
+            </frame.Provider>,
+        );
+        await waitFor(() => expect(draft()).toBe('Ada Lovelace'));
+
+        view.rerender(
+            <frame.Provider>
+                <HookForm id="2" />
+            </frame.Provider>,
+        );
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        expect(screen.getByTestId('status').textContent).not.toBe('ready');
+        expect(draft()).toBe('');
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        expect(save).not.toHaveBeenCalled();
+
+        await act(async () => second({ id: '2', name: 'Grace Hopper' }));
+        await waitFor(() => expect(draft()).toBe('Grace Hopper'));
+        expect(screen.getByTestId('status').textContent).toBe('ready');
+    });
+
+    const confirmOnly = (key: string, scope: 'record' | 'resource'): ResourceActionDefinition => ({
+        key,
+        label: key === 'archive' ? 'Archive' : 'Reindex',
+        scope,
+        method: 'POST',
+        url: scope === 'record' ? '/members/{id}/' + key : '/members/' + key,
+        input: null,
+        result: 'toast',
+        destructive: false,
+    });
+    const withActions = (): ContextManifest => ({
+        byNode: {},
+        inherits: {},
+        known: KNOWN_CONTEXTS,
+        actions: [confirmOnly('archive', 'record'), confirmOnly('reindex', 'resource')],
+        can: { actions: { archive: true, reindex: true } },
+    } as ContextManifest);
+
+    it('an open record-action dialog survives a refresh to an equal manifest', async () => {
+        const frame = createFrameKit({ transport: createMemoryTransport({ rows: { members: MEMBERS } }), urlState: 'memory' });
+        const manifest = withActions();
+        const view = render(
+            <frame.Provider>
+                <HookForm id="1" manifest={manifest} />
+            </frame.Provider>,
+        );
+        fireEvent.click(await screen.findByRole('button', { name: 'Archive' }));
+        expect(await screen.findByRole('dialog')).toBeTruthy();
+
+        view.rerender(
+            <frame.Provider>
+                <HookForm id="1" manifest={structuredClone(manifest)} />
+            </frame.Provider>,
+        );
+        expect(screen.queryByRole('dialog')).toBeTruthy();
+    });
+
+    it('an open resource-action dialog survives a refresh to an equal manifest', async () => {
+        function HookBar({ manifest }: { manifest: ContextManifest }) {
+            const { ResourceActions } = useListShell({ resource: 'members', manifest });
+            return ResourceActions ? <ResourceActions /> : null;
+        }
+        const frame = createFrameKit({ transport: createMemoryTransport({ rows: { members: MEMBERS } }), urlState: 'memory' });
+        const manifest = withActions();
+        const view = render(
+            <frame.Provider>
+                <HookBar manifest={manifest} />
+            </frame.Provider>,
+        );
+        fireEvent.click(await screen.findByRole('button', { name: 'Reindex' }));
+        expect(await screen.findByRole('dialog')).toBeTruthy();
+
+        view.rerender(
+            <frame.Provider>
+                <HookBar manifest={structuredClone(manifest)} />
+            </frame.Provider>,
+        );
+        expect(screen.queryByRole('dialog')).toBeTruthy();
     });
 });

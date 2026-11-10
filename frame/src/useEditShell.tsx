@@ -12,7 +12,13 @@ import type { CreateResultOf, EditOf, ResourceKey, RowOf } from './resources';
 import type { EditSlots, FormMode, FrameNotice, ResourceActionDefinition, Row, SchemaPurpose } from './types';
 
 /** What `useEditShell` takes: `EditShell`'s behaviour props. */
-export interface EditShellOptions<K extends ResourceKey = ResourceKey> {
+/** What `useEditShell` takes, typed by the resource key (ruling 03). */
+export interface EditShellOptions<K extends ResourceKey = ResourceKey> extends EditShellOptionsOf<K> {}
+/** What `useEditShell` returns, typed by the resource key (ruling 03). */
+export interface EditShellState<K extends ResourceKey = ResourceKey> extends EditShellStateOf<K> {}
+
+/** @internal `EditShellOptions` over any string key: frame's own untyped view. Not a root export. */
+export interface EditShellOptionsOf<K extends string> {
     resource: K;
     /** `null` creates. */
     id: string | null;
@@ -31,7 +37,8 @@ export interface EditShellOptions<K extends ResourceKey = ResourceKey> {
 }
 
 /** A form's behaviour: the reads and their state, the draft, the save and its refusal. `EditShell` renders it. */
-export interface EditShellState<K extends ResourceKey = ResourceKey> {
+/** @internal `EditShellState` over any string key: frame's own untyped view. Not a root export. */
+export interface EditShellStateOf<K extends string> {
     resource: K;
     id: string | null;
     manifest: ContextManifest | undefined;
@@ -91,6 +98,11 @@ export interface EditShellState<K extends ResourceKey = ResourceKey> {
  * one (no draft write, no `onSaved`, no `onSubmitted` hook).
  */
 export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditShellOptions<K>): EditShellState<K> {
+    return useEditShellOf(options);
+}
+
+/** @internal `useEditShell` over any string key, which the shell calls (ruling 03: typed at the boundary). Not a root export. */
+export function useEditShellOf<K extends string>(options: EditShellOptionsOf<K>): EditShellStateOf<K> {
     // Typed by the key at the boundary (ruling 03); the behaviour itself reads records as `Row`.
     const {
         resource,
@@ -141,6 +153,11 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
     const schemaQuery = useFormSchema(resource, form, id === null ? 'write' : schemaPurpose);
     const recordQuery = useRowRecord(resource, id);
     const saveMutation = useRowSave(resource);
+    // A host's `placeholderData` (say `keepPreviousData` for its lists) carries the PREVIOUS key's data while the
+    // new one loads. A placeholder is never this record: it never seeds the draft, never counts as loaded, and so a
+    // save cannot send it under the new id. Only the real read for the current key does.
+    const record = recordQuery.isPlaceholderData ? undefined : recordQuery.data;
+    const servedSchema = schemaQuery.isPlaceholderData ? undefined : schemaQuery.data;
 
     // A new record inside one mount starts over (React's previous-prop pattern): a dirty draft is never
     // overwritten by a refetch, so without this the previous record's draft would save under the new id.
@@ -163,12 +180,12 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
     // A stable schema keeps SchemaForm's asynchronous ref resolution from remounting
     // its controls on each keystroke or read-status change. The served schema reaches the form
     // body as served: the form mode acts in the form's resolver (`plainData`), not on the schema.
-    const schema = useMemo(() => schemaQuery.data ?? { type: 'object', properties: {} }, [schemaQuery.data]);
+    const schema = useMemo(() => servedSchema ?? { type: 'object', properties: {} }, [servedSchema]);
 
     // Seed the form once the record arrives (create starts empty).
     useEffect(() => {
-        if (recordQuery.data && !dirty.current) setDraftState(recordQuery.data);
-    }, [recordQuery.data, recordKey]);
+        if (record && !dirty.current) setDraftState(record);
+    }, [record, recordKey]);
 
     // Per-slot across three tiers — this page's `slots`, the injection's app-wide `editSlots`,
     // then frame's default. See FrameInjection.editSlots.
@@ -181,13 +198,17 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
     const readFailed = schemaQuery.isError || (id !== null && recordQuery.isError);
     // Detail (readOnly) still resolves against `view`; create/update gate on their action.
     const effectiveReadOnly = readOnly || !can(id === null ? 'create' : 'update', resource) || readFailed;
-    const ready = schemaQuery.data !== undefined && (id === null || recordQuery.data !== undefined);
+    const ready = servedSchema !== undefined && (id === null || record !== undefined);
     // C17 create-chrome + terminal states. A 404 record read is a DISTINCT not-found state; the
     // heading reads from the resource's singularLabel ("New <noun>" when creating).
     const recordNotFound = id !== null && recordQuery.isError && isNotFound(recordQuery.error);
     const singularLabel = manifest?.singularLabel ?? resource;
     const heading = id === null ? `New ${singularLabel}` : singularLabel;
-    const loading = schemaQuery.isLoading || (id !== null && recordQuery.isLoading);
+    // A placeholder stands in while the real read is in flight: that is still loading.
+    const loading =
+        schemaQuery.isLoading ||
+        schemaQuery.isPlaceholderData ||
+        (id !== null && (recordQuery.isLoading || recordQuery.isPlaceholderData));
     const status = loading
         ? 'loading'
         : recordNotFound
@@ -243,7 +264,10 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
     // buttons mid-request; the component changes only with the record id, the action keys and the handlers.
     const recordActions = resolveActions(manifest, 'record', transport);
     const recordRef = useRef<Row>({});
-    recordRef.current = { ...(recordQuery.data ?? {}), id };
+    recordRef.current = { ...(record ?? {}), id };
+    // The manifest too: a refreshed but equal manifest must not change the component type and close an open dialog.
+    const manifestRef = useRef(manifest);
+    manifestRef.current = manifest;
     const actionKeys = recordActions.map((action) => action.key).join(',');
     const RecordActions = useMemo(
         () =>
@@ -252,14 +276,14 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
                 : ({ compact }: { compact?: boolean }) => (
                       <RecordActionButtons
                           resource={resource}
-                          manifest={manifest}
+                          manifest={manifestRef.current}
                           record={recordRef.current}
                           compact={compact}
                           onNavigate={onNavigate}
                           onNotice={onNotice}
                       />
                   ),
-        [id, actionKeys, resource, manifest, onNavigate, onNotice],
+        [id, actionKeys, resource, onNavigate, onNotice],
     );
 
     return {
@@ -269,7 +293,7 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
         status,
         readFailure,
         schema: schema as SchemaNode,
-        record: recordQuery.data,
+        record,
         draft,
         setDraft,
         form,
@@ -289,5 +313,5 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
         notice: { element: inline.element, onNotice },
         actions: { record: recordActions, RecordActions },
         slots: resolvedSlots,
-    } as unknown as EditShellState<K>;
+    } as unknown as EditShellStateOf<K>;
 }
