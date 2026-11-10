@@ -36,7 +36,8 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:types": "tsc --project tsconfig.typecheck.json"
+    "test:types": "tsc --project tsconfig.typecheck.json",
+    "export-list": "node ../scripts/export-list.mjs src/index.ts --write"
   },
   "peerDependencies": {
     "@rjsf/core": "^6.0.0",

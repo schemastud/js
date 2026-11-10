@@ -31,6 +31,8 @@
     "build-storybook": "storybook build",
     "test-storybook": "test-storybook --url http://127.0.0.1:6006",
     "lint:tokens": "node scripts/lint-tokens.mjs",
+    "export-list": "npm run export-list --workspaces --if-present",
+    "census": "node scripts/import-census.mjs",
     "build:big-calendar": "npm --prefix big-calendar install && npm --prefix big-calendar run build"
   },
   "devDependencies": {

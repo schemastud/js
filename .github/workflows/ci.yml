@@ -1,0 +1,40 @@
+name: CI
+
+# Typecheck and test seam, facets and frame on every push to main and every pull request. These three
+# are the packages a host mounts frame through, so a refactor of any of them is checked before it lands.
+# Each package typechecks and tests against its @schemastud dependencies' built output (dist/*.d.ts and
+# dist/*.js through the workspace links), so the whole workspace is built first, in the root script's
+# topological order. Frame's suite includes the root export-list check (frame/tests/root-exports.test.ts).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Typecheck seam, facets and frame
+        run: npm run typecheck -w @schemastud/seam -w @schemastud/facets -w @schemastud/frame
+
+      - name: Test seam, facets and frame
+        run: npm run test -w @schemastud/seam -w @schemastud/facets -w @schemastud/frame

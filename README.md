@@ -26,7 +26,12 @@ npm install          # one install links all workspaces
 npm run build        # build every package (tsup)
 npm run typecheck
 npm run test
+npm run export-list  # regenerate frame/src/index.exports.txt after changing what the frame root exports
+npm run census       # which root exports any file imports by name (pass the trees to scan)
 ```
+
+`.github/workflows/ci.yml` builds the workspace, then runs `typecheck` and `test` for seam, facets and
+frame. Frame's suite fails when its root barrel and `frame/src/index.exports.txt` differ.
 
 ## Release
 
