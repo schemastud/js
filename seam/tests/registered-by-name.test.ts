@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createWidgetRegistry } from '../src/registry';
+import { RJSF_STOCK_NAMES, createWidgetRegistry } from '../src/registry';
 import { ButtonGroupWidget } from '../src/widgets/button-group';
 import { ComboboxWidget } from '../src/widgets/combobox';
 import { JsonField } from '../src/widgets/json';
@@ -12,20 +12,20 @@ import { StarRatingWidget } from '../src/widgets/star-rating';
  * the resolver hands over the entry's config with the node's declared options merged over it.
  */
 describe('a fresh createWidgetRegistry()', () => {
-    it('lists its eight names, each with one unscoped registration', () => {
+    it('lists its 29 names (RJSF’s 25 stock names and seam’s four widgets), each with one unscoped registration', () => {
         const builtins: Array<[string, unknown]> = [
+            ...RJSF_STOCK_NAMES.map((name): [string, unknown] => [name, name]),
             ['button-group', ButtonGroupWidget],
             ['combobox', ComboboxWidget],
-            ['file', 'file'],
             ['json', JsonField],
-            ['radio', 'radio'],
-            ['select', 'select'],
             ['star-rating', StarRatingWidget],
-            ['textarea', 'textarea'],
         ];
         expect(createWidgetRegistry().names()).toEqual(
-            builtins.map(([name, widget]) => ({ name, registrations: [{ contexts: null, widget }] })),
+            builtins
+                .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+                .map(([name, widget]) => ({ name, registrations: [{ contexts: null, widget }] })),
         );
+        expect(createWidgetRegistry().names()).toHaveLength(29);
     });
 
     it('resolves button-group and star-rating, which used to live on the singleton only', () => {

@@ -68,7 +68,7 @@ export function SubmitButton(props: SubmitButtonProps) {
 }
 
 /** The label rule both a field template and a self-labelling widget apply: a declared title, else the key humanized. */
-function fieldLabel(label: string | undefined, schema: { title?: unknown } | undefined, uiSchema: unknown): string | undefined {
+export function fieldLabel(label: string | undefined, schema: { title?: unknown } | undefined, uiSchema: unknown): string | undefined {
     const ui = (uiSchema ?? {}) as Record<string, unknown>;
     const declared = [ui['ui:title'], (ui['ui:options'] as Record<string, unknown> | undefined)?.title, schema?.title].find(
         (t): t is string => typeof t === 'string' && t.trim() !== '',

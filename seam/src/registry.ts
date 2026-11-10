@@ -25,15 +25,43 @@ interface Entry extends RegistryEntry {
     contexts?: readonly string[];
 }
 
+/** RJSF's stock widget names, as `@rjsf/utils`' `getWidget` maps them across node types (RJSF 6). */
+export const RJSF_STOCK_NAMES = [
+    'alt-date',
+    'alt-datetime',
+    'checkbox',
+    'checkboxes',
+    'color',
+    'data-url',
+    'date',
+    'date-time',
+    'datetime',
+    'email',
+    'file',
+    'files',
+    'hidden',
+    'hostname',
+    'ipv4',
+    'ipv6',
+    'password',
+    'radio',
+    'range',
+    'select',
+    'text',
+    'textarea',
+    'time',
+    'updown',
+    'uri',
+] as const;
+
 /**
- * Seam's built-in names, registered by name and unscoped: the four RJSF widget names a node
- * selects with `x-widget`, and seam's own four widgets.
+ * Seam's built-in names, registered by name and unscoped: RJSF's 25 stock names, each resolving to
+ * itself, and seam's own four widgets.
  */
 const BUILTIN_NAMES: ReadonlyArray<readonly [string, WidgetResolution]> = [
-    ['textarea', 'textarea'],
-    ['radio', 'radio'],
-    ['file', 'file'],
-    ['select', 'select'],
+    // RJSF's 25 stock names (the keys of `@rjsf/utils` getWidget's widget map), each resolving to itself, so a
+    // declaration can name any of them (ruling 04 §5). Valid only on the node types RJSF lists each under.
+    ...RJSF_STOCK_NAMES.map((name) => [name, name] as const),
     ['combobox', ComboboxWidget],
     ['json', JsonField],
     ['button-group', ButtonGroupWidget],

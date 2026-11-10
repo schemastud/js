@@ -13,6 +13,21 @@ export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiS
     return walkUiSchema(schema, registry, schema, new Set());
 }
 
+/**
+ * Whether a node is composite (an object or an array, or a union including one): a component bound to it takes
+ * over the subtree as an RJSF field, where a primitive node takes a widget. The one test the form's uiSchema walker
+ * and the read surfaces share (ruling 04 §5). A local `$ref` and a nullable `anyOf` borrow their target's type,
+ * resolved against the root schema.
+ */
+export function isCompositeNode(schema: SchemaNode, rootSchema: SchemaNode): boolean {
+    const nodeType = schema.type ?? compositeTypeOf(schema, rootSchema);
+    return (
+        nodeType === 'object' ||
+        nodeType === 'array' ||
+        (Array.isArray(nodeType) && (nodeType.includes('object') || nodeType.includes('array')))
+    );
+}
+
 /** The effective type of a nullable anyOf node: its first non-null branch's (ref-resolved) type. */
 function compositeTypeOf(node: SchemaNode, root: SchemaNode): unknown {
     const resolved = resolveLocalRef(node, root);
@@ -78,13 +93,7 @@ function walkUiSchema(
         // for an object/array node takes over the whole subtree as ui:field.
         // A local $ref node borrows its target's type; a nullable anyOf
         // ([$ref|type, null]) borrows its first non-null branch's.
-        const nodeType = schema.type ?? compositeTypeOf(schema, root);
-        const isComposite =
-            nodeType === 'object' ||
-            nodeType === 'array' ||
-            (Array.isArray(nodeType) &&
-                (nodeType.includes('object') || nodeType.includes('array')));
-        if (typeof widget !== 'string' && isComposite) {
+        if (typeof widget !== 'string' && isCompositeNode(schema, root)) {
             ui['ui:field'] = widget;
             // An anyOf node would ALSO render RJSF's option selector beside the
             // custom field unless the field declares it replaces the anyOf.
@@ -194,4 +203,17 @@ export function mergeUiSchema(generated: UiSchema, overrides?: UiSchema): UiSche
     }
 
     return merged;
+}
+
+/**
+ * Ticket 44's rule, written once: lift a node's `enumNames` into `ui:enumNames` (RJSF reads only the uiSchema
+ * spelling) when it is an array as long as the node's `enum`, unless the uiSchema already sets `ui:enumNames` —
+ * a caller's labels win. Returns the uiSchema to use for the node.
+ */
+export function liftEnumNames(node: SchemaNode, uiSchema: UiSchema): UiSchema {
+    const names = node.enumNames;
+    const values = node.enum;
+    if (!Array.isArray(names) || !Array.isArray(values) || names.length !== values.length) return uiSchema;
+    if (uiSchema['ui:enumNames'] !== undefined) return uiSchema;
+    return { ...uiSchema, 'ui:enumNames': names };
 }

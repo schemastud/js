@@ -21,6 +21,14 @@ export { resolveExternalRefs } from './refs';
 export { normalizeNullableRefs } from './nullable-refs';
 export { SchemaForm, WidgetRegistryContext, type SchemaFormProps } from './SchemaForm';
 export { RjsfThemeContext, shadcnTheme } from './theme';
+export {
+    asWidget,
+    createRjsfRegistry,
+    useRjsfRegistry,
+    widgetProps,
+    type RjsfRegistryOptions,
+    type WidgetMountInput,
+} from './widget-props';
 export { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
 export type {
     KeywordVocabulary,
@@ -40,7 +48,7 @@ export type {
     WidgetResolution,
     WidgetScope,
 } from './types';
-export { buildUiSchema, mergeUiSchema } from './ui-schema';
+export { buildUiSchema, isCompositeNode, mergeUiSchema } from './ui-schema';
 export { displayLabel, humanizeKey } from './display-label';
 export { createFormValidator, defaultValidator } from './validator';
 export { SelectionChrome } from './selection-chrome';
