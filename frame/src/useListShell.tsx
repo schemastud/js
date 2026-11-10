@@ -170,11 +170,19 @@ export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>)
 
     const query = useRowList(resource, requestParams);
 
+    // The resource's list/filter schema is the root: the node a `list-item` entry resolves against, the document an
+    // editable cell's `$ref` points into, and what `withEditableCells` reads its properties from. Memoized, with a bare
+    // object standing in until it arrives, so every cell's registry keeps its identity across renders.
+    const rootSchema = useMemo<SchemaNode>(
+        () => (filters.schema as SchemaNode | undefined) ?? { type: 'object' },
+        [filters.schema],
+    );
+
     // Manifest folds list-column participation into the columns; absent → passthrough.
     const resolvedColumns = withEditableCells(
         resolveColumns(resource, filters.schema, columns, manifest, registry),
         manifest,
-        filters.schema,
+        rootSchema,
         registry,
         onCellCommit,
     );
@@ -205,13 +213,7 @@ export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>)
         Loading: slots?.Loading ?? listSlots?.Loading ?? DefaultLoading,
         Pagination: slots?.Pagination ?? listSlots?.Pagination ?? DefaultPagination,
     };
-    // The cards path (realm-dashboards ticket 03). The root node a `list-item` entry resolves
-    // against is the resource's list/filter schema — the same node `withEditableCells` reads its
-    // properties from — with a bare object standing in until it arrives.
-    const rootSchema = useMemo<SchemaNode>(
-        () => (filters.schema as SchemaNode | undefined) ?? { type: 'object' },
-        [filters.schema],
-    );
+    // The cards path (realm-dashboards ticket 03): a `list-item` entry resolves against `rootSchema` (above).
     const cardsPath = manifest ? listItemRendersCards(manifest, rootSchema, registry) : false;
     // Memoized for the same reason `BoundRowActions` is: the Cards slot receives a COMPONENT
     // TYPE, and a fresh closure per render would remount every card on every render.
@@ -379,13 +381,13 @@ export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>)
 function withEditableCells(
     resolved: FrameColumn[],
     manifest: ContextManifest | undefined,
-    schema: unknown,
+    rootSchema: SchemaNode,
     registry: ReturnType<typeof useFrameInjection>['registry'],
     onCellCommit: ((record: Row, field: string, value: unknown) => void) | undefined,
 ): FrameColumn[] {
     if (!manifest) return resolved;
 
-    const properties = ((schema as SchemaNode | undefined)?.properties ?? {}) as Record<
+    const properties = (rootSchema.properties ?? {}) as Record<
         string,
         SchemaNode
     >;
@@ -415,6 +417,7 @@ function withEditableCells(
             cell: (record: Row) => (
                 <EditableCell
                     node={node}
+                    rootSchema={rootSchema}
                     rowCell={rowCell}
                     edit={edit}
                     value={getPath(record, col.field)}

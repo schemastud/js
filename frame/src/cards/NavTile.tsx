@@ -11,7 +11,8 @@ import type { CardWidgetProps, NavTilePayload } from './types';
  * other anchor a card draws — a nav tile that full-page-reloads is the worst offender of the
  * five, since navigation is the only thing it does.
  */
-export function NavTile({ value, options }: CardWidgetProps<NavTilePayload>) {
+// Mounted as a widget, and also drawn directly by `DashboardCard` for a nav row, so it asks only for what it reads.
+export function NavTile({ value, options }: Pick<CardWidgetProps<NavTilePayload>, 'value' | 'options'>) {
     if (!value?.href) return null;
     const Icon = options?.iconFor?.(value.icon);
 

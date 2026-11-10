@@ -60,6 +60,7 @@ function Harness({ rowCell, registry }: { rowCell: NodeParticipation; registry?:
         <div className="rounded-md border p-2" style={{ width: 260 }}>
             <EditableCell
                 node={node}
+                rootSchema={{ type: 'object', properties: { name: node } }}
                 rowCell={rowCell}
                 edit={undefined}
                 value={value}

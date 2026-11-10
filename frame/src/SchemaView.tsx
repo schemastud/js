@@ -1,5 +1,14 @@
-import { useContext, type ReactNode } from 'react';
-import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
+import { useContext, useId, type ReactNode } from 'react';
+import type { Registry } from '@rjsf/utils';
+import {
+    WidgetRegistryContext,
+    asWidget,
+    isCompositeNode,
+    useRjsfRegistry,
+    widgetProps,
+    type SchemaNode,
+    type WidgetRegistry,
+} from '@schemastud/seam';
 import { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
 import type { ContextManifest, FrameContext, NodeParticipation } from './contexts';
 
@@ -8,10 +17,12 @@ import type { ContextManifest, FrameContext, NodeParticipation } from './context
 // `detail` context (per-property) or the `list-item` card body (whole-record),
 // resolving each node through resolveWidgetFor. NOT a form: no submit, no edits.
 //
-// A resolved component is mounted read-only (value + readOnly/disabled hints).
-// A non-participating field, or a bound-but-name-only (RJSF string widget), or an
-// unbound non-heavyweight field falls to a sensible read-only default (label +
-// scalar value). An unbound HEAVYWEIGHT widget is a hard dev error.
+// A resolved component mounts read-only with RJSF `WidgetProps`, built by seam's
+// `widgetProps` over an RJSF registry on the record's root schema (ruling 04). A
+// non-participating field, an RJSF stock name (`asWidget` is undefined), an unbound
+// non-heavyweight field, or a composite node whose name is the FORM's (`detail` only)
+// falls to a sensible read-only default (label + value). An unbound HEAVYWEIGHT
+// widget is a hard dev error.
 // =============================================================================
 
 export interface SchemaViewProps {
@@ -39,17 +50,8 @@ function scalar(value: unknown): string {
     return String(value);
 }
 
-/**
- * The prop bundle a read surface mounts a resolved widget with: the value twice (widgets
- * written against RJSF read `formData`, ones written against the seam read `value`), the node
- * it resolved against, the read-only hints, and the matched registry config as `options`.
- *
- * Exported because `dashboard-card` mounts a widget the same way and had re-implemented this
- * bundle field-for-field; two copies of it drift the day one of them gains a prop.
- */
-export function widgetMountProps(value: unknown, schema: SchemaNode, options?: Record<string, unknown>) {
-    return { value, formData: value, schema, readOnly: true, disabled: true, options: options ?? {} };
-}
+/** A stable `formContext` for the read registry: a module constant, so the memoized registry keeps its identity. */
+const READ_FORM_CONTEXT: Record<string, unknown> = {};
 
 /**
  * How frame shows a binding that NAMED a widget the registry could not resolve — the honest
@@ -119,25 +121,34 @@ function FallbackValue({ value, node }: { value: unknown; node?: SchemaNode }): 
 }
 
 /**
- * Mount a single resolved node read-only. A resolved COMPONENT gets the value +
- * read-only hints; everything else (miss, string widget name, no entry)
+ * Mount a single resolved node read-only. A resolved COMPONENT gets RJSF `WidgetProps` from
+ * `widgetProps` (read-only and disabled, the field as its name, the label, the resolver's merged
+ * options); everything else (miss, stock widget name, no entry, the form's composite field)
  * renders the read-only labeled structured/scalar fallback.
  */
 function ViewNode({
     node,
+    name,
     ctx,
     cm,
     label,
     value,
     registry,
+    rjsfRegistry,
+    rootSchema,
 }: {
     node: SchemaNode;
+    /** The property key; `''` at the root. */
+    name: string;
     ctx: FrameContext;
     cm: NodeParticipation | undefined;
     label: string;
     value: unknown;
     registry: WidgetRegistry;
+    rjsfRegistry: Registry;
+    rootSchema: SchemaNode;
 }): ReactNode {
+    const id = useId();
     const resolved: ResolvedForContext = resolveWidgetFor(node, ctx, cm, undefined, registry);
 
     if (resolved.participates && resolved.unbound && cm?.heavyweight) {
@@ -151,15 +162,31 @@ function ViewNode({
         return <UnboundWidget label={label} widget={cm?.widget} />;
     }
 
-    // A resolved COMPONENT renders read-only; a string widget name (RJSF-only) or a
-    // miss falls to the scalar default.
-    const Widget = resolved.participates && typeof resolved.widget !== 'string' ? resolved.widget : undefined;
+    // A resolved COMPONENT renders read-only; an RJSF stock name or a miss falls to the read
+    // default. In `detail`, a composite node whose name is the FORM's (the node's own
+    // `x-widget`, not this entry's) is the form's field: the detail view shows its structured
+    // read (ruling 04 §5). A name this entry declares itself is a read-surface widget and mounts.
+    const component = resolved.participates ? asWidget(resolved.widget) : undefined;
+    const formsField = ctx === 'detail' && !cm?.widget && isCompositeNode(node, rootSchema);
+    const Widget = formsField ? undefined : component;
 
     return (
         <div data-frame-view="field">
             <span data-frame-view-label>{label}</span>
             {Widget ? (
-                <Widget {...widgetMountProps(value, node, resolved.config)} />
+                <Widget
+                    {...widgetProps({
+                        registry: rjsfRegistry,
+                        schema: node,
+                        value,
+                        name,
+                        id,
+                        label,
+                        readonly: true,
+                        disabled: true,
+                        options: resolved.options,
+                    })}
+                />
             ) : (
                 <FallbackValue value={value} node={node} />
             )}
@@ -170,6 +197,8 @@ function ViewNode({
 export function SchemaView({ schema, record, manifest, context, registry: registryProp }: SchemaViewProps): ReactNode {
     const ctxRegistry = useContext(WidgetRegistryContext);
     const registry = registryProp ?? ctxRegistry;
+    // One RJSF registry for every field, built on the record's root schema (the document a `$ref` points into).
+    const rjsfRegistry = useRjsfRegistry(schema, READ_FORM_CONTEXT);
     if (!registry) {
         throw new Error('[frame] SchemaView requires a WidgetRegistry (prop or WidgetRegistryContext).');
     }
@@ -182,6 +211,9 @@ export function SchemaView({ schema, record, manifest, context, registry: regist
             <div data-frame-view="list-item">
                 <ViewNode
                     node={rootNode}
+                    name=""
+                    rjsfRegistry={rjsfRegistry}
+                    rootSchema={schema}
                     ctx="list-item"
                     cm={cm}
                     label={labelize('', cm)}
@@ -206,6 +238,9 @@ export function SchemaView({ schema, record, manifest, context, registry: regist
                     <ViewNode
                         key={key}
                         node={properties[key]}
+                        name={key}
+                        rjsfRegistry={rjsfRegistry}
+                        rootSchema={schema}
                         ctx="detail"
                         cm={cm}
                         label={labelize(key, cm)}

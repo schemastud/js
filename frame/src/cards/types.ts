@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from 'react';
-import type { SchemaNode } from '@schemastud/seam';
+import type { WidgetProps } from '@rjsf/utils';
 import type { StatTone } from '@schemastud/ui';
 import type { FrameContext } from '../contexts';
 import type { Row } from '../types';
@@ -133,16 +133,13 @@ export interface CardWidgetOptions {
 }
 
 /**
- * The props `SchemaView` mounts a resolved widget with (`value` + read-only hints + the
- * matched registry config as `options`), plus the dashboard `row` when `dashboard-card`
- * is the one mounting it — that is how `recent-list` learns its "View all" href.
+ * What a card receives: RJSF's `WidgetProps`, built by seam's `widgetProps` at every mount site (`SchemaView`'s
+ * `list-item`, `dashboard-card`, the recent-list line), with `value` typed as the card's payload and `options`
+ * as the card config, plus the dashboard `row` when `dashboard-card` is the one mounting it — that is how
+ * `recent-list` learns its "View all" href (ruling 04 §5).
  */
-export interface CardWidgetProps<T = unknown> {
+export interface CardWidgetProps<T = unknown> extends WidgetProps {
     value: T;
-    formData?: T;
-    schema?: SchemaNode;
-    options?: CardWidgetOptions;
-    readOnly?: boolean;
-    disabled?: boolean;
+    options: CardWidgetOptions & WidgetProps['options'];
     row?: DashboardRow;
 }

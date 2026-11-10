@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader } from '@schemastud/ui';
-import type { ComponentType } from 'react';
-import type { WidgetRegistry } from '@schemastud/seam';
+import { useId, type ComponentType } from 'react';
+import { useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from '../context';
 import { listItemRendersCards } from '../listItemRendersCards';
 import { isWidgetComponent } from '../resolveWidgetFor';
-import { SchemaView, UnboundWidget, widgetMountProps } from '../SchemaView';
+import { SchemaView, UnboundWidget } from '../SchemaView';
 import { CardHeading, EmptyState, ROOT_NODE, ViewAllLink } from './chrome';
 import { RecordLine } from './RecordLine';
 import type { CardWidgetProps, SummaryPayload } from './types';
@@ -32,8 +32,13 @@ import type { CardWidgetProps, SummaryPayload } from './types';
  * knew only `name/title/label` — `CentralActivityData` keeps its text in `description`, so
  * the Activity card at tower and the flagship printed `5,4,3,2,1`.
  */
+/** A stable `formContext` for the line registry: a module constant, so the memoized registry keeps its identity. */
+const LINE_FORM_CONTEXT: Record<string, unknown> = {};
+
 export function RecentList({ value, options, row }: CardWidgetProps<SummaryPayload>) {
     const { manifestFor, registry } = useFrameInjection();
+    const rjsfRegistry = useRjsfRegistry(ROOT_NODE, LINE_FORM_CONTEXT);
+    const lineId = useId();
     const resource = row?.resource ?? value?.key;
     const items = value?.overview?.items ?? [];
     const label = value?.label ?? row?.label ?? resource ?? '';
@@ -68,7 +73,19 @@ export function RecentList({ value, options, row }: CardWidgetProps<SummaryPaylo
                                         registry={registry}
                                     />
                                 ) : (
-                                    <line.Line {...widgetMountProps(item, ROOT_NODE, line.config)} />
+                                    <line.Line
+                                        {...widgetProps({
+                                            registry: rjsfRegistry,
+                                            schema: ROOT_NODE,
+                                            value: item,
+                                            name: '',
+                                            id: `${lineId}-${i}`,
+                                            label,
+                                            readonly: true,
+                                            disabled: true,
+                                            options: line.config,
+                                        })}
+                                    />
                                 )}
                             </li>
                         ))}

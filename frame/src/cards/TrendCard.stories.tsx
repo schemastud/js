@@ -1,8 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import type { ReactNode } from 'react';
 import { Card, CardContent } from '@schemastud/ui';
+import { createRjsfRegistry, widgetProps } from '@schemastud/seam';
 import { TrendCard } from './TrendCard';
-import type { SummaryFigure, SummaryPayload } from './types';
+import type { CardWidgetProps, SummaryFigure, SummaryPayload } from './types';
 
 /**
  * Frame/Cards/Trend (exec-board ticket 06). `trend-card` draws a summary's figures as a period
@@ -33,6 +34,14 @@ const series = (values: (number | string)[], forecastFrom = Number.POSITIVE_INFI
 
 const payload = (figures: SummaryFigure[]): SummaryPayload => ({ key: 'exec-revenue', label: 'MRR', figures });
 
+/** A card's full props, built the way every mount site builds them: `widgetProps` over an RJSF registry. */
+const STORY_REGISTRY = createRjsfRegistry({ rootSchema: { type: 'object' } });
+const cardProps = (value: SummaryPayload): CardWidgetProps<SummaryPayload> => ({
+    ...widgetProps({ registry: STORY_REGISTRY, schema: { type: 'object' }, value, name: '', id: 'trend-card', options: {} }),
+    value,
+    options: {},
+});
+
 const Cell = ({ children }: { children: ReactNode }) => (
     <div style={{ maxWidth: '22rem' }}>
         <Card>
@@ -45,7 +54,7 @@ const MRR = [41200, 43800, 43100, 46900, 49400, 52300, 55100, 54700, 58200];
 
 /** Measured periods only — one solid line, led by the latest period. */
 export const Measured: Story = {
-    args: { value: payload(series(MRR)) },
+    args: cardProps(payload(series(MRR))),
     render: (args) => (
         <Cell>
             <TrendCard {...args} />
@@ -55,30 +64,30 @@ export const Measured: Story = {
 
 /** Six measured months, then three forecast: the dashed segment leaves the last measured point. */
 export const WithForecast: Story = {
-    args: { value: payload(series(MRR, 6)) },
+    args: cardProps(payload(series(MRR, 6))),
     render: Measured.render,
 };
 
 /** A projection with no measured baseline: dashed throughout, no boundary rule, no lead. */
 export const AllForecast: Story = {
-    args: { value: payload(series(MRR.slice(0, 4), 0)) },
+    args: cardProps(payload(series(MRR.slice(0, 4), 0))),
     render: Measured.render,
 };
 
 /** A formatted string is not plotted: the line breaks around it and the table keeps its value. */
 export const Gap: Story = {
-    args: { value: payload(series([12, 14, '—', 15, 18])) },
+    args: cardProps(payload(series([12, 14, '—', 15, 18]))),
     render: Measured.render,
 };
 
 /** One period: a centred dot. */
 export const SinglePoint: Story = {
-    args: { value: payload(series([41200])) },
+    args: cardProps(payload(series([41200]))),
     render: Measured.render,
 };
 
 /** No periods: the honest empty state. */
 export const Empty: Story = {
-    args: { value: payload([]) },
+    args: cardProps(payload([])),
     render: Measured.render,
 };

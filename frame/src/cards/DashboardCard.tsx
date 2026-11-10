@@ -1,9 +1,9 @@
-import type { ReactNode } from 'react';
-import type { WidgetRegistry } from '@schemastud/seam';
+import { useId, type ReactNode } from 'react';
+import { useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from '../context';
 import { INHERITS, type ContextManifest, type FrameContext, type NodeParticipation } from '../contexts';
 import { isWidgetComponent, resolveWidgetFor, type ResolvedForContext } from '../resolveWidgetFor';
-import { UnboundWidget, widgetMountProps } from '../SchemaView';
+import { UnboundWidget } from '../SchemaView';
 import { OverviewFrame, ROOT_NODE } from './chrome';
 import { NavTile } from './NavTile';
 import { WelcomePanel } from './WelcomePanel';
@@ -108,6 +108,9 @@ export function dashboardRowRenders(
     return resolved.unbound === true || isWidgetComponent(resolved.widget);
 }
 
+/** A stable `formContext` for the card registry: a module constant, so the memoized registry keeps its identity. */
+const CARD_FORM_CONTEXT: Record<string, unknown> = {};
+
 /**
  * The `list-item` widget a `{realm}-dashboard` row binds. It dispatches on the row's
  * `context` to the TARGET resource's root entry (see {@link resolveDashboardCard}) and mounts
@@ -126,6 +129,9 @@ export function dashboardRowRenders(
  */
 export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>) {
     const { manifestFor, registry } = useFrameInjection();
+    // Before any early return: the card's RJSF registry, on the root node a summary or overview addresses.
+    const rjsfRegistry = useRjsfRegistry(ROOT_NODE, CARD_FORM_CONTEXT);
+    const id = useId();
     const row = value;
     if (!row || typeof row !== 'object') return null;
 
@@ -167,7 +173,22 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
         figures: [],
     };
     const merged: CardWidgetOptions = { ...(options ?? {}), ...(resolved.config ?? {}) };
-    const body = <Widget {...widgetMountProps(payload, ROOT_NODE, merged)} row={row} />;
+    const body = (
+        <Widget
+            {...widgetProps({
+                registry: rjsfRegistry,
+                schema: ROOT_NODE,
+                value: payload,
+                name: '',
+                id,
+                label: row.label,
+                readonly: true,
+                disabled: true,
+                options: merged,
+            })}
+            row={row}
+        />
+    );
 
     if (row.context !== 'overview' || resolved.tier !== 'summary') return cell(body);
 

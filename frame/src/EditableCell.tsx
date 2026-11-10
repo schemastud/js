@@ -1,5 +1,14 @@
-import { useContext, useState, type ReactNode } from 'react';
-import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
+import { useContext, useId, useState, type ReactNode } from 'react';
+import { asNumber, getSchemaType, type RJSFSchema } from '@rjsf/utils';
+import {
+    WidgetRegistryContext,
+    asWidget,
+    isCompositeNode,
+    useRjsfRegistry,
+    widgetProps,
+    type SchemaNode,
+    type WidgetRegistry,
+} from '@schemastud/seam';
 import { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
 import type { NodeParticipation } from './contexts';
 
@@ -26,6 +35,11 @@ import type { NodeParticipation } from './contexts';
 export interface EditableCellProps {
     /** The field's JSON Schema node (the single-field subschema the widget edits). */
     node: SchemaNode;
+    /**
+     * The resource's root schema: the document a `$ref` in `node` points into. The cell's RJSF registry is built
+     * on it, and the composite test reads it (ruling 04 §2, §5).
+     */
+    rootSchema: SchemaNode;
     /** The field's `row-cell` participation entry (byNode[field]['row-cell']). */
     rowCell: NodeParticipation | undefined;
     /** The field's `edit` participation entry — the cascade parent. */
@@ -46,6 +60,26 @@ function scalar(value: unknown): string {
     return String(value);
 }
 
+/** A stable `formContext` for the cell's registry: a module constant, so the memoized registry keeps its identity. */
+const CELL_FORM_CONTEXT: Record<string, unknown> = {};
+
+// RJSF's NumberField: a trailing decimal point or trailing zeros are stripped before `asNumber`.
+const TRAILING_WITH_PREFIX = /\.([0-9]*0)*$/;
+const TRAILING = /[0.]0*$/;
+
+/**
+ * What a cell commits. A stock text widget emits what its input holds, a string; in a form RJSF's `NumberField`
+ * converts it. Outside a form this cell is the one editable mount, so it converts at commit, as `NumberField`
+ * does, when the resolved node is a `number` or `integer` (ruling 04 §1).
+ */
+function atCommit(next: unknown, schema: RJSFSchema): unknown {
+    const type = getSchemaType(schema);
+    const types = Array.isArray(type) ? type : [type];
+    if (!types.some((t) => t === 'number' || t === 'integer') || typeof next !== 'string') return next;
+    const normalized = next.startsWith('.') ? `0${next}` : next;
+    return TRAILING_WITH_PREFIX.test(normalized) ? asNumber(normalized.replace(TRAILING, '')) : asNumber(normalized);
+}
+
 /** The read-only projection — a plain scalar/summary of the field value. */
 function ReadProjection({ value }: { value: unknown }): ReactNode {
     return <span data-frame-cell-value>{scalar(value)}</span>;
@@ -53,6 +87,7 @@ function ReadProjection({ value }: { value: unknown }): ReactNode {
 
 export function EditableCell({
     node,
+    rootSchema,
     rowCell,
     edit,
     value,
@@ -67,6 +102,8 @@ export function EditableCell({
 
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState<unknown>(value);
+    const rjsfRegistry = useRjsfRegistry(rootSchema, CELL_FORM_CONTEXT);
+    const id = useId();
 
     // Resolve the row-cell binding, inheriting `edit` per FC-03. Heavyweight parents
     // are suppressed here (resolved.widget stays undefined), so a heavyweight editor
@@ -88,10 +125,14 @@ export function EditableCell({
         );
     }
 
-    // A resolved COMPONENT is editable; a string widget name (RJSF-only), a miss, a
-    // suppressed heavyweight, or a non-participating field falls to the read
-    // projection — no in-place editing, just the value.
-    const Widget = resolved.participates && typeof resolved.widget !== 'string' ? resolved.widget : undefined;
+    // A resolved COMPONENT is editable; an RJSF stock name, a miss, a suppressed
+    // heavyweight, or a non-participating field falls to the read projection — no
+    // in-place editing, just the value. A composite node whose name is the FORM's (it
+    // came from the node or down the `edit` cascade, not from this cell's own entry) is
+    // the form's field: the cell shows its read value and is not editable (ruling 04 §5).
+    const component = resolved.participates ? asWidget(resolved.widget) : undefined;
+    const formsField = !rowCell?.widget && isCompositeNode(node, rootSchema);
+    const Widget = formsField ? undefined : component;
 
     if (!Widget) {
         return (
@@ -110,7 +151,8 @@ export function EditableCell({
         setEditing(false);
         // Blur-without-change (or an unchanged commit) cancels silently — no host
         // mutation for a no-op.
-        if (next !== value) onCommit(next);
+        const committed = atCommit(next, rjsfRegistry.schemaUtils.retrieveSchema(node as RJSFSchema, next));
+        if (committed !== value) onCommit(committed);
     };
 
     const cancel = () => {
@@ -141,12 +183,18 @@ export function EditableCell({
             }}
         >
             <Widget
-                value={draft}
-                formData={draft}
-                schema={node}
-                options={resolved.config ?? {}}
-                autofocus
-                onChange={(next: unknown) => setDraft(next)}
+                {...widgetProps({
+                    registry: rjsfRegistry,
+                    schema: node,
+                    value: draft,
+                    name: '',
+                    id,
+                    readonly: false,
+                    disabled: false,
+                    autofocus: true,
+                    options: resolved.options,
+                    onChange: (next: unknown) => setDraft(next),
+                })}
             />
         </div>
     );

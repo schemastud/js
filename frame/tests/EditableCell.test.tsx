@@ -42,6 +42,7 @@ describe('EditableCell (row-cell runtime)', () => {
         render(
             <EditableCell
                 node={node}
+                rootSchema={{ type: 'object', properties: { name: node } }}
                 rowCell={part({ inheritsBinding: true })}
                 edit={part({ widget: 'email-input' })}
                 value="a@b.co"
@@ -71,6 +72,7 @@ describe('EditableCell (row-cell runtime)', () => {
         render(
             <EditableCell
                 node={node}
+                rootSchema={{ type: 'object', properties: { name: node } }}
                 rowCell={part({ inheritsBinding: true })}
                 edit={part({ widget: 'email-input' })}
                 value="a@b.co"
@@ -96,6 +98,7 @@ describe('EditableCell (row-cell runtime)', () => {
         render(
             <EditableCell
                 node={node}
+                rootSchema={{ type: 'object', properties: { name: node } }}
                 rowCell={part({ inheritsBinding: true })}
                 edit={part({ widget: 'email-input' })}
                 value="a@b.co"
@@ -115,6 +118,7 @@ describe('EditableCell (row-cell runtime)', () => {
         render(
             <EditableCell
                 node={node}
+                rootSchema={{ type: 'object', properties: { name: node } }}
                 rowCell={part({ inheritsBinding: true })}
                 edit={part({ widget: 'circuit-graph', heavyweight: true })}
                 value="graph-summary"
@@ -140,6 +144,7 @@ describe('EditableCell (row-cell runtime)', () => {
         render(
             <EditableCell
                 node={node}
+                rootSchema={{ type: 'object', properties: { name: node } }}
                 rowCell={part({ inheritsBinding: true })}
                 edit={part({ widget: 'not-registered' })}
                 value="plain"
