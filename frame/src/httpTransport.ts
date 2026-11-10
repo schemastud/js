@@ -67,7 +67,13 @@ export function createHttpTransport(options: HttpTransportOptions = {}): FrameTr
                 parsed = text;
             }
         }
-        if (!res.ok) throw new FrameActionError(res.status, parsed, `${method} ${url} failed (${res.status}).`);
+        if (!res.ok) {
+            const where = `${method} ${url} failed (${res.status}).`;
+            const error = new FrameActionError(res.status, parsed, where);
+            // The server's message stays the user-facing one; the request it answered rides as the cause.
+            Object.defineProperty(error, 'cause', { value: new Error(where), enumerable: false, configurable: true, writable: true });
+            throw error;
+        }
         return parsed as T;
     }
 

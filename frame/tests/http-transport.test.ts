@@ -107,4 +107,16 @@ describe('createHttpTransport', () => {
         expect((error as FrameActionError).message).toBe('No query results.');
         expect(isNotFound(error)).toBe(true);
     });
+
+    it('keeps the server message as the message, and names the request in the cause', async () => {
+        const { fetch } = fakeFetch(() => ({ status: 403, body: { message: 'Forbidden' } }));
+        const transport = createHttpTransport({ manifestUrl: '/frame/operator/manifest', fetch });
+
+        const error = await transport.getManifest!().catch((e: unknown) => e);
+
+        expect(error).toBeInstanceOf(FrameActionError);
+        expect((error as FrameActionError).message).toBe('Forbidden');
+        expect((error as Error).cause).toBeInstanceOf(Error);
+        expect(((error as Error).cause as Error).message).toContain('/frame/operator/manifest');
+    });
 });
