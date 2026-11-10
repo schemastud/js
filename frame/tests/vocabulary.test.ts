@@ -28,6 +28,45 @@ describe('frame vocabulary', () => {
         expect(serializeVocabulary(buildVocabulary()), `vocabulary.default.json is stale. Run \`${REGENERATE}\`.`).toBe(committed);
     });
 
+    it('writes the sorted union of core reads and repeatable reader modules', async () => {
+        const host = tmpHost();
+        const result = await runVocabulary({
+            widgets: [], readers: ['first', 'second'], out: 'vocabulary.json', write: true, cwd: host,
+            load: async (specifier) => ({ default: specifier === 'first'
+                ? { 'manifest:host-z': () => {}, 'manifest:resources': () => {} }
+                : { 'manifest:host-a': () => {}, 'manifest:host-z': () => {} } }),
+        });
+        expect(result.exitCode).toBe(0);
+        const reads = JSON.parse(readFileSync(join(host, 'vocabulary.json'), 'utf8')).reads;
+        expect(reads).toContain('manifest:resources');
+        expect(reads).toContain('context-block:entry.widget');
+        expect(reads).toContain('manifest:host-a');
+        expect(reads).toContain('manifest:host-z');
+        expect(reads).toEqual([...new Set(reads)].sort());
+        expect(buildVocabulary().reads).not.toContain('manifest:host-z');
+    });
+
+    it('refuses malformed readers exports and load failures, naming the module', async () => {
+        for (const value of [undefined, [], new Date(), { 'bad-group:key': () => {} }, { 'manifest:': () => {} }, { 'manifest:key': 'not a function' }]) {
+            const result = await runVocabulary({ widgets: [], readers: ['broken'], out: 'vocabulary.json', write: true,
+                cwd: tmpHost(), load: async () => ({ default: value }) });
+            expect(result.exitCode).toBe(2);
+            expect(result.message).toContain('--readers broken');
+        }
+        const result = await runVocabulary({ widgets: [], readers: ['missing'], out: 'vocabulary.json', write: true,
+            cwd: tmpHost(), load: async () => { throw new Error('not found'); } });
+        expect(result.exitCode).toBe(2);
+        expect(result.message).toContain('--readers missing');
+    });
+
+    it('the bin loads a source readers module through the host Vite loader', () => {
+        const out = join(tmpHost(), 'vocabulary.json');
+        const result = spawnSync(process.execPath, [join(FRAME, 'bin/frame-vocabulary.mjs'),
+            '--readers', fixture('readers.ts'), '--out', out, '--write'], { cwd: FRAME, encoding: 'utf8' });
+        expect(result.status, result.stderr).toBe(0);
+        expect(JSON.parse(readFileSync(out, 'utf8')).reads).toContain('manifest:source-reader');
+    }, 60_000);
+
     it('holds the stock names with their node types, seam’s four, the seven cards and the five column kinds', () => {
         const { widgets, contexts, formModes, reserved, conflicts }: FrameVocabulary = buildVocabulary();
 
@@ -57,7 +96,7 @@ describe('frame vocabulary', () => {
 
     it("a TSX module passed as --widgets adds its names; one kit writes no conflicts key", async () => {
         const host = tmpHost();
-        const result = await runVocabulary({ widgets: [fixture('kit-a.tsx')], out: 'vocabulary.json', write: true, cwd: host, load });
+        const result = await runVocabulary({ readers: [], widgets: [fixture('kit-a.tsx')], out: 'vocabulary.json', write: true, cwd: host, load });
         expect(result.exitCode).toBe(0);
         const written = JSON.parse(readFileSync(join(host, 'vocabulary.json'), 'utf8')) as FrameVocabulary;
         expect(written.widgets['host-rating']).toEqual([{}]);
@@ -67,7 +106,7 @@ describe('frame vocabulary', () => {
     it('two kits that bind one name differently put it under conflicts, in KNOWN_CONTEXTS order', async () => {
         const host = tmpHost();
         const result = await runVocabulary({
-            widgets: [fixture('kit-a.tsx'), fixture('kit-b.tsx')],
+            widgets: [fixture('kit-a.tsx'), fixture('kit-b.tsx')], readers: [],
             out: 'vocabulary.json',
             write: true,
             cwd: host,
@@ -83,7 +122,7 @@ describe('frame vocabulary', () => {
 
     it('compares without --write: 1 when missing or different, 0 when current', async () => {
         const host = tmpHost();
-        const run = (write: boolean) => runVocabulary({ widgets: [], out: 'vocabulary.json', write, cwd: host, load });
+        const run = (write: boolean) => runVocabulary({ readers: [], widgets: [], out: 'vocabulary.json', write, cwd: host, load });
 
         expect((await run(false)).exitCode).toBe(1);
         expect((await run(true)).exitCode).toBe(0);
@@ -95,7 +134,7 @@ describe('frame vocabulary', () => {
     });
 
     it('a registration scoped to a context frame does not know exits 2, naming it', async () => {
-        const result = await runVocabulary({ widgets: [fixture('kit-nope.tsx')], out: 'vocabulary.json', write: true, cwd: tmpHost(), load });
+        const result = await runVocabulary({ readers: [], widgets: [fixture('kit-nope.tsx')], out: 'vocabulary.json', write: true, cwd: tmpHost(), load });
         expect(result.exitCode).toBe(2);
         expect(result.message).toContain('"nope"');
     });
@@ -111,9 +150,13 @@ describe('frame vocabulary', () => {
             join(kit, 'index.mjs'),
             "export default function widgets(registry) { registry.registerWidget('fixture-kit-name', 'textarea'); }\n",
         );
+        writeFileSync(join(kit, 'readers.mjs'), "export default { 'manifest:fixture-reader': () => {} };\n");
+        const manifest = JSON.parse(readFileSync(join(kit, 'package.json'), 'utf8'));
+        manifest.exports['./readers'] = { import: './readers.mjs' };
+        writeFileSync(join(kit, 'package.json'), JSON.stringify(manifest));
         const bin = join(FRAME, 'bin/frame-vocabulary.mjs');
         const run = (spec: string) =>
-            spawnSync(process.execPath, [bin, '--widgets', spec, '--out', join(host, 'vocabulary.json'), '--write'], {
+            spawnSync(process.execPath, [bin, '--widgets', spec, '--readers', '@fixture/kit/readers', '--readers=@fixture/kit/readers', '--out', join(host, 'vocabulary.json'), '--write'], {
                 cwd: host,
                 encoding: 'utf8',
             });
@@ -122,6 +165,7 @@ describe('frame vocabulary', () => {
         expect(ok.status, ok.stderr).toBe(0);
         const written = JSON.parse(readFileSync(join(host, 'vocabulary.json'), 'utf8')) as FrameVocabulary;
         expect(written.widgets['fixture-kit-name']).toEqual([{ stock: ['string'] }]);
+        expect(written.reads?.filter((key) => key === 'manifest:fixture-reader')).toEqual(['manifest:fixture-reader']);
 
         const refused = run('@fixture/kit/nope');
         expect(refused.status).toBe(2);

@@ -5,6 +5,8 @@ import { createRjsfRegistry, type WidgetRegistry } from '@schemastud/seam';
 import { KNOWN_CONTEXTS, type FrameContext } from './contexts';
 import { createFrameRegistry } from './kit';
 import type { FormMode } from './types';
+import { FRAME_READS } from './wireReaders';
+export { FRAME_READS } from './wireReaders';
 
 // =============================================================================
 // The frame vocabulary (ruling 05 §2; ticket 33). What a host's kits bind, per name and context, written once by
@@ -22,6 +24,13 @@ export interface VocabularyRegistration {
     stock?: NodeType[];
 }
 
+export type FrameReaders = Readonly<
+    Record<
+        `${'manifest' | 'resource-entry' | 'context-block' | 'schema-keywords'}:${string}`,
+        (...args: never[]) => unknown
+    >
+>;
+
 export interface FrameVocabulary {
     $comment: string;
     version: 1;
@@ -32,6 +41,8 @@ export interface FrameVocabulary {
     widgets: Record<string, VocabularyRegistration[]>;
     /** Name → the contexts where two kits bind it and their answers differ. Absent when there are none. */
     conflicts?: Record<string, FrameContext[]>;
+    /** Sorted union of Frame and host reader modules, as <group>:<key>. */
+    reads?: string[];
 }
 
 /** One kit's host registrations: what that kit is handed as `widgets`. */
@@ -109,7 +120,10 @@ function answersDiffer(a: VocabularyRegistration, b: VocabularyRegistration): bo
  * merged. `widgets` is the union (the first kit's registrations in winning order, then any a later kit adds), and
  * `conflicts` names where kits disagree. No argument, or `[]`, is the default kit.
  */
-export function buildVocabulary(kits: Array<KitWidgets | undefined> = []): FrameVocabulary {
+export function buildVocabulary(
+    kits: Array<KitWidgets | undefined> = [],
+    readers: readonly string[] = [],
+): FrameVocabulary {
     const stock = stockTypesFor(createRjsfRegistry({ rootSchema: {} }).widgets);
     const perKit = (kits.length === 0 ? [undefined] : kits).map((kit, i) => kitRegistrations(kit, i, stock));
 
@@ -142,6 +156,7 @@ export function buildVocabulary(kits: Array<KitWidgets | undefined> = []): Frame
         formModes: [...FORM_MODES],
         reserved: [...RESERVED],
         widgets,
+        reads: [...new Set([...FRAME_READS, ...readers])].sort(),
         ...(Object.keys(conflicts).length > 0 ? { conflicts } : {}),
     };
 }
@@ -167,10 +182,12 @@ export function serializeVocabulary(vocabulary: FrameVocabulary): string {
 export interface RunVocabularyOptions {
     /** Each `--widgets` value, one per kit. */
     widgets: string[];
+    /** Each repeatable --readers module. */
+    readers: string[];
     out: string;
     write: boolean;
     cwd: string;
-    /** Loads one `--widgets` module (the bin passes Vite for a source path and `resolveFromHost` for a package). */
+    /** Loads a --widgets or --readers module: Vite for source, host exports resolution for a package. */
     load: (specifier: string) => Promise<unknown>;
     /** The command a mismatch names. */
     command?: string;
@@ -203,9 +220,27 @@ export async function runVocabulary(options: RunVocabularyOptions): Promise<RunV
         kits.push(kit as KitWidgets);
     }
 
+    const reads: string[] = [];
+    for (const specifier of options.readers) {
+        let loaded: unknown;
+        try {
+            loaded = await options.load(specifier);
+        } catch (error) {
+            return { exitCode: 2, message: `frame-vocabulary: could not load --readers ${specifier} from ${options.cwd}: ${(error as Error).message}` };
+        }
+        const readers = (loaded as { default?: unknown })?.default;
+        if (readers === null || typeof readers !== 'object' ||
+            (Object.getPrototypeOf(readers) !== Object.prototype && Object.getPrototypeOf(readers) !== null) ||
+            !Object.entries(readers).every(([key, reader]) =>
+                /^(manifest|resource-entry|context-block|schema-keywords):[^\s:]+$/.test(key) && typeof reader === 'function')) {
+            return { exitCode: 2, message: `frame-vocabulary: --readers ${specifier} must default-export a plain FrameReaders map of <group>:<key> to reader functions.` };
+        }
+        reads.push(...Object.keys(readers));
+    }
+
     let next: string;
     try {
-        next = serializeVocabulary(buildVocabulary(kits));
+        next = serializeVocabulary(buildVocabulary(kits, reads));
     } catch (error) {
         return { exitCode: 2, message: `frame-vocabulary: ${(error as Error).message}` };
     }

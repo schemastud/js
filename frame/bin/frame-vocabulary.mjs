@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// frame-vocabulary [--widgets <module>]... [--out <path>] [--write]
+// frame-vocabulary [--widgets <module>]... [--readers <module>]... [--out <path>] [--write]
 //
 // Writes (with --write) or compares the host's frame vocabulary: what each kit's registry binds, per name and
 // context (ruling 05 §2; ticket 33). Exit 0: written, or current. Exit 1: missing or different. Exit 2: a usage
-// error, or a --widgets module that cannot load or has no function default export.
+// error, an invalid --widgets function, or an invalid --readers map of wire keys to reader functions.
 //
-// A --widgets value that starts with ./, ../ or /, or names an existing file relative to cwd, is a source module
+// A --widgets or --readers value that starts with ./, ../ or /, or names an existing file relative to cwd, is a source module
 // and loads through the host's own Vite. Anything else is a package specifier. Vite and every package go through
 // ONE resolver, resolveFromHost: the host's node_modules chain and the package's `exports`, taking `import`, then
 // `node`, then `default`, as the host's own `import` would (Node 22.13, no flags).
@@ -15,19 +15,21 @@ import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { runVocabulary } from '../dist/vocabulary.js';
 
-const USAGE = 'usage: frame-vocabulary [--widgets <module>]... [--out <path>] [--write]';
+const USAGE = 'usage: frame-vocabulary [--widgets <module>]... [--readers <module>]... [--out <path>] [--write]';
 
 function parseArgs(argv) {
-    const options = { widgets: [], out: 'resources/frame/vocabulary.json', write: false };
+    const options = { widgets: [], readers: [], out: 'resources/frame/vocabulary.json', write: false };
     for (let i = 0; i < argv.length; i++) {
         const arg = argv[i];
         if (arg === '--write') options.write = true;
-        else if (arg === '--widgets' || arg === '--out') {
+        else if (arg === '--widgets' || arg === '--readers' || arg === '--out') {
             const value = argv[++i];
             if (!value || value.startsWith('--')) throw new Error(`${arg} needs a value.`);
             if (arg === '--widgets') options.widgets.push(value);
+            else if (arg === '--readers') options.readers.push(value);
             else options.out = value;
         } else if (arg.startsWith('--widgets=')) options.widgets.push(arg.slice('--widgets='.length));
+        else if (arg.startsWith('--readers=')) options.readers.push(arg.slice('--readers='.length));
         else if (arg.startsWith('--out=')) options.out = arg.slice('--out='.length);
         else throw new Error(`unknown argument "${arg}".`);
     }
@@ -187,7 +189,11 @@ async function main() {
     }
     const cwd = process.cwd();
     const loader = hostLoader(cwd);
-    const flags = [...options.widgets.flatMap((w) => ['--widgets', w]), ...(options.out ? ['--out', options.out] : [])];
+    const flags = [
+        ...options.widgets.flatMap((w) => ['--widgets', w]),
+        ...options.readers.flatMap((r) => ['--readers', r]),
+        ...(options.out ? ['--out', options.out] : []),
+    ];
     try {
         const result = await runVocabulary({
             ...options,
