@@ -1,8 +1,10 @@
 # Independent Frame schema-purpose example
 
-This private fixture consumes exported `@schemastud/frame`, Seam and facets contracts with a custom
-transport, ordinary primitives and QueryClient. It imports no Beam/Beam-inertia application code.
-The in-memory producer is explicit: this is not an HTTP backend, authentication or durable storage.
+This private fixture mounts one `createFrameKit()` over Frame's memory transport
+(`@schemastud/frame/testing`). The kit supplies the provider, the `@schemastud/ui` primitives and slots, the widget
+registry and `can`. The in-memory producer decides only what is the producer's: which schema a purpose gets, what
+create stores, and what the approve action does. It imports no Beam/Beam-inertia application code, and it is not an
+HTTP backend, authentication or durable storage.
 
 Use Node22.13+ and pnpm9.15.3. In a new clone of the supplied Schemastud candidate, first build `frame`
 using its declared dependencies and pinned peers through the documented local proof setup. Its
@@ -16,8 +18,9 @@ pnpm build
 pnpm dev --port 46560 --strictPort
 ```
 
-The relative `file:../../frame` dependency resolves the same candidate, not a globally installed
-Frame or a live checkout. The local lock records the exact peers and required packages. If preparing
+The relative `file:../../frame`, `file:../../seam`, `file:../../facets` and `file:../../ui` dependencies, and the
+`pnpm.overrides` that hold Frame's own `@schemastud/*` dependencies to them, resolve the same candidate, not a
+globally installed Frame, a registry release or a live checkout. Build those four packages first. The local lock records the exact peers and required packages. If preparing
 a new local candidate before the lock is generated, run `pnpm install` once and retain that lock as
 part of the candidate; replay uses `--frozen-lockfile`. No package release is implied.
 

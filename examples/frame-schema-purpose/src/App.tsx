@@ -1,16 +1,8 @@
-import { useMemo, useRef, useState } from 'react';
-import type { ComponentProps } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    FrameProvider,
-    EditShell,
-    createResourceTransport,
-    type FrameInjection,
-    type SchemaPurpose,
-    type Row,
-} from '@schemastud/frame';
-import { createWidgetRegistry, type SchemaNode } from '@schemastud/seam';
-import type { UseUrlState } from '@schemastud/facets';
+import { useState, useSyncExternalStore } from 'react';
+import { QueryClient } from '@tanstack/react-query';
+import { EditShell, createFrameKit, type ContextManifest, type Row, type SchemaPurpose } from '@schemastud/frame';
+import { createMemoryTransport } from '@schemastud/frame/testing';
+import type { SchemaNode } from '@schemastud/seam';
 
 const writeSchema: SchemaNode = {
     type: 'object',
@@ -18,12 +10,7 @@ const writeSchema: SchemaNode = {
     required: ['title'],
     properties: {
         title: { type: 'string', title: 'Title', minLength: 1 },
-        status: {
-            type: 'string',
-            title: 'Status',
-            enum: ['open', 'closed'],
-            default: 'open',
-        },
+        status: { type: 'string', title: 'Status', enum: ['open', 'closed'], default: 'open' },
     },
 };
 const readSchema: SchemaNode = {
@@ -37,222 +24,121 @@ const readSchema: SchemaNode = {
         approvalState: { type: 'string', title: 'Approval' },
     },
 };
-const Button = (p: ComponentProps<'button'>) => <button {...p} />;
-const Input = (p: ComponentProps<'input'>) => <input {...p} />;
-const Label = (p: ComponentProps<'label'>) => <label {...p} />;
-const Box = ({ children }: { children?: React.ReactNode }) => (
-    <div>{children}</div>
-);
-const Dialog = ({
-    children,
-    title,
-    open,
-}: {
-    children?: React.ReactNode;
-    title?: string;
-    open?: boolean;
-}) =>
-    open === false ? null : (
-        <section role="dialog" aria-label={title}>
-            {title ? <h2>{title}</h2> : null}
-            {children}
-        </section>
-    );
-const primitives: FrameInjection['primitives'] = {
-    Button,
-    Input,
-    Label,
-    Badge: Box,
-    Table: Box,
-    Skeleton: () => <span>Loading</span>,
-    Popover: Box,
-    PopoverTrigger: Box,
-    PopoverContent: Box,
-    SimpleSelect: (p) => (
-        <select
-            value={p.value}
-            onChange={(e) => p.onValueChange(e.target.value)}
-            aria-label={p.placeholder}
-        >
-            {p.options.map((o: { value: string; label: string }) => (
-                <option key={o.value} value={o.value}>
-                    {o.label}
-                </option>
-            ))}
-        </select>
-    ),
-    SidePanel: Box,
-    Dialog,
-};
-const manifest = {
+
+/** What the producer declares for `requests`: create but not update, and one confirm-only record action. */
+const requests: ContextManifest = {
     byNode: {},
     inherits: {},
     known: [],
     singularLabel: 'request',
-    can: {
-        create: true,
-        update: false,
-        delete: false,
-        actions: { approve: true },
-    },
+    can: { create: true, update: false, delete: false, actions: { approve: true } },
     actions: [
         {
             key: 'approve',
             label: 'Approve fixture',
-            scope: 'record' as const,
+            scope: 'record',
             method: 'POST',
             url: '/fixture/{id}/approve',
             input: null,
-            result: 'toast' as const,
+            result: 'toast',
             destructive: false,
         },
     ],
 };
 
-/** A standalone in-memory producer; no Beam, router, PHP backend or authentication is implied. */
+// ---------------------------------------------------------------------------------------------------------------
+// The in-memory producer: one record, a write and a read schema, and a switch that fails the next read schema.
+// No Beam, router, PHP backend or authentication is implied, and nothing is durable.
+// ---------------------------------------------------------------------------------------------------------------
+let row: Row = { id: '1', title: 'Replace monitor', status: 'closed', approvalState: 'pending' };
+let failNextRead = false;
+
+/** The schema requests, shown below the surface. */
+let calls: string[] = [];
+const listeners = new Set<() => void>();
+const record = (call: string) => {
+    calls = [...calls, call];
+    listeners.forEach((listener) => listener());
+};
+const useCalls = () =>
+    useSyncExternalStore(
+        (listener) => (listeners.add(listener), () => listeners.delete(listener)),
+        () => calls,
+    );
+
+/**
+ * Frame's own memory transport, over the producer above. Only what the producer decides is overridden: which schema
+ * a purpose gets, what create stores, and what the approve action does.
+ */
+const transport = createMemoryTransport(
+    { manifest: { resources: [], contexts: { requests } } },
+    {
+        list: async () => ({ data: [row], total: 1, page: 1, perPage: 25 }) as never,
+        get: async () => ({ ...row }),
+        async getFormSchema(_resource, form, purpose: SchemaPurpose = 'write') {
+            record(`${form}:${purpose}`);
+            if (purpose === 'read' && failNextRead) {
+                failNextRead = false;
+                throw Error('Controlled read schema failure');
+            }
+            return purpose === 'read' ? readSchema : writeSchema;
+        },
+        async create<Result>(_resource: string, data: unknown): Promise<Result> {
+            const input = data as { title: string; status?: string };
+            row = { id: '2', title: input.title, status: input.status ?? 'open', approvalState: 'pending' };
+            return { ...row } as Result;
+        },
+        save: async () => {
+            throw Error('This fixture has no record editing');
+        },
+        async invoke() {
+            row = { ...row, approvalState: 'approved' };
+            return { message: 'Approved in this fixture.', data: { ...row } };
+        },
+    },
+);
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+
+/**
+ * One kit, at module scope. Its defaults supply what this file used to hand-write: the provider, the `@schemastud/ui`
+ * primitives and slots, a seeded widget registry, and `can` read from the manifest (create yes, update no).
+ */
+const frame = createFrameKit({ transport, urlState: 'memory', queryClient });
+
 export function SchemaPurposeDemo() {
-    const [client] = useState(
-        () =>
-            new QueryClient({
-                defaultOptions: {
-                    queries: { retry: false, staleTime: Infinity },
-                },
-            }),
-    );
     const [view, setView] = useState<'create' | 'detail' | 'legacy'>('create');
-    const [calls, setCalls] = useState<string[]>([]);
-    const row = useRef<Row>({
-        id: '1',
-        title: 'Replace monitor',
-        status: 'closed',
-        approvalState: 'pending',
-    });
-    const failRead = useRef(false);
-    const useUrlState: UseUrlState = () => [new URLSearchParams(), () => {}];
-    const transport = useMemo(
-        () =>
-            createResourceTransport(
-                {
-                    list: async () =>
-                        Response.json({
-                            data: [row.current],
-                            total: 1,
-                            page: 1,
-                            perPage: 25,
-                        }).json(),
-                    get: async () => ({ ...row.current }),
-                    async getFormSchema(
-                        _resource,
-                        form,
-                        purpose: SchemaPurpose = 'write',
-                    ) {
-                        await Promise.resolve();
-                        setCalls((before) => [...before, `${form}:${purpose}`]);
-                        if (purpose === 'read' && failRead.current) {
-                            failRead.current = false;
-                            throw Error('Controlled read schema failure');
-                        }
-                        return purpose === 'read' ? readSchema : writeSchema;
-                    },
-                    async create<Result>(
-                        _resource: string,
-                        data: unknown,
-                    ): Promise<Result> {
-                        const input = data as {
-                            title: string;
-                            status?: string;
-                        };
-                        row.current = {
-                            id: '2',
-                            title: input.title,
-                            status: input.status ?? 'open',
-                            approvalState: 'pending',
-                        };
-                        return { ...row.current } as Result;
-                    },
-                    save: async () => {
-                        throw Error('This fixture has no record editing');
-                    },
-                    remove: async () => {
-                        throw Error('This fixture has no delete');
-                    },
-                },
-                {
-                    resourceUrl: (resource) => '/fixture/' + resource,
-                    read: async () => {
-                        throw Error('No filters in this fixture');
-                    },
-                    async write<T>() {
-                        row.current = {
-                            ...row.current,
-                            approvalState: 'approved',
-                        };
-                        return {
-                            message: 'Approved in this fixture.',
-                            data: { ...row.current },
-                        } as T;
-                    },
-                },
-            ),
-        [],
-    );
-    const value: FrameInjection = {
-        transport,
-        primitives,
-        useUrlState,
-        registry: createWidgetRegistry(),
-        schemaFetcher: async () => ({}),
-        can: (action) => action === 'create',
-        manifestFor: () => manifest,
-    };
+    const schemaCalls = useCalls();
+
     return (
-        <QueryClientProvider client={client}>
-            <FrameProvider value={value}>
-                <main className="schema-purpose-example">
-                    <h1>Separate write and read schemas</h1>
-                    <nav aria-label="Fixture views">
-                        <button onClick={() => setView('create')}>
-                            Create
-                        </button>
-                        <button onClick={() => setView('detail')}>
-                            Read detail
-                        </button>
-                        <button onClick={() => setView('legacy')}>
-                            Legacy disabled edit
-                        </button>
-                        <button
-                            onClick={() => {
-                                failRead.current = true;
-                                setView('detail');
-                                void client.resetQueries({
-                                    queryKey: [
-                                        'frame',
-                                        'requests',
-                                        'form-schema',
-                                        'bare',
-                                        'read',
-                                    ],
-                                });
-                            }}
-                        >
-                            Fail read schema
-                        </button>
-                    </nav>
-                    <EditShell
-                        key={view}
-                        resource="requests"
-                        id={view === 'create' ? null : String(row.current.id)}
-                        readOnly={view === 'detail'}
-                        schemaPurpose={view === 'detail' ? 'read' : 'write'}
-                        container="bare"
-                        manifest={manifest}
-                        onSaved={() => setView('detail')}
-                    />
-                    <output aria-label="Schema requests">
-                        {calls.join(', ')}
-                    </output>
-                </main>
-            </FrameProvider>
-        </QueryClientProvider>
+        <frame.Provider>
+            <main className="schema-purpose-example">
+                <h1>Separate write and read schemas</h1>
+                <nav aria-label="Fixture views">
+                    <button onClick={() => setView('create')}>Create</button>
+                    <button onClick={() => setView('detail')}>Read detail</button>
+                    <button onClick={() => setView('legacy')}>Legacy disabled edit</button>
+                    <button
+                        onClick={() => {
+                            failNextRead = true;
+                            setView('detail');
+                            void queryClient.resetQueries({ queryKey: ['frame', 'requests', 'form-schema', 'bare', 'read'] });
+                        }}
+                    >
+                        Fail read schema
+                    </button>
+                </nav>
+                <EditShell
+                    key={view}
+                    resource="requests"
+                    id={view === 'create' ? null : String(row.id)}
+                    readOnly={view === 'detail'}
+                    schemaPurpose={view === 'detail' ? 'read' : 'write'}
+                    container="bare"
+                    onSaved={() => setView('detail')}
+                />
+                <output aria-label="Schema requests">{schemaCalls.join(', ')}</output>
+            </main>
+        </frame.Provider>
     );
 }
