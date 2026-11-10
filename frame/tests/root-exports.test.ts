@@ -8,8 +8,11 @@ import { expect, it } from 'vitest';
  * record of what a host can import from `@schemastud/frame`: adding, removing or moving a root name
  * fails here until `npm run export-list` regenerates the list and it is committed with the change.
  * The check compares and never writes.
+ *
+ * The check builds a TypeScript program over the barrel's whole import graph: about a second on
+ * an idle machine, and ten on a loaded one, past vitest's 5 s default. Hence the explicit timeout.
  */
-it('the root barrel exports exactly the committed list', () => {
+it('the root barrel exports exactly the committed list', { timeout: 60_000 }, () => {
     const script = resolve(import.meta.dirname, '../../scripts/export-list.mjs');
     const barrel = resolve(import.meta.dirname, '../src/index.ts');
 
