@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useFrameInjection } from '../src/context';
@@ -127,30 +127,41 @@ describe('createFrameKit', () => {
         expect(getManifest).toHaveBeenCalledTimes(1);
     });
 
-    it('with no QueryClient anywhere, useManifest beside the Provider and a ListShell share one getManifest call', async () => {
-        const transport = createMemoryTransport({ rows: { members: MEMBERS }, manifest: manifestWith({ name: 'Name' }) });
-        const getManifest = vi.spyOn(transport, 'getManifest');
+    it('with no QueryClient anywhere, useManifest above and inside the Provider read one entry: one call, one object', async () => {
+        // A fresh object per call, so the identity below can only hold if both sides read one cache entry.
+        const getManifest = vi.fn(async () => manifestWith({ name: 'Name' }));
+        const transport = createMemoryTransport({ rows: { members: MEMBERS } }, { getManifest });
         const frame = createFrameKit({ transport, urlState: 'memory' });
-        function Beside({ children }: { children: ReactNode }) {
+        const seen: { above?: FrameManifest; inside?: FrameManifest } = {};
+        function Above({ children }: { children: ReactNode }) {
             const manifest = frame.useManifest();
+            if (manifest.data) seen.above = manifest.data;
             return (
                 <>
-                    <output data-testid="beside">{manifest.data ? 'loaded' : 'loading'}</output>
+                    <output data-testid="above">{manifest.data ? 'loaded' : 'loading'}</output>
                     {children}
                 </>
             );
         }
+        function Inside() {
+            const manifest = frame.useManifest();
+            if (manifest.data) seen.inside = manifest.data;
+            return <output data-testid="inside">{manifest.data ? 'loaded' : 'loading'}</output>;
+        }
 
         render(
-            <Beside>
+            <Above>
                 <frame.Provider>
+                    <Inside />
                     <ListShell resource="members" />
                 </frame.Provider>
-            </Beside>,
+            </Above>,
         );
 
         expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
-        expect(await screen.findByText('loaded')).toBeTruthy();
+        await waitFor(() => expect(seen.above && seen.inside).toBeTruthy());
+        // The same cache entry, so the same object: the kit's own client serves both sides.
+        expect(seen.inside).toBe(seen.above);
         expect(getManifest).toHaveBeenCalledTimes(1);
     });
 });
