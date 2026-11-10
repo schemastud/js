@@ -1,0 +1,25 @@
+# What frame/src/subpaths/editor.ts exports. A test compares this file with the barrel and never writes it.
+# Regenerate with `npm run export-list`, and commit the result with the change that moved a name.
+type CollapseLevel
+type CollapseModes
+type Conformance
+value EditShellMountProvider
+type EditShellMountValue
+value FiveRegionEditShell
+type FiveRegionEditShellProps
+type FlushFn
+type HeavyweightWidgetProps
+value Inspector
+value MissingSlots
+type NodeAccess
+value PalettePane
+type RequiredSlot
+value SavePill
+value StatusBar
+value WidgetShell
+type WidgetShellProps
+value WidgetSurface
+value collapseModes
+value deriveCollapseLevel
+value useEditShellMount
+value useEditShellMountController

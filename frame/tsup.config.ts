@@ -7,6 +7,11 @@ export default defineConfig({
         index: 'src/index.ts',
         shadcn: 'src/shadcn/index.tsx',
         testing: 'src/testing/index.ts',
+        // Ruling 02 §8's subpaths: what leaves the root without leaving the package.
+        editor: 'src/subpaths/editor.ts',
+        cards: 'src/subpaths/cards.ts',
+        picker: 'src/subpaths/picker.ts',
+        wire: 'src/subpaths/wire.ts',
         // The Node-only build-time subpath (`@schemastud/frame/vocabulary`) the `frame-vocabulary` bin runs.
         vocabulary: 'src/vocabulary.ts',
     },

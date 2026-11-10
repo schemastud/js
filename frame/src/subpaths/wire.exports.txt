@@ -1,0 +1,16 @@
+# What frame/src/subpaths/wire.ts exports. A test compares this file with the barrel and never writes it.
+# Regenerate with `npm run export-list`, and commit the result with the change that moved a name.
+type BadgeCellOptions
+type BadgesCellOptions
+type DateCellOptions
+value FRAME_CONTEXT_KEYWORD
+value INHERITS
+value KNOWN_ROW_ACTIONS
+type NodeParticipation
+type NumberCellOptions
+type RealmDefinition
+type ResolvedForContext
+value STUD_RESOURCE_REF_KEYWORD
+type TextCellOptions
+value resolveActions
+value resolveWidgetFor

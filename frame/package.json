@@ -19,6 +19,22 @@
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js"
     },
+    "./editor": {
+      "types": "./dist/editor.d.ts",
+      "import": "./dist/editor.js"
+    },
+    "./cards": {
+      "types": "./dist/cards.d.ts",
+      "import": "./dist/cards.js"
+    },
+    "./picker": {
+      "types": "./dist/picker.d.ts",
+      "import": "./dist/picker.js"
+    },
+    "./wire": {
+      "types": "./dist/wire.d.ts",
+      "import": "./dist/wire.js"
+    },
     "./vocabulary": {
       "types": "./dist/vocabulary.d.ts",
       "import": "./dist/vocabulary.js"
@@ -47,7 +63,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:types": "tsc --project tsconfig.typecheck.json && tsc --project tsconfig.typecheck.registered.json",
-    "export-list": "node ../scripts/export-list.mjs src/index.ts --write",
+    "export-list": "node ../scripts/export-list.mjs src/index.ts --write && for b in editor cards picker wire; do node ../scripts/export-list.mjs src/subpaths/$b.ts --write; done",
     "frame:vocabulary": "tsup && node bin/frame-vocabulary.mjs --out vocabulary.default.json"
   },
   "peerDependencies": {

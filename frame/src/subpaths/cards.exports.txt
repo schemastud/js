@@ -1,0 +1,29 @@
+# What frame/src/subpaths/cards.ts exports. A test compares this file with the barrel and never writes it.
+# Regenerate with `npm run export-list`, and commit the result with the change that moved a name.
+value CARD_WIDGETS
+type CardWidgetOptions
+type CardWidgetProps
+value DashboardCard
+type DashboardRow
+value FigureCard
+value NavTile
+type NavTilePayload
+type OverviewPayload
+value RecentList
+value RecordLine
+value StatRow
+type SummaryFigure
+type SummaryPayload
+value TrendCard
+type TrendPoint
+type TrendSegment
+type WelcomeAction
+value WelcomePanel
+type WelcomePayload
+value dashboardRowRenders
+value describeTrend
+value forecastBoundary
+value formatRecordTime
+value resolveDashboardCard
+value trendSegments
+value trendSeries
