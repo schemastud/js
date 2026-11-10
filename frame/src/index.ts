@@ -23,7 +23,7 @@ export {
     type EditShellOptions,
     type EditShellState,
 } from './useEditShell';
-export { WidgetShell, WidgetSurface } from './WidgetShell';
+export { WidgetShell, WidgetSurface, type HeavyweightWidgetProps } from './WidgetShell';
 export {
     createMountDispatcher,
     type MountDispatcher,

@@ -23,6 +23,7 @@ import {
     type WidgetRegistry,
 } from '@schemastud/seam';
 import { FrameProvider } from './context';
+import type { HeavyweightWidgetProps } from './WidgetShell';
 import { createMemoryTransport, createMemoryUrlState, type MemoryTransportFixtures } from './testing';
 import {
     EditShellMountProvider,
@@ -301,13 +302,8 @@ const DEMO_NODE = {
     attrs: { title: 'Overview', pinned: true },
 };
 
-interface DemoEditorProps {
-    record?: Row;
-    readOnly?: boolean;
-    editShellMount?: EditShellMountValue;
-}
-
-function DemoEditorWidget({ record, readOnly, editShellMount }: DemoEditorProps) {
+/** The harness's full-surface editor, written to frame's heavyweight contract: it reads `readonly`. */
+function DemoEditorWidget({ formData: record, readonly, editShellMount }: HeavyweightWidgetProps) {
     // Publish once onto the shared mount so the surrounding panes have content.
     const published = useMemo(() => {
         editShellMount?.publishCandidates([
@@ -333,7 +329,7 @@ function DemoEditorWidget({ record, readOnly, editShellMount }: DemoEditorProps)
                 {(record?.name as string) ?? 'Untitled record'}
             </div>
             <p className="text-muted-foreground">
-                A demo heavyweight editor canvas{readOnly ? ' (read-only)' : ''}. In the product
+                A demo heavyweight editor canvas{readonly ? ' (read-only)' : ''}. In the product
                 this is a blockdoc / circuit-graph widget mounted full-surface over the record.
             </p>
         </div>

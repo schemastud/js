@@ -93,6 +93,7 @@ type FrameSidePanelEntry
 type FrameTransport
 type GuardComponent
 type GuardRegistry
+type HeavyweightWidgetProps
 type HttpTransportOptions
 value INHERITS
 type IconResolver

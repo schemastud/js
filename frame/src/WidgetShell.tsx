@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState, type ComponentType } from 'react';
 import type { ResourceKey } from './resources';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from './context';
@@ -16,6 +16,23 @@ import type { Row, WidgetShellProps, WidgetShellPropsOf } from './types';
 // not a field form. This is the single, shared materialization (no divergent
 // per-host copy): the host router mounts <WidgetShell> for a `mounts:'widget'`
 // leaf, exactly as it mounts <EditShell> for `'edit'`.
+
+/**
+ * What a full-surface (heavyweight) editor receives from `WidgetSurface` (`WidgetShell`, `FiveRegionEditShell`):
+ * frame's own props, not RJSF's (ruling 04 §5). The lock is `readonly`, RJSF's spelling, the one every widget
+ * receives; `formData` and `value` both carry the record, because hosts read either.
+ */
+export interface HeavyweightWidgetProps<R = Row> {
+    schema: SchemaNode;
+    /** The whole record. */
+    formData: R;
+    /** The same record. */
+    value: R;
+    readonly: boolean;
+    onChange?: (data: R) => void;
+    onSubmit?: (data: R) => void;
+    editShellMount: EditShellMountValue;
+}
 
 /**
  * The pure, props-driven surface: resolve the named heavyweight widget from the
@@ -60,17 +77,18 @@ export function WidgetSurface({
         undefined,
         registry,
     );
-    const Widget = resolved.widget;
-
     // A heavyweight widget resolves to a component; a bare RJSF widget name (or a
     // miss) cannot mount full-surface — surface that rather than crash.
-    if (typeof Widget !== 'function') {
+    if (typeof resolved.widget !== 'function') {
         return (
             <div data-frame-shell="widget-unbound" data-widget={widget}>
                 Widget “{widget}” is not mounted (no registry match).
             </div>
         );
     }
+
+    // Narrowed once, here: a full-surface editor takes frame's heavyweight contract.
+    const Widget = resolved.widget as ComponentType<HeavyweightWidgetProps>;
 
     // The EditShellMount is scoped here and dies with this surface on navigate-away.
     return (
@@ -82,7 +100,7 @@ export function WidgetSurface({
                     value={record ?? {}}
                     onChange={onChange}
                     onSubmit={onSubmit}
-                    readOnly={readOnly}
+                    readonly={readOnly}
                     editShellMount={mount}
                 />
             </div>

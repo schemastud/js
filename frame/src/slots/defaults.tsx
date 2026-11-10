@@ -438,6 +438,8 @@ function SchemaFormBody({
                 schemaFetcher={schemaFetcher}
                 // `bare` is the plain-data mode, acting in the form's resolver after references resolve.
                 plainData={form === 'bare'}
+                // RJSF's own lock reaches every widget as `readonly`; `disabled` stays, so nothing changes on screen.
+                readonly={readOnly}
                 disabled={readOnly}
                 formContext={{ intentBus, readOnly }}
                 // The frame's SaveBar is the one save control; suppress RJSF's own
