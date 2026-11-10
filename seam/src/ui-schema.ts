@@ -75,6 +75,19 @@ function resolveLocalRef(node: SchemaNode, root: SchemaNode): SchemaNode {
     return target && typeof target === 'object' ? (target as SchemaNode) : node;
 }
 
+/** The node that carries an enum for this field: itself after a local `$ref`, else a nullable `anyOf` branch's. */
+function enumCarrier(schema: SchemaNode, root: SchemaNode): SchemaNode | undefined {
+    const own = resolveLocalRef(schema, root);
+    if (Array.isArray(own.enum)) return own;
+    if (!Array.isArray(schema.anyOf)) return undefined;
+    for (const branch of schema.anyOf as SchemaNode[]) {
+        if (!branch || typeof branch !== 'object' || branch.type === 'null') continue;
+        const resolved = resolveLocalRef(branch, root);
+        if (Array.isArray(resolved.enum)) return resolved;
+    }
+    return undefined;
+}
+
 function walkUiSchema(
     schema: SchemaNode,
     registry: WidgetRegistry,
@@ -137,6 +150,12 @@ function walkUiSchema(
     if (options && Object.keys(options).length > 0) {
         ui['ui:options'] = options;
     }
+
+    // Ticket 44: an enum's labels reach the form. PHP emits `enumNames`; RJSF reads only `ui:enumNames`. The node is
+    // read after its local `$ref` resolves (a PHP enum usually sits in `$defs`), or on the nullable `anyOf` branch that
+    // carries the enum. The caller's own `ui:enumNames` still wins, later, through `mergeUiSchema`.
+    const enumNode = enumCarrier(schema, root);
+    if (enumNode) Object.assign(ui, liftEnumNames(enumNode, ui));
 
     // Arrays without an items definition can't be rendered generically (RJSF
     // shows an "unsupported field" error block) — hide them; they're edited
