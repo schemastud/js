@@ -8,7 +8,7 @@ import { useFormSchema, useRowRecord, useRowSave } from './data';
 import { isNotFound } from './errors';
 import { bridgeHostWidgets, stripHostWidgets } from './raw-mode';
 import { RecordActionButtons, useInlineNotice } from './ResourceActions';
-import type { EditShellProps, FormMode, Row } from './types';
+import type { EditShellProps, EditShellPropsOf, FormMode, Row } from './types';
 
 /**
  * The edit surface (create when id === null; detail = <EditShell readOnly/> — no
@@ -20,7 +20,7 @@ import type { EditShellProps, FormMode, Row } from './types';
  */
 export function EditShell<K extends ResourceKey = ResourceKey>(typed: EditShellProps<K>) {
     // Typed by the key at the boundary (ruling 03); the shell itself reads records as `Row`.
-    const props = typed as unknown as EditShellProps<string>;
+    const props = typed as unknown as EditShellPropsOf<string>;
     // A different record (including create mode) must never inherit another record's draft.
     return <EditShellRecord key={JSON.stringify([props.resource, props.id, props.schemaPurpose ?? 'write'])} {...props} />;
 }
@@ -38,7 +38,7 @@ function EditShellRecord({
     slots,
     manifest: manifestProp,
     onNavigate,
-}: EditShellProps<string>) {
+}: EditShellPropsOf<string>) {
     const { can, hooks, editSlots, primitives, manifestFor } = useFrameInjection();
     // The record ACTIONS a detail page draws (ADR-0005) come from the resource's manifest — handed in,
     // else looked up through the injection (a hook at a real host, so it is read during render).

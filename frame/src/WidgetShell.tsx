@@ -9,7 +9,7 @@ import {
 } from './EditShellMount';
 import { useFormSchema, useRowRecord, useRowSave } from './data';
 import { resolveWidgetFor } from './resolveWidgetFor';
-import type { Row, WidgetShellProps } from './types';
+import type { Row, WidgetShellProps, WidgetShellPropsOf } from './types';
 
 // ED-04 — materialize the `mounts: 'widget'` route path (frame 22-spine). A route
 // whose entry mounts a widget renders ONE `heavyweight` widget **full-surface**,
@@ -99,7 +99,7 @@ export function WidgetSurface({
  */
 export function WidgetShell<K extends ResourceKey = ResourceKey>(typed: WidgetShellProps<K>) {
     // Typed by the key at the boundary (ruling 03); the shell itself reads records as `Row`.
-    const { resource, id, widget, readOnly = false, onSaved } = typed as unknown as WidgetShellProps<string>;
+    const { resource, id, widget, readOnly = false, onSaved } = typed as unknown as WidgetShellPropsOf<string>;
     const { can } = useFrameInjection();
     const [formData, setFormData] = useState<Row>({});
     const mount = useEditShellMountController();

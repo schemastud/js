@@ -25,7 +25,7 @@ import { RecordActionButtons, ResourceActionBar, useInlineNotice } from './Resou
 import { useRowList } from './data';
 import { useListPagination } from './useListPagination';
 import type { ContextManifest } from './contexts';
-import type { FrameColumn, ListShellProps, Row } from './types';
+import type { FrameColumn, ListShellProps, ListShellPropsOf, Row } from './types';
 
 /** No host column overrides: the manifest's `list-column` set is the column set. A constant, so memos stay stable. */
 const NO_COLUMNS: FrameColumn[] = [];
@@ -46,7 +46,7 @@ export function ListShell<K extends ResourceKey = ResourceKey>(props: ListShellP
         manifest: manifestProp,
         onCellCommit,
         paginationPlacement = 'both',
-    } = props as unknown as ListShellProps<string>;
+    } = props as unknown as ListShellPropsOf<string>;
     const { can, registry, listSlots, transport, useUrlState, manifestFor } = useFrameInjection();
     // Handed in, else the injection's lookup (a kit's manifest), as EditShell does.
     const manifest = manifestProp ?? manifestFor?.(resource);
@@ -377,7 +377,7 @@ function withEditableCells(
     manifest: ContextManifest | undefined,
     schema: unknown,
     registry: ReturnType<typeof useFrameInjection>['registry'],
-    onCellCommit: ListShellProps<string>['onCellCommit'],
+    onCellCommit: ListShellPropsOf<string>['onCellCommit'],
 ): FrameColumn[] {
     if (!manifest) return resolved;
 

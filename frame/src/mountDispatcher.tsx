@@ -4,13 +4,13 @@ import { EditShell } from './EditShell';
 import { ListShell } from './ListShell';
 import type { RouteComponent } from './routes';
 import type {
-    EditShellProps,
+    EditShellPropsOf,
     FormMode,
     FrameColumn,
-    ListShellProps,
+    ListShellPropsOf,
     ManifestLookup,
     RouteContextEntry,
-    WidgetShellProps,
+    WidgetShellPropsOf,
 } from './types';
 import { WidgetShell } from './WidgetShell';
 
@@ -18,9 +18,9 @@ const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
 // A dispatched resource key arrives off the wire as a runtime string, so this is where it is cast, once (ruling 03):
 // the dispatcher mounts the shells untyped, whatever map a host registered.
-const UntypedListShell = ListShell as unknown as ComponentType<ListShellProps<string>>;
-const UntypedEditShell = EditShell as unknown as ComponentType<EditShellProps<string>>;
-const UntypedWidgetShell = WidgetShell as unknown as ComponentType<WidgetShellProps<string>>;
+const UntypedListShell = ListShell as unknown as ComponentType<ListShellPropsOf<string>>;
+const UntypedEditShell = EditShell as unknown as ComponentType<EditShellPropsOf<string>>;
+const UntypedWidgetShell = WidgetShell as unknown as ComponentType<WidgetShellPropsOf<string>>;
 
 /**
  * The `mounts` fallback dispatcher — the thing that lets a manifest entry render **without a host
@@ -89,7 +89,7 @@ const UntypedWidgetShell = WidgetShell as unknown as ComponentType<WidgetShellPr
  */
 export interface MountDispatcherOptions {
     /** Resolve list navigation at render time; hosts may use their router hooks here. */
-    onOpenFor?: (entry: RouteContextEntry) => ListShellProps<string>['onOpen'];
+    onOpenFor?: (entry: RouteContextEntry) => ListShellPropsOf<string>['onOpen'];
 
     /**
      * Reads the record id for an `edit`/`detail` leaf from wherever the host's router keeps it — a hook

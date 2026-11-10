@@ -33,11 +33,11 @@ import { FrameProvider, useFrameInjection } from '../context';
 import { ListShell } from '../ListShell';
 
 // The picker's resource is a runtime key, so it mounts the list untyped, cast once here (ruling 03).
-const UntypedListShell = ListShell as unknown as ComponentType<ListShellProps<string>>;
+const UntypedListShell = ListShell as unknown as ComponentType<ListShellPropsOf<string>>;
 import { useRowList } from '../data';
 import { ShadcnTable, shadcnListSlots } from '../shadcn/list-slots';
 import type { ContextManifest } from '../contexts';
-import type { FrameColumn, FrameInjection, ListShellProps, ResourcePage, Row } from '../types';
+import type { FrameColumn, FrameInjection, ListShellPropsOf, ResourcePage, Row } from '../types';
 import { resolveRecordPlacement, type RecordPlacement, type ResourcePickerDensity } from './placement';
 import {
     EMPTY_SELECTION,

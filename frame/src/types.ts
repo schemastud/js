@@ -617,11 +617,12 @@ export type PaginationSlotProps = PaginationCommonProps &
           }
     );
 
-export interface ListShellProps<K extends string = ResourceKey> {
+/** @internal The list shell's props over any string key: frame's own untyped view (`ListShellPropsOf<string>`). Not a root export. */
+export interface ListShellPropsOf<K extends string> {
     resource: K;
     /** Per-field overrides on the columns. Optional: with a manifest the columns are its `list-column` set. */
     columns?: FrameColumn<RowOf<K>>[];
-    onOpen?: (record: RowOf<K> | { id: null }) => void;
+    onOpen?: (record: OpenedOf<K>) => void;
     slots?: Partial<ListSlots>;
     /**
      * The resource's ContextManifest. When present, `list-column` participation folds
@@ -677,7 +678,8 @@ export interface SaveBarSlotProps {
  * heavyweight widget full-surface. `widget` is the registered widget name the
  * route entry carries (`RouteContextEntry.widget`).
  */
-export interface WidgetShellProps<K extends string = ResourceKey> {
+/** @internal The widget shell's props over any string key: frame's own untyped view. Not a root export. */
+export interface WidgetShellPropsOf<K extends string> {
     resource: K;
     id: string | null;
     widget: string;
@@ -685,7 +687,8 @@ export interface WidgetShellProps<K extends string = ResourceKey> {
     onSaved?: (record: RowOf<K> | CreateResultOf<K>) => void;
 }
 
-export interface EditShellProps<K extends string = ResourceKey> {
+/** @internal The edit shell's props over any string key: frame's own untyped view. Not a root export. */
+export interface EditShellPropsOf<K extends string> {
     resource: K;
     id: string | null;
     readOnly?: boolean;
@@ -739,3 +742,16 @@ export interface EditShellProps<K extends string = ResourceKey> {
     onCancel?: () => void;
     slots?: Partial<EditSlots>;
 }
+
+/**
+ * What `ListShell`'s `onOpen` receives: a typed row, or `{ id: null }` when the shell opens a new record. For an
+ * untyped key (nothing registered, or a key the map does not type) it is a plain `Row`, exactly as before the map.
+ */
+export type OpenedOf<K extends string> = Row extends RowOf<K> ? Row : RowOf<K> | { id: null };
+
+/** `ListShell`'s props, typed by the resource key (ruling 03). Registered, an unknown key is refused here. */
+export interface ListShellProps<K extends ResourceKey = ResourceKey> extends ListShellPropsOf<K> {}
+/** `EditShell`'s props, typed by the resource key (ruling 03). */
+export interface EditShellProps<K extends ResourceKey = ResourceKey> extends EditShellPropsOf<K> {}
+/** `WidgetShell`'s props, typed by the resource key (ruling 03). */
+export interface WidgetShellProps<K extends ResourceKey = ResourceKey> extends WidgetShellPropsOf<K> {}
