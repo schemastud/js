@@ -100,16 +100,14 @@ export interface MountDispatcherOptions {
     manifestFor?: ManifestLookup;
 
     /**
-     * The resource's DECLARED form mode — `AdminResourceDefinition.form`, which every
-     * `ParticleResource`/`AdminResource` in the estate already states (`form: 'bare'`).
+     * The resource's DECLARED form mode — `AdminResourceDefinition.form`, which the manifest
+     * always carries (`enriched` unless the resource chose `bare`).
      *
      * ⚠️ Its absence used to be invisible. This dispatcher constructed `EditShell` with no
      * `form` prop at all, so every dispatcher-mounted `edit`/`detail` route took the shell's
-     * own `'bare'` default no matter what the resource declared — the declaration nominated
-     * and nothing authorized. It reads as harmless today only because the one resource in the
-     * estate declaring `#[Widget]` names a `combobox` registered nowhere, so `'enriched'`
-     * currently renders the same pixels as `'bare'`; the moment a host registers that widget
-     * the two diverge and the route ignores the declaration. A hook is the expected wiring
+     * own default no matter what the resource declared — the declaration nominated and nothing
+     * authorized. Both defaults are now `enriched`, so a missing lookup draws declared widgets,
+     * but a resource that chose `bare` still needs this lookup to be honoured. A hook is the expected wiring
      * (`(resource) => useManifest(realm).data?.resources[resource]?.form`), so it is called
      * during the dispatched component's render, never at dispatch time.
      */
@@ -185,7 +183,7 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
                         container: 'page' as const,
                         // The DECLARED form mode. Read at render, and omitted entirely when the
                         // host wired no lookup or the resource is unknown — `undefined` lets
-                        // EditShell's own `'bare'` default stand rather than this dispatcher
+                        // EditShell's own `'enriched'` default stand rather than this dispatcher
                         // restating it, so there is one place the default lives.
                         form: options.formFor?.(resource),
                     });

@@ -721,6 +721,10 @@ export interface EditShellProps {
      * and `editSlots.Container` still sits BELOW the prop.
      */
     container?: 'panel' | 'page' | 'bare';
+    /**
+     * The form mode. Default `enriched`: the form draws each declared widget. `bare` is the
+     * plain-data mode, for a resource that declares it.
+     */
     form?: FormMode;
     /**
      * Show the splicewire/raw mode toggle — a dev/debug affordance for previewing a

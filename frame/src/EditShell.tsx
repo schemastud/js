@@ -28,7 +28,7 @@ function EditShellRecord({
     readOnly = false,
     schemaPurpose = 'write',
     container = 'panel',
-    form: formProp = 'bare',
+    form: formProp = 'enriched',
     showModeToggle = false,
     onSaved,
     onCancel,
