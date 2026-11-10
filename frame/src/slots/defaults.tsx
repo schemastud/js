@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, type ComponentType, type ReactNode } from 're
 import { Trash2 } from 'lucide-react';
 import { useFrameInjection } from '../context';
 import { dashboardRowRenders } from '../cards';
-import { useRemoveResource } from '../data';
+import { useRowRemove } from '../data';
 import { getPath } from '../getPath';
 import type {
     CardsSlotProps,
@@ -84,7 +84,7 @@ export function DefaultRowActions({
 }: RowActionsSlotProps) {
     const { primitives, can } = useFrameInjection();
     const { Button } = primitives;
-    const remove = useRemoveResource(resource);
+    const remove = useRowRemove(resource);
 
     if (!actions.includes('delete') || !can('delete', resource)) return null;
 

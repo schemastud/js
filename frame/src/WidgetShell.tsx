@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
+import type { ResourceKey } from './resources';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from './context';
 import {
@@ -6,7 +7,7 @@ import {
     useEditShellMountController,
     type EditShellMountValue,
 } from './EditShellMount';
-import { useFormSchema, useResourceRecord, useSaveResource } from './data';
+import { useFormSchema, useRowRecord, useRowSave } from './data';
 import { resolveWidgetFor } from './resolveWidgetFor';
 import type { Row, WidgetShellProps } from './types';
 
@@ -96,14 +97,16 @@ export function WidgetSurface({
  * ListShell) are untouched, and heavyweight-in-cell suppression still lives in
  * `resolveWidgetFor` unchanged.
  */
-export function WidgetShell({ resource, id, widget, readOnly = false, onSaved }: WidgetShellProps) {
+export function WidgetShell<K extends ResourceKey = ResourceKey>(typed: WidgetShellProps<K>) {
+    // Typed by the key at the boundary (ruling 03); the shell itself reads records as `Row`.
+    const { resource, id, widget, readOnly = false, onSaved } = typed as unknown as WidgetShellProps<string>;
     const { can } = useFrameInjection();
     const [formData, setFormData] = useState<Row>({});
     const mount = useEditShellMountController();
 
     const schemaQuery = useFormSchema(resource, 'enriched');
-    const recordQuery = useResourceRecord(resource, id);
-    const saveMutation = useSaveResource(resource);
+    const recordQuery = useRowRecord(resource, id);
+    const saveMutation = useRowSave(resource);
 
     useEffect(() => {
         if (recordQuery.data) setFormData(recordQuery.data);

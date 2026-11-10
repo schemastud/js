@@ -8,6 +8,7 @@ import {
     useRef,
     useState,
     type ComponentProps,
+    type ComponentType,
     type ReactNode,
 } from 'react';
 import { QueryClient, QueryClientContext, QueryClientProvider } from '@tanstack/react-query';
@@ -30,10 +31,13 @@ import {
 import { Check, ChevronsUpDown, ListFilter, Loader2, Search, X } from 'lucide-react';
 import { FrameProvider, useFrameInjection } from '../context';
 import { ListShell } from '../ListShell';
-import { useResourceList } from '../data';
+
+// The picker's resource is a runtime key, so it mounts the list untyped, cast once here (ruling 03).
+const UntypedListShell = ListShell as unknown as ComponentType<ListShellProps<string>>;
+import { useRowList } from '../data';
 import { ShadcnTable, shadcnListSlots } from '../shadcn/list-slots';
 import type { ContextManifest } from '../contexts';
-import type { FrameColumn, FrameInjection, ResourcePage, Row } from '../types';
+import type { FrameColumn, FrameInjection, ListShellProps, ResourcePage, Row } from '../types';
 import { resolveRecordPlacement, type RecordPlacement, type ResourcePickerDensity } from './placement';
 import {
     EMPTY_SELECTION,
@@ -521,7 +525,7 @@ function BrowseBody(body: BodyProps) {
         collection,
     );
     const requestParams = collection ? { ...filters.requestParams, collection } : filters.requestParams;
-    const page = useResourceList(props.resource, requestParams);
+    const page = useRowList(props.resource, requestParams);
     const data = page.data as ResourcePage<Row> | undefined;
     const rows: Row[] = data?.data ?? [];
     const total = data && 'total' in data ? data.total : null;
@@ -612,7 +616,7 @@ function BrowseBody(body: BodyProps) {
                     allowSet={select === 'set' || props.allowSet !== false}
                 />
                 <Tray selection={selection} onChange={onChange} labels={labels} select={select} noun={noun} disabled={props.disabled} />
-                <ListShell resource={props.resource} manifest={shellManifest} columns={columns} paginationPlacement="bottom" />
+                <UntypedListShell resource={props.resource} manifest={shellManifest} columns={columns} paginationPlacement="bottom" />
             </div>
         </PickContext.Provider>
     );

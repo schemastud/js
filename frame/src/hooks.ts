@@ -1,4 +1,5 @@
 import type { Row } from './types';
+import type { CreateResultOf, ResourceKey, RowOf } from './resources';
 
 // =============================================================================
 // A small registerable hook bus — the host-side `onSubmitted` seam (FC-04). A
@@ -13,11 +14,12 @@ export interface SubmittedContext {
     mode: 'create' | 'edit';
 }
 
-export type SubmittedHandler = (record: Row, ctx: SubmittedContext) => void;
+/** A submit handler, its saved record typed by the key (the read row, or what a create returns). */
+export type SubmittedHandler<K extends ResourceKey = ResourceKey> = (record: RowOf<K> | CreateResultOf<K>, ctx: SubmittedContext) => void;
 
 export interface FrameHooks {
     /** Register a handler for a resource's successful submit; returns an unregister fn. */
-    onSubmitted(resource: string, handler: SubmittedHandler): () => void;
+    onSubmitted<K extends ResourceKey = ResourceKey>(resource: K, handler: SubmittedHandler<K>): () => void;
     /** Fire every handler registered for `resource` with the saved record + context. */
     fireSubmitted(resource: string, record: Row, ctx: SubmittedContext): void;
 }
@@ -37,12 +39,12 @@ export function createFrameHooks(): FrameHooks {
                 set = new Set();
                 handlers.set(resource, set);
             }
-            set.add(handler);
+            set.add(handler as unknown as SubmittedHandler);
 
             return () => {
                 const current = handlers.get(resource);
                 if (!current) return;
-                current.delete(handler);
+                current.delete(handler as unknown as SubmittedHandler);
                 if (current.size === 0) handlers.delete(resource);
             };
         },
@@ -51,7 +53,7 @@ export function createFrameHooks(): FrameHooks {
             const set = handlers.get(resource);
             if (!set) return;
             for (const handler of [...set]) {
-                handler(record, ctx);
+                handler(record as never, ctx);
             }
         },
     };

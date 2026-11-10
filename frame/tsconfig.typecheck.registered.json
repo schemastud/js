@@ -1,0 +1,6 @@
+{
+    "//": "The REGISTERED program (ruling 03 slice 1): frame's barrel compiled with a fixture map registered. The unregistered program is tsconfig.typecheck.json; its glob never reaches tests/registered, so the map stays out of it.",
+    "extends": "./tsconfig.json",
+    "include": ["src/index.ts", "tests/registered"],
+    "exclude": []
+}

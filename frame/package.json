@@ -40,7 +40,7 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "test:types": "tsc --project tsconfig.typecheck.json",
+    "test:types": "tsc --project tsconfig.typecheck.json && tsc --project tsconfig.typecheck.registered.json",
     "export-list": "node ../scripts/export-list.mjs src/index.ts --write"
   },
   "peerDependencies": {

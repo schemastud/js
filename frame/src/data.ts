@@ -1,8 +1,9 @@
-import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryOptions, type UseQueryResult } from '@tanstack/react-query';
 import { transportScope } from '@schemastud/facets';
 import type { SchemaNode } from '@schemastud/seam';
 import { useFrameInjection } from './context';
 import type { FormMode, FrameTransport, ResourcePage, Row, SchemaPurpose } from './types';
+import type { CreateResultOf, EditOf, ResourceKey, RowOf } from './resources';
 
 /**
  * Extra `useQuery` knobs a caller may thread onto a Frame read (e.g. `refetchInterval`,
@@ -63,7 +64,7 @@ function useSelectedCollection(): string | undefined {
 }
 
 /** List rows for a resource through the injected transport, keyed by request params. */
-export function useResourceList(
+export function useRowList(
     resource: string,
     params: Record<string, string>,
     options?: ResourceQueryOptions<ResourcePage<Row>>,
@@ -84,7 +85,7 @@ export function useResourceList(
  * cache namespace end-to-end rather than a parallel bespoke fetch). The `enabled: id !== null`
  * default still holds unless `options` overrides it.
  */
-export function useResourceRecord(
+export function useRowRecord(
     resource: string,
     id: string | null,
     options?: ResourceQueryOptions<Row>,
@@ -120,7 +121,7 @@ export function useFormSchema(resource: string, form: FormMode, purpose: SchemaP
 }
 
 /** Save (create when id === null, else update); invalidates the resource's queries. */
-export function useSaveResource(resource: string) {
+export function useRowSave(resource: string) {
     const { transport } = useFrameInjection();
     const collection = useSelectedCollection();
     const queryClient = useQueryClient();
@@ -145,7 +146,7 @@ export function useSaveResource(resource: string) {
 }
 
 /** Delete a record; invalidates the resource's queries. */
-export function useRemoveResource(resource: string) {
+export function useRowRemove(resource: string) {
     const { transport } = useFrameInjection();
     const collection = useSelectedCollection();
     const queryClient = useQueryClient();
@@ -161,4 +162,49 @@ export function useRemoveResource(resource: string) {
             });
         },
     });
+}
+
+// ── Typed by the resource key (ruling 03) ─────────────────────────────────────────
+// The four hooks a host calls take the key as a type parameter and return its rows. Unregistered, the key is any
+// string and every row is `Row`, exactly as before. Frame's own shells call the untyped `useRow*` versions above,
+// which are not exported from the package root: inside frame a key is a runtime string and a row is a `Row`.
+
+/** A page of the key's rows. */
+export function useResourceList<K extends ResourceKey = ResourceKey>(
+    resource: K,
+    params: Record<string, string>,
+    options?: ResourceQueryOptions<ResourcePage<RowOf<K>>>,
+): UseQueryResult<ResourcePage<RowOf<K>>, Error> {
+    return useRowList(resource, params, options as ResourceQueryOptions<ResourcePage<Row>> | undefined) as unknown as UseQueryResult<
+        ResourcePage<RowOf<K>>,
+        Error
+    >;
+}
+
+/** One record of the key: the read row, or the edit projection the socket returns to a signed-in editor. */
+export function useResourceRecord<K extends ResourceKey = ResourceKey>(
+    resource: K,
+    id: string | null,
+    options?: ResourceQueryOptions<RowOf<K> | EditOf<K>>,
+): UseQueryResult<RowOf<K> | EditOf<K>, Error> {
+    return useRowRecord(resource, id, options as ResourceQueryOptions<Row> | undefined) as unknown as UseQueryResult<
+        RowOf<K> | EditOf<K>,
+        Error
+    >;
+}
+
+/** Save the key's record (create when `id` is null). The payload stays `unknown` (ruling 03, Q16). */
+export function useSaveResource<K extends ResourceKey = ResourceKey>(
+    resource: K,
+): UseMutationResult<RowOf<K> | CreateResultOf<K>, Error, { id: string | null; data: unknown }> {
+    return useRowSave(resource) as unknown as UseMutationResult<
+        RowOf<K> | CreateResultOf<K>,
+        Error,
+        { id: string | null; data: unknown }
+    >;
+}
+
+/** Delete one of the key's records. */
+export function useRemoveResource<K extends ResourceKey = ResourceKey>(resource: K) {
+    return useRowRemove(resource);
 }

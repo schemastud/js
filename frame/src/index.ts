@@ -272,6 +272,17 @@ export type {
     ActionResult,
     FrameNotice,
 } from './types';
+export type {
+    FrameResourceMap,
+    FrameResourceEntry,
+    ResourceKey,
+    RowOf,
+    EditOf,
+    CreateResultOf,
+    ActionKeyOf,
+    ActionInputOf,
+    FieldOf,
+} from './resources';
 
 // Re-export the seam + facets surface a frame host commonly needs, so a consumer
 // wires against one import (the migration path the facets tracer proved).

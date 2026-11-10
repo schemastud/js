@@ -12,6 +12,7 @@ import type {
 import type { ComponentType, ReactNode } from 'react';
 import type { FrameHooks } from './hooks';
 import type { SummaryPayload } from './cards/types';
+import type { CreateResultOf, FieldOf, ResourceKey, RowOf } from './resources';
 import type { ContextManifest } from './contexts';
 
 // =============================================================================
@@ -275,11 +276,11 @@ export interface FormResolver {
 // FrameColumn[]. The seam is forward-compatible with a future x-column reflection
 // strategy (out of scope) without changing the shell contract.
 // -----------------------------------------------------------------------------
-export interface FrameColumn {
-    field: string;
+export interface FrameColumn<R = Row> {
+    field: FieldOf<R>;
     header?: string;
     sortField?: string;
-    cell?: (record: Row) => ReactNode;
+    cell?: (record: R) => ReactNode;
     /**
      * A control rendered in the column's header BEFORE its label — a host statement, like
      * `cell`, passed through by `resolveColumns` for the field it names. The ResourcePicker puts
@@ -616,11 +617,11 @@ export type PaginationSlotProps = PaginationCommonProps &
           }
     );
 
-export interface ListShellProps {
-    resource: string;
+export interface ListShellProps<K extends string = ResourceKey> {
+    resource: K;
     /** Per-field overrides on the columns. Optional: with a manifest the columns are its `list-column` set. */
-    columns?: FrameColumn[];
-    onOpen?: (record: Row) => void;
+    columns?: FrameColumn<RowOf<K>>[];
+    onOpen?: (record: RowOf<K> | { id: null }) => void;
     slots?: Partial<ListSlots>;
     /**
      * The resource's ContextManifest. When present, `list-column` participation folds
@@ -635,7 +636,7 @@ export interface ListShellProps {
      * per-field save (e.g. `transport.save` / a narrow PATCH). Required only to make
      * row-cell cells actually persist; without it an edited cell commits to a no-op.
      */
-    onCellCommit?: (record: Row, field: string, value: unknown) => void;
+    onCellCommit?: (record: RowOf<K>, field: FieldOf<RowOf<K>>, value: unknown) => void;
     /**
      * Where the pagination bar (count · rows-per-page · prev/next) renders relative to
      * the table. Defaults to `'both'` — a bar above and below. Swap the `Pagination`
@@ -676,16 +677,16 @@ export interface SaveBarSlotProps {
  * heavyweight widget full-surface. `widget` is the registered widget name the
  * route entry carries (`RouteContextEntry.widget`).
  */
-export interface WidgetShellProps {
-    resource: string;
+export interface WidgetShellProps<K extends string = ResourceKey> {
+    resource: K;
     id: string | null;
     widget: string;
     readOnly?: boolean;
-    onSaved?: (record: Row) => void;
+    onSaved?: (record: RowOf<K> | CreateResultOf<K>) => void;
 }
 
-export interface EditShellProps {
-    resource: string;
+export interface EditShellProps<K extends string = ResourceKey> {
+    resource: K;
     id: string | null;
     readOnly?: boolean;
     /** Explicit projection opt-in; defaults to write, including legacy disabled editors. Create always uses write. */
@@ -734,7 +735,7 @@ export interface EditShellProps {
      * (e.g. behind `import.meta.env.DEV`) to expose it.
      */
     showModeToggle?: boolean;
-    onSaved?: (record: Row) => void;
+    onSaved?: (record: RowOf<K> | CreateResultOf<K>) => void;
     onCancel?: () => void;
     slots?: Partial<EditSlots>;
 }

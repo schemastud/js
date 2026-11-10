@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from 'react';
+import type { ResourceKey } from './resources';
 import type { SchemaNode } from '@schemastud/seam';
 import { ListFilters, useListFilters } from '@schemastud/facets';
 import { useFrameInjection } from './context';
@@ -21,7 +22,7 @@ import {
 import { resolveRowActions } from './rowActions';
 import { resolveActions } from './actions';
 import { RecordActionButtons, ResourceActionBar, useInlineNotice } from './ResourceActions';
-import { useResourceList } from './data';
+import { useRowList } from './data';
 import { useListPagination } from './useListPagination';
 import type { ContextManifest } from './contexts';
 import type { FrameColumn, ListShellProps, Row } from './types';
@@ -35,15 +36,17 @@ const NO_COLUMNS: FrameColumn[] = [];
  * is fully schema-driven (rides FilterSchemaController where a filter schema
  * exists), pagination is transport-driven, columns resolve through the columns seam.
  */
-export function ListShell({
-    resource,
-    columns = NO_COLUMNS,
-    onOpen,
-    slots,
-    manifest: manifestProp,
-    onCellCommit,
-    paginationPlacement = 'both',
-}: ListShellProps) {
+export function ListShell<K extends ResourceKey = ResourceKey>(props: ListShellProps<K>) {
+    // Typed by the key at the boundary (ruling 03); the shell itself reads rows as `Row`.
+    const {
+        resource,
+        columns = NO_COLUMNS,
+        onOpen,
+        slots,
+        manifest: manifestProp,
+        onCellCommit,
+        paginationPlacement = 'both',
+    } = props as unknown as ListShellProps<string>;
     const { can, registry, listSlots, transport, useUrlState, manifestFor } = useFrameInjection();
     // Handed in, else the injection's lookup (a kit's manifest), as EditShell does.
     const manifest = manifestProp ?? manifestFor?.(resource);
@@ -73,7 +76,7 @@ export function ListShell({
         });
     }, [requestedCollection, selectedCollection, setSearchParams]);
 
-    const query = useResourceList(resource, requestParams);
+    const query = useRowList(resource, requestParams);
 
     // Manifest folds list-column participation into the columns; absent → passthrough.
     const resolvedColumns = withEditableCells(
@@ -374,7 +377,7 @@ function withEditableCells(
     manifest: ContextManifest | undefined,
     schema: unknown,
     registry: ReturnType<typeof useFrameInjection>['registry'],
-    onCellCommit: ListShellProps['onCellCommit'],
+    onCellCommit: ListShellProps<string>['onCellCommit'],
 ): FrameColumn[] {
     if (!manifest) return resolved;
 

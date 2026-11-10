@@ -1,9 +1,10 @@
 import { createFormIntentBus } from '@schemastud/seam';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { ResourceKey } from './resources';
 import { flushSync } from 'react-dom';
 import { useFrameInjection } from './context';
 import { DefaultContainer, DefaultFormBody, DefaultNotFound, DefaultSaveBar, DefaultToggle } from './slots/defaults';
-import { useFormSchema, useResourceRecord, useSaveResource } from './data';
+import { useFormSchema, useRowRecord, useRowSave } from './data';
 import { isNotFound } from './errors';
 import { bridgeHostWidgets, stripHostWidgets } from './raw-mode';
 import { RecordActionButtons, useInlineNotice } from './ResourceActions';
@@ -17,7 +18,9 @@ import type { EditShellProps, FormMode, Row } from './types';
  * persist strategy sits BELOW the transport; the shell is blind to which strategy
  * runs. Every slot has a frame default the host may override.
  */
-export function EditShell(props: EditShellProps) {
+export function EditShell<K extends ResourceKey = ResourceKey>(typed: EditShellProps<K>) {
+    // Typed by the key at the boundary (ruling 03); the shell itself reads records as `Row`.
+    const props = typed as unknown as EditShellProps<string>;
     // A different record (including create mode) must never inherit another record's draft.
     return <EditShellRecord key={JSON.stringify([props.resource, props.id, props.schemaPurpose ?? 'write'])} {...props} />;
 }
@@ -35,7 +38,7 @@ function EditShellRecord({
     slots,
     manifest: manifestProp,
     onNavigate,
-}: EditShellProps) {
+}: EditShellProps<string>) {
     const { can, hooks, editSlots, primitives, manifestFor } = useFrameInjection();
     // The record ACTIONS a detail page draws (ADR-0005) come from the resource's manifest — handed in,
     // else looked up through the injection (a hook at a real host, so it is read during render).
@@ -55,8 +58,8 @@ function EditShellRecord({
     const intentBus = useMemo(() => createFormIntentBus(), []);
 
     const schemaQuery = useFormSchema(resource, form, id === null ? 'write' : schemaPurpose);
-    const recordQuery = useResourceRecord(resource, id);
-    const saveMutation = useSaveResource(resource);
+    const recordQuery = useRowRecord(resource, id);
+    const saveMutation = useRowSave(resource);
     // A stable schema keeps SchemaForm's asynchronous ref resolution from remounting
     // its controls on each keystroke or read-status change.
     const schema = useMemo(() => {

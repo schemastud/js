@@ -2,6 +2,8 @@
 # Regenerate with `npm run export-list`, and commit the result with the change that moved a name.
 value ActionButton
 type ActionHandlers
+type ActionInputOf
+type ActionKeyOf
 type ActionResult
 type AdminResourceDefinition
 type AssertRouteContextOptions
@@ -20,6 +22,7 @@ type CollapseModes
 type ColumnKind
 type Conformance
 type ContextManifest
+type CreateResultOf
 type CursorPaginated
 value DashboardCard
 type DashboardRow
@@ -41,6 +44,7 @@ value DefaultToggle
 value DefaultToolbar
 type DetailPresentation
 value EMPTY_SELECTION
+type EditOf
 value EditShell
 value EditShellMountProvider
 type EditShellMountValue
@@ -52,6 +56,7 @@ type ErrorSlotProps
 value FRAME_CONTEXT_KEYWORD
 type FacetsPrimitives
 type FacetsTransport
+type FieldOf
 value FigureCard
 type FilterSchema
 type FilterSchemaResponse
@@ -83,6 +88,8 @@ type FrameNotice
 type FramePrimitives
 value FrameProvider
 type FrameRegistryOptions
+type FrameResourceEntry
+type FrameResourceMap
 type FrameSidePanelEntry
 type FrameTransport
 type GuardComponent
@@ -135,6 +142,7 @@ value ResourceActionBar
 type ResourceActionDefinition
 type ResourceCollectionAddress
 type ResourceFilterHttp
+type ResourceKey
 type ResourceKindIcon
 type ResourceKindOption
 value ResourceKindPicker
@@ -162,6 +170,7 @@ type RouteRegistry
 type Row
 type RowAction
 type RowActionsSlotProps
+type RowOf
 value STUD_RESOURCE_REF_KEYWORD
 value STUD_WIDGET_KEYWORD
 value STUD_WIDGET_OPTIONS_KEYWORD
