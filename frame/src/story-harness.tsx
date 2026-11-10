@@ -14,6 +14,7 @@
 //     edit panes (StatusBar / SavePill / Inspector / PalettePane / MissingSlots).
 // =============================================================================
 import { useMemo, type ReactNode } from 'react';
+import type { Widget } from '@rjsf/utils';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { defaultPrimitives } from './primitives';
 import {
@@ -339,5 +340,7 @@ function DemoEditorWidget({ formData: record, readonly, editShellMount }: Heavyw
 /** Register the demo heavyweight editor under a widget name a WidgetShell resolves. */
 export function registerDemoEditor(name = 'demo-editor') {
     return (registry: WidgetRegistry) =>
-        registry.registerWidget(name, DemoEditorWidget);
+        // A full-surface editor takes frame's HeavyweightWidgetProps, not RJSF's WidgetProps: it registers through
+        // the heavyweight narrowing, which WidgetSurface reverses at its one mount (ruling 04 §5).
+        registry.registerWidget(name, DemoEditorWidget as unknown as Widget);
 }

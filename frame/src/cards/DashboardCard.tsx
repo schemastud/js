@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react';
-import { useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
+import { asWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from '../context';
 import { INHERITS, type ContextManifest, type FrameContext, type NodeParticipation } from '../contexts';
 import { isWidgetComponent, resolveWidgetFor, type ResolvedForContext } from '../resolveWidgetFor';
@@ -163,8 +163,9 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
     if (resolved.unbound) {
         return cell(<UnboundWidget kind="unbound" label={row.label} widget={resolved.declared} />);
     }
-    if (!isWidgetComponent(resolved.widget)) return null;
-    const Widget = resolved.widget;
+    // The one narrowing to RJSF's widget contract: a stock name or a miss mounts nothing here.
+    const Widget = asWidget(resolved.widget);
+    if (!Widget) return null;
 
     const payload: SummaryPayload = row.summary ?? {
         key: resource,

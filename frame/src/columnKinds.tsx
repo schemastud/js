@@ -128,7 +128,7 @@ const COLUMN_KIND_WIDGETS: Record<string, ComponentType<WidgetProps>> = {
 /** Register the five kinds by name, scoped to `list-column` (`registerFrameWidgets` calls it). */
 export function registerColumnKinds(registry: WidgetRegistry): void {
     for (const [name, widget] of Object.entries(COLUMN_KIND_WIDGETS)) {
-        registry.registerWidget(name, widget as never, undefined, { contexts: ['list-column'] });
+        registry.registerWidget(name, widget, undefined, { contexts: ['list-column'] });
     }
 }
 

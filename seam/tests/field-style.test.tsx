@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ComboboxWidget } from '../src/widgets/combobox';
 import { SchemaForm } from '../src/SchemaForm';
 import { createWidgetRegistry } from '../src/registry';
+import { createRjsfRegistry, widgetProps } from '../src/widget-props';
 
 afterEach(() => {
     cleanup();
@@ -20,7 +21,16 @@ const BARE_STUD = /var\(--stud-[a-z-]+\)/;
 
 describe('field widgets carry a token fallback chain', () => {
     it('combobox: no bare --stud-* colour', () => {
-        const { container } = render(<ComboboxWidget id="realm" onChange={() => {}} />);
+        // A widget takes RJSF's WidgetProps: build them as every mount site does.
+        const props = widgetProps({
+            registry: createRjsfRegistry({ rootSchema: { type: 'string' } }),
+            schema: { type: 'string' },
+            value: undefined,
+            name: 'realm',
+            id: 'realm',
+            readonly: false,
+        });
+        const { container } = render(<ComboboxWidget {...props} />);
         const style = container.querySelector('input')!.getAttribute('style') ?? '';
         expect(style).toContain('var(--input');
         expect(style).not.toMatch(BARE_STUD);

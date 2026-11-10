@@ -1,4 +1,4 @@
-import type * as React from 'react';
+import type { Field, Widget } from '@rjsf/utils';
 
 /** A JSON Schema node — kept loose on purpose; this layer only inspects it. */
 export type SchemaNode = Record<string, unknown>;
@@ -8,8 +8,7 @@ export type SchemaNode = Record<string, unknown>;
  * component RJSF mounts directly. `undefined` means "RJSF's own default is
  * already right — emit nothing".
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type WidgetResolution = string | React.ComponentType<any> | undefined;
+export type WidgetResolution = string | Widget | Field | undefined;
 
 /**
  * Data-valued widget configuration attached at registration time: an object, or

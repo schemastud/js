@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { SchemaNode } from '../types';
+import type { WidgetProps } from '@rjsf/utils';
 import { FIELD_BORDER, FIELD_INK, FIELD_SURFACE } from './field-tokens';
 
 // A generic RJSF widget: a plain text input backed by a <datalist> of suggestions —
@@ -7,15 +7,6 @@ import { FIELD_BORDER, FIELD_INK, FIELD_SURFACE } from './field-tokens';
 // select). Opt in per-attr with `x-widget: 'combobox'` + `x-widget-options:
 // {suggestions: [...]}`; the widget itself is context-free (no frame/PM knowledge).
 
-interface ComboboxWidgetProps {
-    id?: string;
-    value?: unknown;
-    disabled?: boolean;
-    readonly?: boolean;
-    schema?: SchemaNode;
-    options?: { suggestions?: unknown[] };
-    onChange: (value: unknown) => void;
-}
 
 const INPUT_STYLE: CSSProperties = {
     width: '100%',
@@ -27,13 +18,13 @@ const INPUT_STYLE: CSSProperties = {
     fontSize: 13,
 };
 
-function suggestions(props: ComboboxWidgetProps): string[] {
+function suggestions(props: WidgetProps): string[] {
     const list = props.options?.suggestions;
 
     return Array.isArray(list) ? list.map(String) : [];
 }
 
-export function ComboboxWidget(props: ComboboxWidgetProps) {
+export function ComboboxWidget(props: WidgetProps) {
     const { id, value, disabled, readonly, onChange } = props;
     const locked = Boolean(disabled || readonly);
     const listId = id ? `${id}-suggestions` : undefined;

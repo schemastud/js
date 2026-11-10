@@ -1,4 +1,4 @@
-import type { ComponentType } from 'react';
+import type { Widget } from '@rjsf/utils';
 import type { WidgetRegistry } from '@schemastud/seam';
 import { FRAME_CONTEXT_KEYWORD } from '../resolveWidgetFor';
 import { StatRow } from './StatRow';
@@ -40,7 +40,7 @@ export type {
  */
 export const CARD_WIDGETS: Record<
     'stat-row' | 'figure-card' | 'recent-list' | 'record-line' | 'nav-tile' | 'dashboard-card' | 'trend-card',
-    ComponentType<any>
+    Widget
 > = {
     'stat-row': StatRow,
     'figure-card': FigureCard,

@@ -4,7 +4,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { BlockdocManifest } from '../src/core';
 import { createNodeViewRegistry } from '../src/react/node-views';
 import type { NodeViewComponentProps } from '../src/react/node-views';
+import type { Field, Widget } from '@rjsf/utils';
 import { createRichContentWidget } from '../src/rjsf';
+import { emitRichContentChange } from '../src/rjsf/create-rich-content-widget';
 import base from './fixtures/base.manifest.json';
 import contentArticle from './fixtures/content-article.manifest.json';
 
@@ -176,5 +178,34 @@ describe('createRichContentWidget', () => {
         await waitFor(() => {
             expect(container.querySelector('[data-blockdoc-node="contentSection"]')).not.toBeNull();
         });
+    });
+});
+
+/** frame-foundation 34 (interface decision, edit A): one component, both RJSF contracts, no cast. */
+describe('createRichContentWidget is both a Widget and a Field', () => {
+    // Compile-time: blockdoc's typecheck covers this file, so an unassignable component fails the build.
+    const RichContent = createRichContentWidget(createNodeViewRegistry(), { baseManifest: base });
+    const asWidget: Widget = RichContent;
+    const asField: Field = RichContent;
+
+    it('is assignable to both contracts with no cast', () => {
+        expect(asWidget).toBe(RichContent);
+        expect(asField).toBe(RichContent);
+    });
+
+    it('a field mount forwards its field path: onChange(doc, path)', () => {
+        const onChange = vi.fn();
+        emitRichContentChange({ fieldPathId: { path: ['bodyDoc'], $id: 'root_bodyDoc' }, onChange } as never, sectionDoc as never);
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange.mock.calls[0]).toEqual([sectionDoc, ['bodyDoc']]);
+    });
+
+    it('a widget mount takes the widget arity: onChange(doc)', () => {
+        const onChange = vi.fn();
+        emitRichContentChange({ value: null, onChange }, sectionDoc as never);
+
+        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange.mock.calls[0]).toEqual([sectionDoc]);
     });
 });

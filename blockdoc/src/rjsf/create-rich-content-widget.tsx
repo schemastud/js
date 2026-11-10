@@ -1,7 +1,7 @@
 import { getUiOptions } from '@rjsf/utils';
-import type { UiSchema } from '@rjsf/utils';
+import type { FieldProps, WidgetProps } from '@rjsf/utils';
 import { defaultValidator } from '@schemastud/seam';
-import type { ComponentType } from 'react';
+import type { FunctionComponent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BlockdocManifest } from '../core';
 import { BlockdocEditor } from '../react/BlockdocEditor';
@@ -15,20 +15,31 @@ import type { NodeViewRegistry } from '../react/node-views';
  * as an RJSF FIELD for object-typed doc values — while plain hosts may mount
  * it with widget-signature props. It accepts both and normalizes internally.
  */
-interface RichContentProps {
-    // Field-signature props.
-    formData?: unknown;
-    schema?: Record<string, unknown>;
-    uiSchema?: UiSchema;
-    registry?: { formContext?: Record<string, unknown> };
-    formContext?: Record<string, unknown>;
-    /** RJSF v6 field-path identity; its `path` must ride every onChange or the update lands on the root. */
-    fieldPathId?: { path?: Array<string | number> };
-    // Widget-signature props.
-    value?: unknown;
-    options?: Record<string, unknown>;
-    // Shared. In field mode RJSF's signature is (newFormData, path, errorSchema?, id?).
-    onChange?: (doc: DocJson, path?: Array<string | number>) => void;
+type RichContentFieldProps = Partial<FieldProps<DocJson | null>>;
+type RichContentWidgetProps = Partial<WidgetProps<DocJson | null>>;
+
+/**
+ * Either RJSF contract (ruling 04, ticket 34): the component is both a `Widget` and a `Field`, so it registers with
+ * no cast. The normalizer below reads either shape; only the `onChange` arity depends on which mounted it.
+ */
+type RichContentProps = RichContentFieldProps | RichContentWidgetProps;
+
+/** A field mount carries its RJSF v6 field-path identity; a widget mount never does. */
+function isFieldMount(props: RichContentProps): props is RichContentFieldProps {
+    return 'fieldPathId' in props && props.fieldPathId !== undefined;
+}
+
+/**
+ * Commit a doc through the mount's own `onChange` arity. A FIELD scopes the update by its path,
+ * `onChange(doc, path)`: RJSF v6 routes a path-less field onChange to the form root, wiping sibling fields. A WIDGET
+ * takes `onChange(doc)`. Module-internal; the rich-content test drives it.
+ */
+export function emitRichContentChange(props: RichContentProps, doc: DocJson): void {
+    if (isFieldMount(props)) {
+        props.onChange?.(doc, props.fieldPathId?.path ?? []);
+    } else {
+        props.onChange?.(doc);
+    }
 }
 
 /**
@@ -93,7 +104,7 @@ function isRealDocSchema(schema: Record<string, unknown> | undefined): schema is
 export function createRichContentWidget(
     nodeViewRegistry: NodeViewRegistry,
     defaults: RichContentWidgetDefaults = {},
-): ComponentType<RichContentProps> {
+): FunctionComponent<RichContentProps> {
     function RichContentWidget(props: RichContentProps) {
         // Props normalizer: field props win, widget props are the fallback.
         const value = (props.formData !== undefined ? props.formData : props.value) as DocJson | null | undefined;
@@ -200,10 +211,9 @@ export function createRichContentWidget(
 
         const [advisoryErrors, setAdvisoryErrors] = useState<string[]>([]);
         const fieldSchema = props.schema;
-        const onChangeRef = useRef(props.onChange);
-        onChangeRef.current = props.onChange;
-        const fieldPathRef = useRef(props.fieldPathId?.path);
-        fieldPathRef.current = props.fieldPathId?.path;
+        // The latest props, read at commit time: the mount's onChange arity is chosen then.
+        const propsRef = useRef(props);
+        propsRef.current = props;
 
         // Advisory validation at commit boundaries: surface as a red list;
         // never blocks the commit — the server's validation is authoritative.
@@ -223,7 +233,7 @@ export function createRichContentWidget(
 
                 // Field mode MUST scope the update by path (RJSF v6 routes a
                 // path-less onChange to the form root, wiping sibling fields).
-                onChangeRef.current?.(doc, fieldPathRef.current);
+                emitRichContentChange(propsRef.current, doc);
             },
             [fieldSchema],
         );

@@ -88,7 +88,9 @@ export function WidgetSurface({
     }
 
     // Narrowed once, here: a full-surface editor takes frame's heavyweight contract.
-    const Widget = resolved.widget as ComponentType<HeavyweightWidgetProps>;
+    // The registry holds RJSF's Widget | Field; a full-surface editor is neither, and is registered through this
+    // same narrowing in reverse. It is narrowed here, once, to frame's heavyweight contract (ruling 04 §5).
+    const Widget = resolved.widget as unknown as ComponentType<HeavyweightWidgetProps>;
 
     // The EditShellMount is scoped here and dies with this surface on navigate-away.
     return (
