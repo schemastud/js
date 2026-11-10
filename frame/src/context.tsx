@@ -3,6 +3,7 @@ import { QueryClientContext } from '@tanstack/react-query';
 import { FacetsProvider } from '@schemastud/facets';
 import { WidgetRegistryContext, defaultRegistry, type WidgetRegistry } from '@schemastud/seam';
 import { registerResourceRefWidget } from './ResourceRefWidget';
+import { registerColumnKinds } from './columnKinds';
 import type { FrameInjection } from './types';
 
 const FrameContext = createContext<FrameInjection | null>(null);
@@ -13,7 +14,7 @@ const FrameContext = createContext<FrameInjection | null>(null);
 const installedRegistries = new WeakSet<WidgetRegistry>();
 
 /**
- * Install frame's built-in widgets (the ResourcePicker field widget) into a registry exactly once.
+ * Install frame's built-in widgets (the ResourcePicker field widget and the five column kinds) into a registry exactly once.
  * Idempotent per registry. A host that resolves forms through a registry no FrameProvider is handed
  * calls this itself; FrameProvider calls it for its own registry AND seam's `defaultRegistry`.
  */
@@ -38,6 +39,8 @@ function ensureBuiltinWidgets(registry: WidgetRegistry | undefined | null): void
     // twice re-entrantly) leaves the guard permanently tripped with the widget never
     // actually installed, and no way to retry.
     registerResourceRefWidget(registry);
+    // The column kinds, by name for `list-column` only (ruling 01 §4).
+    registerColumnKinds(registry);
     installedRegistries.add(registry);
 }
 

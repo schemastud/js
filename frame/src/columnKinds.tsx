@@ -1,9 +1,7 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { useId, type ComponentType, type CSSProperties } from 'react';
+import type { WidgetProps } from '@rjsf/utils';
 import { useFrameInjection } from './context';
-import { getPath } from './getPath';
-import type { NodeParticipation } from './contexts';
-import type { Row } from './types';
-import { displayLabel } from '@schemastud/seam';
+import { displayLabel, useRjsfRegistry, widgetProps, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 
 // =============================================================================
 // Declared column kinds — how a cell RENDERS, said once on the server.
@@ -34,10 +32,12 @@ import { displayLabel } from '@schemastud/seam';
 // has to ship.
 // =============================================================================
 
-/** The derived vocabulary. A name outside this set falls through to the default cell. */
-export const COLUMN_KINDS = ['text', 'badge', 'badges', 'number', 'date'] as const;
-
-export type ColumnKind = (typeof COLUMN_KINDS)[number];
+// ## A kind is a widget (ruling 01 §4)
+//
+// Each kind is a component written to RJSF's `WidgetProps`, registered by name for the `list-column` context
+// only, so a host's unscoped `date` (or seam's stock RJSF `text`/`date`) never takes a column, and a host that
+// registers one of these names for `list-column` replaces frame's. A list cell mounts the resolved widget through
+// seam's `widgetProps`, read-only, as every other read context does.
 
 export interface TextCellOptions {
     /** Monospace family (`var(--font-mono)`), for keys/ids/endpoints. */
@@ -110,53 +110,72 @@ const SIZES: Record<string, string> = { xs: '0.75rem', sm: '0.875rem', base: '1r
 const isEmpty = (value: unknown): boolean =>
     value === null || value === undefined || value === '';
 
-/**
- * Resolve a declared `list-column` participation into a cell renderer, or `undefined` when
- * the participation names no kind (or one this build does not know).
- *
- * Deliberately returns a closure that renders a COMPONENT rather than raw markup: the
- * renderers read `primitives` off the injection, and a hook can only run inside a
- * component's render. This is also what keeps `resolveColumns` a pure function with an
- * unchanged signature.
- */
-export function resolveDeclaredCell(
-    field: string,
-    participation: NodeParticipation,
-): ((record: Row) => ReactNode) | undefined {
-    const kind = participation.widget;
+const TextKind = ({ value, options }: WidgetProps) => <TextCell value={value} options={options as TextCellOptions} />;
+const BadgeKind = ({ value, options }: WidgetProps) => <BadgeCell value={value} options={options as BadgeCellOptions} />;
+const BadgesKind = ({ value, options }: WidgetProps) => <BadgesCell value={value} options={options as BadgesCellOptions} />;
+const NumberKind = ({ value, options }: WidgetProps) => <NumberCell value={value} options={options as NumberCellOptions} />;
+const DateKind = ({ value, options }: WidgetProps) => <DateCell value={value} options={options as DateCellOptions} />;
 
-    if (!kind || !(COLUMN_KINDS as readonly string[]).includes(kind)) return undefined;
+/** The five kinds, by name. Internal: a host reaches a kind by its name through the registry. */
+const COLUMN_KIND_WIDGETS: Record<string, ComponentType<WidgetProps>> = {
+    text: TextKind,
+    badge: BadgeKind,
+    badges: BadgesKind,
+    number: NumberKind,
+    date: DateKind,
+};
 
-    const options = (participation.options ?? {}) as Record<string, unknown>;
-
-    return (record: Row) => (
-        <DeclaredCell kind={kind as ColumnKind} options={options} value={getPath(record, field)} />
-    );
+/** Register the five kinds by name, scoped to `list-column` (`registerFrameWidgets` calls it). */
+export function registerColumnKinds(registry: WidgetRegistry): void {
+    for (const [name, widget] of Object.entries(COLUMN_KIND_WIDGETS)) {
+        registry.registerWidget(name, widget as never, undefined, { contexts: ['list-column'] });
+    }
 }
 
-/** The one component every declared kind renders through. */
-export function DeclaredCell({
-    kind,
-    options,
+const EMPTY_ROOT: SchemaNode = { type: 'object' };
+const EMPTY_NODE: SchemaNode = {};
+
+/**
+ * A list cell: the widget the column resolved, mounted through seam's `widgetProps` with the read surfaces' one call
+ * (ticket 29's): the property as served, the field as its name, the column header as its label, locked
+ * (`readonly` and `disabled`), and the resolver's merged options, over an RJSF registry built on the list's root
+ * schema.
+ */
+export function ColumnWidgetCell({
+    widget: Widget,
+    property,
+    rootSchema,
+    field,
+    header,
     value,
+    options,
 }: {
-    kind: ColumnKind;
-    options: Record<string, unknown>;
+    widget: ComponentType<WidgetProps>;
+    /** The list schema's property for the field, as served; absent when the list schema does not carry it. */
+    property: SchemaNode | undefined;
+    rootSchema: SchemaNode | undefined;
+    field: string;
+    header: string;
     value: unknown;
+    options: Record<string, unknown> | undefined;
 }) {
-    switch (kind) {
-        case 'badge':
-            return <BadgeCell value={value} options={options as BadgeCellOptions} />;
-        case 'badges':
-            return <BadgesCell value={value} options={options as BadgesCellOptions} />;
-        case 'number':
-            return <NumberCell value={value} options={options as NumberCellOptions} />;
-        case 'date':
-            return <DateCell value={value} options={options as DateCellOptions} />;
-        case 'text':
-        default:
-            return <TextCell value={value} options={options as TextCellOptions} />;
-    }
+    const registry = useRjsfRegistry(rootSchema ?? EMPTY_ROOT);
+    const id = useId();
+    return (
+        <Widget
+            {...widgetProps({
+                registry,
+                schema: property ?? EMPTY_NODE,
+                value,
+                name: field,
+                id,
+                label: header,
+                readonly: true,
+                disabled: true,
+                options,
+            })}
+        />
+    );
 }
 
 // ─── text ────────────────────────────────────────────────────────────────────
@@ -364,3 +383,4 @@ function DateCell({ value, options }: { value: unknown; options: DateCellOptions
         </span>
     );
 }
+

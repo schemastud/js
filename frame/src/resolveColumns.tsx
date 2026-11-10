@@ -1,7 +1,11 @@
-import type { FrameColumn, ResolveColumns } from './types';
+import type { ReactNode } from 'react';
+import type { FrameColumn, ResolveColumns, Row } from './types';
 import type { ContextManifest, NodeParticipation } from './contexts';
-import { resolveDeclaredCell } from './columnKinds';
-import { displayLabel } from '@schemastud/seam';
+import { ColumnWidgetCell } from './columnKinds';
+import { getPath } from './getPath';
+import { isWidgetComponent, resolveWidgetFor } from './resolveWidgetFor';
+import { UnboundWidget } from './SchemaView';
+import { displayLabel, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
@@ -27,13 +31,13 @@ const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
  * there is no participation entry to add one from.
  *
  * **A manifest also decides how a cell RENDERS.** `list-column` participation carries a
- * `widget` name — it always has, and until now nothing on the client read it, so a
- * declaration could say `#[Column('badge')]` and the host still had to hand-write the
- * closure. That name is now resolved through {@link resolveDeclaredCell} into a `cell`
- * renderer drawn from frame's derived column-kind vocabulary (`text` / `badge` / `badges`
- * / `number` / `date`). Precedence is unchanged where it already existed: a host `cell`
- * still wins by field, and a kind frame does not know resolves to nothing and falls to the
- * default cell. `cellSource` records which of the two produced the renderer, because one
+ * `widget` name, a column kind, and a column kind is a widget (ruling 01 §4): the name resolves
+ * through `resolveWidgetFor` in the `list-column` context against `registry`, where frame registers
+ * its kinds (`text` / `badge` / `badges` / `number` / `date`) scoped to `list-column`, and the
+ * resolved component mounts through seam's `widgetProps`. A name nothing binds draws the unbound
+ * marker; a stock RJSF name, or no name, falls to the default cell. Only the column's own entry
+ * resolves: the node's form binding (`x-widget`) never reaches a list cell. A host `cell` still
+ * wins by field. `cellSource` records which of the two produced the renderer, because one
  * downstream consumer — the `row-cell` editable-in-place wiring in `ListShell` — keys off
  * "did a HOST supply a cell", and a synthesized one must not be mistaken for that.
  *
@@ -47,6 +51,7 @@ export const resolveColumns: ResolveColumns = (
     _schema,
     hostColumns,
     manifest,
+    registry,
 ): ReturnType<ResolveColumns> => {
     if (!manifest) return hostColumns;
 
@@ -65,6 +70,8 @@ export const resolveColumns: ResolveColumns = (
     }
 
     const hostByField = new Map(hostColumns.map((c) => [c.field, c] as const));
+    const root = _schema as SchemaNode | undefined;
+    const properties = (root?.properties ?? {}) as Record<string, SchemaNode>;
 
     // Manifest-participating fields, ordered by `sort` (stable for equal/absent sort).
     const fields = [...participation.entries()].sort(sortEntries).map(([field]) => field);
@@ -76,12 +83,14 @@ export const resolveColumns: ResolveColumns = (
         // (`badge`/`date`/`number`/…), resolved to a renderer. A host `cell` still wins:
         // host-closure-wins-by-field is the existing contract and a declaration is a
         // DEFAULT for it, never a replacement.
-        const declared = host?.cell ? undefined : resolveDeclaredCell(field, cm);
+        const header = host?.header ?? displayLabel({ title: cm.label }, field, { property: true });
+        // FLAT, as `withEditableCells` reads it: `byNode` keys a dotted pointer whole.
+        const declared = host?.cell ? undefined : declaredCell(field, cm, properties[field], root, registry, header);
         // Manifest supplies header/sortField defaults; a host FrameColumn overrides —
         // and its `cell` renderer wins (host-closure-wins-by-field).
         const column: FrameColumn = {
             field,
-            header: host?.header ?? displayLabel({ title: cm.label }, field, { property: true }),
+            header,
             ...(host?.sortField ? { sortField: host.sortField } : {}),
             ...(host?.headerControl ? { headerControl: host.headerControl } : {}),
             ...(host?.cell ? { cell: host.cell, cellSource: 'host' as const } : {}),
@@ -90,6 +99,44 @@ export const resolveColumns: ResolveColumns = (
         return column;
     });
 };
+
+/**
+ * The cell a column's declared kind draws, or `undefined` for the default cell. Only a NAMED entry resolves: a
+ * column with no kind never picks up a predicate widget. The name resolves against the property with its own form
+ * binding (`x-widget`) removed; its `x-widget-options` stay, beneath the column entry's (ruling 01 §3, §4). The
+ * widget mounts over the property as served.
+ */
+function declaredCell(
+    field: string,
+    entry: NodeParticipation,
+    property: SchemaNode | undefined,
+    root: SchemaNode | undefined,
+    registry: WidgetRegistry,
+    header: string,
+): ((record: Row) => ReactNode) | undefined {
+    if (!entry.widget) return undefined;
+    // Only the node the name resolves against: `{ type: 'string' }` stands in for a property the list schema lacks.
+    const { 'x-widget': _formBinding, ...node } = property ?? ({ type: 'string' } as SchemaNode);
+    const resolved = resolveWidgetFor(node, 'list-column', entry, undefined, registry);
+    if (isWidgetComponent(resolved.widget)) {
+        const widget = resolved.widget as Parameters<typeof ColumnWidgetCell>[0]['widget'];
+        return (record: Row) => (
+            <ColumnWidgetCell
+                widget={widget}
+                property={property}
+                rootSchema={root}
+                field={field}
+                header={header}
+                value={getPath(record, field)}
+                options={resolved.options}
+            />
+        );
+    }
+    if (resolved.unbound) {
+        return () => <UnboundWidget label={header} widget={entry.widget} kind="unbound-column" />;
+    }
+    return undefined;
+}
 
 function listColumnParticipation(manifest: ContextManifest): Map<string, NodeParticipation> {
     const out = new Map<string, NodeParticipation>();

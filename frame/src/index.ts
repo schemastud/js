@@ -69,10 +69,6 @@ export {
 } from './EditShellMount';
 export { resolveColumns } from './resolveColumns';
 export {
-    COLUMN_KINDS,
-    DeclaredCell,
-    resolveDeclaredCell,
-    type ColumnKind,
     type TextCellOptions,
     type BadgeCellOptions,
     type BadgesCellOptions,

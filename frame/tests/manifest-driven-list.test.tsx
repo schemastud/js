@@ -149,7 +149,7 @@ const headers = () => screen.getAllByRole('columnheader').map((h) => h.textConte
 
 describe('resolveColumns — a manifest with ZERO host columns is a complete column set', () => {
     it('returns every participating field, sort-ordered, with manifest labels as headers', () => {
-        expect(resolveColumns('widgets', null, [], MANIFEST)).toEqual([
+        expect(resolveColumns('widgets', null, [], MANIFEST, createWidgetRegistry())).toEqual([
             { field: 'id', header: 'Identifier' },
             { field: 'title', header: 'Title' },
         ]);
@@ -161,12 +161,12 @@ describe('resolveColumns — a manifest with ZERO host columns is a complete col
             inherits: {},
             known: KNOWN_CONTEXTS,
         };
-        expect(resolveColumns('widgets', null, [], manifest)).toEqual([{ field: 'parent_tenant_id', header: 'Parent tenant' }]);
+        expect(resolveColumns('widgets', null, [], manifest, createWidgetRegistry())).toEqual([{ field: 'parent_tenant_id', header: 'Parent tenant' }]);
     });
 
     it('still passes host columns straight through when there is NO manifest — the other path', () => {
         const host = [{ field: 'title', header: 'Custom' }];
-        expect(resolveColumns('widgets', null, host, undefined)).toBe(host);
+        expect(resolveColumns('widgets', null, host, undefined, createWidgetRegistry())).toBe(host);
     });
 });
 

@@ -314,7 +314,9 @@ export type ResolveColumns = (
     resource: string,
     schema: unknown,
     hostColumns: FrameColumn[],
-    manifest?: import('./contexts').ContextManifest,
+    manifest: import('./contexts').ContextManifest | undefined,
+    /** Where a column's kind resolves: frame's kinds are registered here, scoped to `list-column`. */
+    registry: import('@schemastud/seam').WidgetRegistry,
 ) => FrameColumn[];
 
 // The manifest entry shape frame's shells consume — the frontend projection of the

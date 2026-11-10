@@ -368,7 +368,7 @@ describe('EditShell', () => {
 describe('resolveColumns seam', () => {
     it('v1 strategy returns the host-supplied FrameColumn[]', () => {
         const columns = [{ field: 'title' }, { field: 'value' }];
-        expect(resolveColumns('widgets', undefined, columns)).toBe(columns);
+        expect(resolveColumns('widgets', undefined, columns, undefined, createWidgetRegistry())).toBe(columns);
     });
 });
 
@@ -512,7 +512,7 @@ describe('ListShell — contributed columns under dotted pointers (ticket 19)', 
 
     it('resolves a contributed column into the column set off the manifest alone', () => {
         // No host column for it: participation IS the declaration, so the seam emits it.
-        const resolved = resolveColumns('widgets', undefined, [], manifest);
+        const resolved = resolveColumns('widgets', undefined, [], manifest, createWidgetRegistry());
 
         expect(resolved.map((c) => c.field)).toEqual(['title', 'commerce.plan']);
         expect(resolved[1].header).toBe('Plan');
@@ -522,7 +522,7 @@ describe('ListShell — contributed columns under dotted pointers (ticket 19)', 
         // `participation.has(col.field)` matches on the dotted string as-is — the manifest
         // check needed no path resolution, only the value read did.
         expect(() =>
-            resolveColumns('widgets', undefined, [{ field: 'commerce.plan' }], manifest),
+            resolveColumns('widgets', undefined, [{ field: 'commerce.plan' }], manifest, createWidgetRegistry()),
         ).not.toThrow();
     });
 

@@ -3,10 +3,9 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry } from '@schemastud/seam';
-import { FrameProvider } from '../src/context';
+import { FrameProvider, registerFrameWidgets } from '../src/context';
 import { ListShell } from '../src/ListShell';
 import { resolveColumns } from '../src/resolveColumns';
-import { COLUMN_KINDS } from '../src/columnKinds';
 import { KNOWN_CONTEXTS, type ContextManifest } from '../src/contexts';
 import type {
     FrameInjection,
@@ -109,6 +108,10 @@ function Harness({ children }: { children: ReactNode }) {
     );
 }
 
+/** A registry with frame's built-ins installed, as a kit's or a FrameProvider's is. */
+const REGISTRY = createWidgetRegistry();
+registerFrameWidgets(REGISTRY);
+
 const manifestOf = (
     byNode: ContextManifest['byNode'],
 ): ContextManifest => ({ byNode, inherits: {}, known: KNOWN_CONTEXTS });
@@ -121,7 +124,7 @@ describe('resolveColumns — the declared kind becomes the cell', () => {
             kind: { 'list-column': { participates: true, widget: 'badge' } },
         });
 
-        const [column] = resolveColumns('concepts', undefined, [], manifest);
+        const [column] = resolveColumns('concepts', undefined, [], manifest, REGISTRY);
 
         expect(column.cell).toBeTypeOf('function');
         expect(column.cellSource).toBe('declared');
@@ -130,7 +133,7 @@ describe('resolveColumns — the declared kind becomes the cell', () => {
     it('leaves a column with NO declared kind exactly as it was — no cell at all', () => {
         const manifest = manifestOf({ kind: { 'list-column': { participates: true } } });
 
-        const [column] = resolveColumns('concepts', undefined, [], manifest);
+        const [column] = resolveColumns('concepts', undefined, [], manifest, REGISTRY);
 
         expect(column.cell).toBeUndefined();
         expect(column.cellSource).toBeUndefined();
@@ -142,19 +145,21 @@ describe('resolveColumns — the declared kind becomes the cell', () => {
         });
         const hostCell = () => 'HOST';
 
-        const [column] = resolveColumns('concepts', undefined, [{ field: 'kind', cell: hostCell }], manifest);
+        const [column] = resolveColumns('concepts', undefined, [{ field: 'kind', cell: hostCell }], manifest, REGISTRY);
 
         expect(column.cell).toBe(hostCell);
         expect(column.cellSource).toBe('host');
     });
 
-    it('an UNKNOWN kind is inert, not fatal — the vocabulary is a client fact and a host may run an older build', () => {
+    it('an UNKNOWN kind is not fatal: it is unbound, and the cell draws the unbound marker (ruling 01 §4)', () => {
         const manifest = manifestOf({
             kind: { 'list-column': { participates: true, widget: 'sparkline-from-the-future' } },
         });
 
-        expect(() => resolveColumns('concepts', undefined, [], manifest)).not.toThrow();
-        expect(resolveColumns('concepts', undefined, [], manifest)[0].cell).toBeUndefined();
+        expect(() => resolveColumns('concepts', undefined, [], manifest, REGISTRY)).not.toThrow();
+        const [column] = resolveColumns('concepts', undefined, [], manifest, REGISTRY);
+        render(<>{column.cell?.(ROWS[0])}</>);
+        expect(document.querySelector('[data-frame-view="unbound-column"]')).not.toBeNull();
     });
 
     it('resolves a DOTTED pointer through the same path resolution the default cell uses', () => {
@@ -162,14 +167,17 @@ describe('resolveColumns — the declared kind becomes the cell', () => {
             'commerce.plan': { 'list-column': { participates: true, widget: 'text' } },
         });
 
-        const [column] = resolveColumns('tenants', undefined, [], manifest);
+        const [column] = resolveColumns('tenants', undefined, [], manifest, REGISTRY);
 
         expect(column.cell).toBeTypeOf('function');
         expect(column.field).toBe('commerce.plan');
     });
 
-    it('names exactly the five derived kinds — a sixth is a decision, not a typo', () => {
-        expect([...COLUMN_KINDS]).toEqual(['text', 'badge', 'badges', 'number', 'date']);
+    it('frame registers exactly the five derived kinds for list-column — a sixth is a decision, not a typo', () => {
+        const listColumn = REGISTRY.names()
+            .filter(({ registrations }) => registrations.some((r) => r.contexts?.includes('list-column')))
+            .map(({ name }) => name);
+        expect(listColumn).toEqual(['badge', 'badges', 'date', 'number', 'text']);
     });
 });
 

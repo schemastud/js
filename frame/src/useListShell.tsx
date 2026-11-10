@@ -172,7 +172,7 @@ export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>)
 
     // Manifest folds list-column participation into the columns; absent → passthrough.
     const resolvedColumns = withEditableCells(
-        resolveColumns(resource, filters.schema, columns, manifest),
+        resolveColumns(resource, filters.schema, columns, manifest, registry),
         manifest,
         filters.schema,
         registry,

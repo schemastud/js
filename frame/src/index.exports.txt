@@ -10,7 +10,6 @@ type AssertRouteContextOptions
 type BadgeCellOptions
 type BadgesCellOptions
 value CARD_WIDGETS
-value COLUMN_KINDS
 type CardLinkRenderer
 type CardWidgetOptions
 type CardWidgetProps
@@ -19,7 +18,6 @@ type CellSlotProps
 type CollapseLevel
 type CollapseMode
 type CollapseModes
-type ColumnKind
 type Conformance
 type ContextManifest
 type CreateResultOf
@@ -27,7 +25,6 @@ type CursorPaginated
 value DashboardCard
 type DashboardRow
 type DateCellOptions
-value DeclaredCell
 value DefaultCards
 value DefaultCell
 value DefaultContainer
@@ -253,7 +250,6 @@ value registerResourceRefWidget
 value resolveActions
 value resolveColumns
 value resolveDashboardCard
-value resolveDeclaredCell
 value resolveKindPlacement
 value resolveRecordPlacement
 value resolveRowActions
