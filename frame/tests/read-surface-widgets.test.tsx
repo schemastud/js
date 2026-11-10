@@ -138,6 +138,34 @@ describe('an RJSF widget in the read surfaces', () => {
         expect((seen.at(-1) as WidgetProps & { row?: DashboardRow }).row).toBe(row);
     });
 
+    it("DashboardCard passes the resolver's merged options: the summary entry's own win over the registry config", async () => {
+        const { Probe, seen } = probe();
+        const frame = createFrameKit({
+            transport: createMemoryTransport({
+                manifest: {
+                    resources: [],
+                    contexts: {
+                        members: manifestOf({
+                            '': { summary: { participates: true, widget: 'probe-card', options: { precision: 2, tone: 'warning' } } },
+                        }),
+                    },
+                },
+            }),
+            urlState: 'memory',
+            widgets: (registry) => registry.registerWidget('probe-card', Probe as never, { precision: 0, unit: 'USD' }),
+        });
+        const row: DashboardRow = { resource: 'members', context: 'summary', label: 'Members', href: '/members' };
+
+        render(
+            <frame.Provider>
+                <DashboardCard {...({ value: row, options: {} } as never)} />
+            </frame.Provider>,
+        );
+
+        await waitFor(() => expect(document.querySelector('[data-probe]')).not.toBeNull());
+        expect(seen.at(-1)!.options).toMatchObject({ precision: 2, unit: 'USD', tone: 'warning' });
+    });
+
     // Ruling 04, limit 2: a name that resolves to an RJSF stock NAME (a string) mounts nothing outside the form; the
     // surface draws the read value.
     it('stock name: a detail field naming `textarea` draws its read value, not a control', () => {

@@ -172,7 +172,9 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
         icon: row.icon,
         figures: [],
     };
-    const merged: CardWidgetOptions = { ...(options ?? {}), ...(resolved.config ?? {}) };
+    // The resolver's MERGED options (the registry entry's config, the node's `x-widget-options`, then the context
+    // entry's own) over the card's outer config — ruling 04's options at every mount, never the bare registry config.
+    const merged: CardWidgetOptions = { ...(options ?? {}), ...(resolved.options ?? {}) };
     const body = (
         <Widget
             {...widgetProps({

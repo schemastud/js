@@ -83,7 +83,7 @@ export function RecentList({ value, options, row }: CardWidgetProps<SummaryPaylo
                                             label,
                                             readonly: true,
                                             disabled: true,
-                                            options: line.config,
+                                            options: line.options,
                                         })}
                                     />
                                 )}
@@ -101,7 +101,8 @@ export function RecentList({ value, options, row }: CardWidgetProps<SummaryPaylo
  * Frame's `record-line` — or whatever a host registered later on that name — with the
  * registry config it carries. The bare component when the card set was never registered.
  */
-function recordLineFor(registry: WidgetRegistry): { Line: ComponentType<any>; config?: Record<string, unknown> } {
-    const { widget, config } = registry.resolveEntry({ 'x-widget': 'record-line' });
-    return isWidgetComponent(widget) ? { Line: widget, config } : { Line: RecordLine };
+function recordLineFor(registry: WidgetRegistry): { Line: ComponentType<any>; options?: Record<string, unknown> } {
+    // The resolved entry's merged options, as every other mount passes them.
+    const { widget, options } = registry.resolveEntry({ 'x-widget': 'record-line' });
+    return isWidgetComponent(widget) ? { Line: widget, options } : { Line: RecordLine };
 }
