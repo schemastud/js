@@ -261,7 +261,7 @@ function ActionDialog({
                         formData={formData}
                         intentBus={intentBus}
                         readOnly={pending}
-                        form="bare"
+                        form="enriched"
                         onChange={setFormData}
                         onSubmit={(data) => onSubmit(data)}
                         registerSubmit={registerSubmit}

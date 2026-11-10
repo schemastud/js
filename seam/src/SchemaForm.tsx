@@ -30,6 +30,13 @@ export interface SchemaFormProps
      * is active; the caller's `templates` and `widgets` still win over it.
      */
     theme?: ThemeProps;
+    /**
+     * The plain-data mode (`form: 'bare'`): the form resolves no declared widget name. Below the root, each node's
+     * `x-widget` is ignored and inference draws its control; `x-widget-options`, `x-group`/`x-tab`, `x-placeholder`
+     * and `x-stud-resource-ref` are untouched, and the root `x-widget` is kept. It acts after external references
+     * resolve, so a name a fetched `$ref` carries is suppressed too. Default false.
+     */
+    plainData?: boolean;
 }
 
 /**
@@ -48,6 +55,7 @@ export function SchemaForm({
     templates,
     widgets,
     theme,
+    plainData = false,
     ...rest
 }: SchemaFormProps) {
     const ThemedForm = themedForm(useRjsfTheme(theme));
@@ -91,8 +99,9 @@ export function SchemaForm({
     );
 
     const generatedUiSchema = useMemo(
-        () => (formSchema ? buildUiSchema(formSchema, activeRegistry) : {}),
-        [formSchema, activeRegistry],
+        // The form is the `edit` context: a name scoped to `edit` binds here, a `list-column` kind never does.
+        () => (formSchema ? buildUiSchema(formSchema, activeRegistry, { context: 'edit', plainData }) : {}),
+        [formSchema, activeRegistry, plainData],
     );
 
     if (!formSchema) {

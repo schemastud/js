@@ -2,6 +2,17 @@ import type { SchemaNode, WidgetRegistry } from './types';
 
 type UiSchema = Record<string, unknown>;
 
+/** How the form walks: `context` selects scoped name registrations (`SchemaForm` passes `edit`); `plainData` is the `bare` mode. */
+export interface UiSchemaOptions {
+    /** The context the form resolves names in. Absent, only unscoped names bind (a direct caller's behaviour before contexts). */
+    context?: string;
+    /**
+     * The plain-data mode: below the root, a node's `x-widget` is ignored and inference draws its control. The root
+     * `x-widget` is kept, as are `x-widget-options` and every other keyword.
+     */
+    plainData?: boolean;
+}
+
 /**
  * Walk a (pre-dereferenced) JSON Schema and emit an RJSF uiSchema from the
  * predicate registry — this is how the predicate widget-resolution contract
@@ -9,8 +20,8 @@ type UiSchema = Record<string, unknown>;
  * differs from RJSF's own default get a `ui:widget`; `x-placeholder` maps to
  * `ui:placeholder`.
  */
-export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry): UiSchema {
-    return walkUiSchema(schema, registry, schema, new Set());
+export function buildUiSchema(schema: SchemaNode, registry: WidgetRegistry, options: UiSchemaOptions = {}): UiSchema {
+    return walkUiSchema(schema, registry, schema, new Set(), options, true);
 }
 
 /**
@@ -69,14 +80,18 @@ function walkUiSchema(
     registry: WidgetRegistry,
     root: SchemaNode,
     seen: Set<string>,
+    walk: UiSchemaOptions,
+    isRoot = false,
 ): UiSchema {
     const ui: UiSchema = {};
 
-    let { widget, config } = registry.resolveEntry(schema);
+    // `bare` acts here, on the resolved schema: a name a fetched reference carried is suppressed too.
+    const node = walk.plainData && !isRoot ? withoutDeclaredName(schema) : schema;
+    let { widget, config } = registry.resolveEntry(node, walk.context);
     // Plain open-object editing belongs to forms, not to general widget/card resolution.
     if (
         widget === undefined &&
-        !schema['x-widget'] &&
+        !node['x-widget'] &&
         schema.type === 'object' &&
         !schema.$ref &&
         !schema.anyOf &&
@@ -150,7 +165,7 @@ function walkUiSchema(
     const properties = target.properties as Record<string, SchemaNode> | undefined;
     if (properties) {
         for (const [key, child] of Object.entries(properties)) {
-            const childUi = walkUiSchema(child, registry, root, seen);
+            const childUi = walkUiSchema(child, registry, root, seen, walk);
             if (Object.keys(childUi).length > 0) {
                 ui[key] = childUi;
             }
@@ -159,7 +174,7 @@ function walkUiSchema(
 
     const items = target.items as SchemaNode | undefined;
     if (items && typeof items === 'object' && !Array.isArray(items)) {
-        const itemsUi = walkUiSchema(items, registry, root, seen);
+        const itemsUi = walkUiSchema(items, registry, root, seen, walk);
         if (Object.keys(itemsUi).length > 0) {
             ui.items = itemsUi;
         }
@@ -216,4 +231,11 @@ export function liftEnumNames(node: SchemaNode, uiSchema: UiSchema): UiSchema {
     if (!Array.isArray(names) || !Array.isArray(values) || names.length !== values.length) return uiSchema;
     if (uiSchema['ui:enumNames'] !== undefined) return uiSchema;
     return { ...uiSchema, 'ui:enumNames': names };
+}
+
+/** The node with its declared widget name removed, so inference resolves it (the plain-data mode). */
+function withoutDeclaredName(node: SchemaNode): SchemaNode {
+    if (node['x-widget'] === undefined) return node;
+    const { 'x-widget': _name, ...rest } = node;
+    return rest;
 }

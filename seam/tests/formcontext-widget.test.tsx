@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFormIntentBus, widgetFormContext } from '../src/intent-bus';
 import { createWidgetRegistry } from '../src/registry';
 import { SchemaForm } from '../src/SchemaForm';
+import { buildUiSchema } from '../src/ui-schema';
 import type { SchemaNode } from '../src/types';
 
 afterEach(() => {
@@ -12,7 +13,7 @@ afterEach(() => {
 
 /**
  * Guards the enrich-widget wiring: a COMPONENT widget resolved through the predicate
- * registry (x-stud-widget) must be able to reach the host formContext — with the
+ * registry (by its `x-widget` name) must be able to reach the host formContext — with the
  * intentBus on it — that the frame rides for its enrich affordance.
  *
  * RJSF v6 dropped the `formContext` widget prop and exposes it only via
@@ -36,15 +37,12 @@ describe('formContext delivery to a component widget', () => {
         }
 
         const registry = createWidgetRegistry();
-        registry.registerWidget(
-            (s: SchemaNode) => s['x-stud-widget'] === 'probe',
-            ProbeWidget as never,
-        );
+        registry.registerWidget('probe', ProbeWidget as never);
 
         const schema: SchemaNode = {
             type: 'object',
             properties: {
-                interpretation: { type: 'string', 'x-stud-widget': 'probe' },
+                interpretation: { type: 'string', 'x-widget': 'probe' },
             },
         };
 
@@ -63,5 +61,42 @@ describe('formContext delivery to a component widget', () => {
         expect(seen.hasBus).toBe(true);
         // Document the v6 break the helper works around: the raw prop is empty.
         expect(seen.rawPropKeys).toEqual([]);
+    });
+});
+
+/**
+ * frame-foundation 24 (interface decision, edit C): the form walks in the `edit` context, and the plain-data mode
+ * keeps the root's declared name while every node below it is inferred.
+ */
+describe('buildUiSchema: the edit scope and the kept root', () => {
+    const RootProof = () => null;
+    const ScopedProof = () => null;
+    const ListProof = () => null;
+    const registry = createWidgetRegistry();
+    registry.registerWidget('root-proof', RootProof as never);
+    registry.registerWidget('scoped-proof', ScopedProof as never, undefined, { contexts: ['edit'] });
+    registry.registerWidget('list-proof', ListProof as never, undefined, { contexts: ['list-column'] });
+    const schema: SchemaNode = {
+        type: 'object',
+        'x-widget': 'root-proof',
+        properties: {
+            rating: { type: 'string', 'x-widget': 'scoped-proof' },
+            badge: { type: 'string', 'x-widget': 'list-proof' },
+        },
+    };
+    const rootMount = (ui: Record<string, unknown>) => ui['ui:field'] ?? ui['ui:widget'];
+    const child = (ui: Record<string, unknown>, key: string) => (ui[key] as Record<string, unknown> | undefined)?.['ui:widget'];
+
+    it('enriched: the child resolves its edit-scoped name, and a name scoped to another context gets nothing', () => {
+        const ui = buildUiSchema(schema, registry, { context: 'edit' });
+        expect(rootMount(ui)).toBe(RootProof);
+        expect(child(ui, 'rating')).toBe(ScopedProof);
+        expect(child(ui, 'badge')).toBeUndefined();
+    });
+
+    it('plainData: the root still resolves; the child does not', () => {
+        const ui = buildUiSchema(schema, registry, { context: 'edit', plainData: true });
+        expect(rootMount(ui)).toBe(RootProof);
+        expect(child(ui, 'rating')).toBeUndefined();
     });
 });

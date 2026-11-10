@@ -226,7 +226,7 @@ describe('the declared form mode reaches the shell', () => {
      * authorized.
      *
      * It reads as harmless today only by accident: `form`'s entire semantics is one line in
-     * `EditShell` (whether `x-stud-widget` is bridged to `x-widget`), and the one resource
+     * `SchemaForm` (whether `plainData` ignores a declared `x-widget`), and the one resource
      * declaring `#[Widget]` names a `combobox` registered nowhere — so `'enriched'` renders
      * the same pixels as `'bare'` and the defect is invisible. The moment a host registers
      * that widget the two diverge and the route ignores the declaration.

@@ -26,8 +26,8 @@
  "realm": {
  "type": "string",
  "title": "Realm",
- "x-stud-widget": "combobox",
- "x-stud-widget-options": {
+ "x-widget": "combobox",
+ "x-widget-options": {
  "suggestions": [
  "site",
  "operator",

@@ -387,10 +387,9 @@ export function DefaultCards({ rows, onOpen, Card }: CardsSlotProps) {
 // -----------------------------------------------------------------------------
 
 /**
- * Default form body — seam's SchemaForm. Both `raw` and `splicewire` modes render
- * through the same SchemaForm; the mode only changes which widgets resolve (a host
- * registers `splicewire-enrich` in seam's WidgetRegistry). The enrich/refine
- * affordance rides a FormIntentBus on formContext (not props).
+ * Default form body — seam's SchemaForm. Both form modes render through the same SchemaForm:
+ * `enriched` draws each declared widget, `bare` (`plainData`) draws inferred controls. The
+ * enrich/refine affordance rides a FormIntentBus on formContext (not props).
  */
 export function DefaultFormBody(props: FormBodySlotProps) {
     const { schema, readOnly } = props;
@@ -416,6 +415,7 @@ function SchemaFormBody({
     formData,
     intentBus,
     readOnly,
+    form,
     onChange,
     onSubmit,
     registerSubmit,
@@ -436,6 +436,8 @@ function SchemaFormBody({
                 formData={formData}
                 registry={registry}
                 schemaFetcher={schemaFetcher}
+                // `bare` is the plain-data mode, acting in the form's resolver after references resolve.
+                plainData={form === 'bare'}
                 disabled={readOnly}
                 formContext={{ intentBus, readOnly }}
                 // The frame's SaveBar is the one save control; suppress RJSF's own

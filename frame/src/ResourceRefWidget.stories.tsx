@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { userEvent, within } from 'storybook/test';
 import type { SchemaNode } from '@schemastud/seam';
 import { ResourceRefWidget } from './ResourceRefWidget';
-import { STUD_RESOURCE_REF_KEYWORD } from './raw-mode';
+const STUD_RESOURCE_REF_KEYWORD = 'x-stud-resource-ref';
 import { MockFrameProvider } from './story-harness';
 
 /**

@@ -172,8 +172,6 @@ type RowAction
 type RowActionsSlotProps
 type RowOf
 value STUD_RESOURCE_REF_KEYWORD
-value STUD_WIDGET_KEYWORD
-value STUD_WIDGET_OPTIONS_KEYWORD
 type SaveBarSlotProps
 value SavePill
 type SchemaFetcher
@@ -211,7 +209,6 @@ type WidgetShellProps
 value WidgetSurface
 value actionUrl
 value assertRouteContext
-value bridgeHostWidgets
 value buildRealmRoutes
 value collapseModes
 value createFormIntentBus
@@ -264,7 +261,6 @@ value selectionFromValue
 value selectionToSearch
 value selectionToValue
 value setPagePicked
-value stripHostWidgets
 value togglePick
 value trendSegments
 value trendSeries

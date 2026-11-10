@@ -651,6 +651,11 @@ export interface FormBodySlotProps {
     formData: Row;
     intentBus: FormIntentBus;
     readOnly: boolean;
+    /**
+     * The form mode. The schema arrives as served, never stripped: under `bare` a body draws no declared widget
+     * name below the root (seam's `SchemaForm` does it with `plainData`; a body that reads `x-widget` itself must
+     * ignore it).
+     */
     form: FormMode;
     onChange: (data: Row) => void;
     onSubmit: (data: Row) => void;

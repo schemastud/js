@@ -48,7 +48,7 @@ export type {
     WidgetResolution,
     WidgetScope,
 } from './types';
-export { buildUiSchema, isCompositeNode, mergeUiSchema } from './ui-schema';
+export { buildUiSchema, isCompositeNode, mergeUiSchema, type UiSchemaOptions } from './ui-schema';
 export { displayLabel, humanizeKey } from './display-label';
 export { createFormValidator, defaultValidator } from './validator';
 export { SelectionChrome } from './selection-chrome';

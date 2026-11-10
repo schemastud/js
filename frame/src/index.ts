@@ -116,14 +116,8 @@ export { EditableCell, type EditableCellProps } from './EditableCell';
 export { KNOWN_CONTEXTS, INHERITS } from './contexts';
 export type { FrameContext, NodeParticipation, ContextManifest } from './contexts';
 export {
-    stripHostWidgets,
-    bridgeHostWidgets,
-    STUD_WIDGET_KEYWORD,
-    STUD_WIDGET_OPTIONS_KEYWORD,
-    STUD_RESOURCE_REF_KEYWORD,
-} from './raw-mode';
-export {
     ResourceRefWidget,
+    STUD_RESOURCE_REF_KEYWORD,
     ResourcePickerWidget,
     registerResourceRefWidget,
     readResourceRefConfig,

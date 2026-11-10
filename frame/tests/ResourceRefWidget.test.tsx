@@ -6,7 +6,7 @@ afterEach(cleanup);
 
 import { FrameProvider, registerFrameWidgets } from '../src/context';
 import { ResourceRefWidget, readResourceRefConfig } from '../src/ResourceRefWidget';
-import { STUD_RESOURCE_REF_KEYWORD } from '../src/raw-mode';
+const STUD_RESOURCE_REF_KEYWORD = 'x-stud-resource-ref';
 import { createWidgetRegistry, defaultRegistry } from '@schemastud/seam';
 import { mockPrimitives } from '../src/story-harness';
 import type { FrameInjection, FrameTransport, Paginated, Row } from '../src/types';

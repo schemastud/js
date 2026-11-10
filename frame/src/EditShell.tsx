@@ -6,7 +6,6 @@ import { useFrameInjection } from './context';
 import { DefaultContainer, DefaultFormBody, DefaultNotFound, DefaultSaveBar, DefaultToggle } from './slots/defaults';
 import { useFormSchema, useRowRecord, useRowSave } from './data';
 import { isNotFound } from './errors';
-import { bridgeHostWidgets, stripHostWidgets } from './raw-mode';
 import { RecordActionButtons, useInlineNotice } from './ResourceActions';
 import type { EditShellProps, EditShellPropsOf, FormMode, Row } from './types';
 
@@ -61,11 +60,9 @@ function EditShellRecord({
     const recordQuery = useRowRecord(resource, id);
     const saveMutation = useRowSave(resource);
     // A stable schema keeps SchemaForm's asynchronous ref resolution from remounting
-    // its controls on each keystroke or read-status change.
-    const schema = useMemo(() => {
-        const served = schemaQuery.data ?? { type: 'object', properties: {} };
-        return form === 'bare' ? stripHostWidgets(served) : bridgeHostWidgets(served);
-    }, [schemaQuery.data, form]);
+    // its controls on each keystroke or read-status change. The served schema reaches the form
+    // body as served: the form mode acts in the form's resolver (`plainData`), not on the schema.
+    const schema = useMemo(() => schemaQuery.data ?? { type: 'object', properties: {} }, [schemaQuery.data]);
 
     // Seed the form once the record arrives (create starts empty).
     useEffect(() => {

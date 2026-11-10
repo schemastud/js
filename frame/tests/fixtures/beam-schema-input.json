@@ -5,7 +5,7 @@
     "properties": {
         "artifact": {
             "type": "object",
-            "x-stud-widget": "json"
+            "x-widget": "json"
         }
     },
     "required": [

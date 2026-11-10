@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
 import { widgetFormContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { useOptionalFrameInjection } from './context';
-import { STUD_RESOURCE_REF_KEYWORD } from './raw-mode';
 import { ResourceRecordPicker } from './resource-picker/RecordPicker';
 import {
     selectionFromValue,
     selectionToValue,
     type ResourceSelectMode,
 } from './resource-picker/selection';
+
+/** The keyword a reference field carries its picker config on (`x-stud-resource-ref`); the form mode never touches it. */
+export const STUD_RESOURCE_REF_KEYWORD = 'x-stud-resource-ref';
 
 // =============================================================================
 // FC-04 — the `x-stud-resource-ref` field widget, now the ResourcePicker's compact
