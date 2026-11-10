@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { QueryClient, keepPreviousData } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ContextManifest } from '../src/contexts';
-import { useEditShell, useListShell } from '../src';
+import { useEditShell, useListShell, useResourceAction } from '../src';
 import { KNOWN_CONTEXTS } from '../src/contexts';
 import { createFrameKit } from '../src/kit';
 import { ListShell } from '../src/ListShell';
@@ -298,5 +298,71 @@ describe('useEditShell and useListShell: amend regressions', () => {
             </frame.Provider>,
         );
         expect(screen.queryByRole('dialog')).toBeTruthy();
+    });
+});
+
+/** frame-foundation 32 (interface decision, edits A and C): a typed action call that never rejects. */
+describe('useResourceAction', () => {
+    const archive: ResourceActionDefinition = {
+        key: 'archive',
+        label: 'Archive',
+        scope: 'record',
+        method: 'POST',
+        url: '/members/{id}/archive',
+        input: null,
+        result: 'toast',
+        destructive: false,
+    };
+    const manifest: FrameManifest = {
+        resources: [],
+        contexts: {
+            members: { byNode: {}, inherits: {}, known: KNOWN_CONTEXTS, actions: [archive], can: { actions: { archive: true } } },
+        },
+    };
+
+    async function call(target: { id?: string | null; data: null }, invoke: ReturnType<typeof vi.fn>) {
+        const seen: { result?: unknown; error?: Error | null; available?: boolean } = {};
+        let run: () => Promise<unknown> = async () => undefined;
+        function Probe() {
+            const action = useResourceAction('members', 'archive');
+            seen.error = action.error;
+            seen.available = action.available;
+            run = () => action.invoke(target as never);
+            return null;
+        }
+        const frame = createFrameKit({ transport: createMemoryTransport({ manifest }, { invoke: invoke as never }), urlState: 'memory' });
+        render(
+            <frame.Provider>
+                <Probe />
+            </frame.Provider>,
+        );
+        await waitFor(() => expect(seen.available).toBe(true));
+        await act(async () => {
+            seen.result = await run();
+        });
+        // The refusal lands on the mutation's state in the render that follows.
+        await waitFor(() => expect(seen.error).toBeTruthy());
+        return seen;
+    }
+
+    it('a record action with no id is refused on error and never reaches the transport', async () => {
+        const invoke = vi.fn(async () => ({ message: 'Archived.' }));
+        const seen = await call({ data: null }, invoke);
+
+        expect(seen.result).toBeUndefined();
+        expect(seen.error?.message).toContain('needs the record');
+        expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it("a server refusal resolves undefined and is the hook's error, unwrapped", async () => {
+        const refusal = new Error('Not allowed.');
+        const invoke = vi.fn(async () => {
+            throw refusal;
+        });
+        const seen = await call({ id: '1', data: null }, invoke);
+
+        expect(seen.result).toBeUndefined();
+        expect(seen.error).toBe(refusal);
+        expect(invoke).toHaveBeenCalledWith(archive, { id: '1', data: null });
     });
 });

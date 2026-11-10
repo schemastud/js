@@ -141,6 +141,7 @@ type ResolvedKindPlacement
 type ResolvedRecordPlacement
 type ResolvedSkin
 value ResourceActionBar
+type ResourceActionCall
 type ResourceActionDefinition
 type ResourceCollectionAddress
 type ResourceFilterHttp
@@ -276,6 +277,7 @@ value useInlineNotice
 value useListShell
 value useOptionalFrameInjection
 value useRemoveResource
+value useResourceAction
 value useResourceList
 value useResourceRecord
 value useSaveResource

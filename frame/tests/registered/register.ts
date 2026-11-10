@@ -17,7 +17,7 @@ declare module '../../src/resources' {
             row: MemberRow;
             edit: MemberEdit;
             createResult: MemberRow;
-            actions: { archive: null };
+            actions: { archive: null; publish: { note: string } };
         };
     }
 }

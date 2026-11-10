@@ -12,6 +12,7 @@ export {
 } from './kit';
 export { ListShell, listItemRendersCards } from './ListShell';
 export { EditShell } from './EditShell';
+export { useResourceAction, type ResourceActionCall } from './useResourceAction';
 export {
     useListShell,
     type ListShellOptions,
