@@ -1,7 +1,7 @@
 import type { SchemaNode } from '@schemastud/seam';
-import { FrameActionError } from './actions';
 import { parseResourcePage } from './resourcePage';
 import { createResourceTransport, type ResourceTransportOptions } from './resourceTransport';
+import { createSessionRequest } from './session';
 import type { FrameManifest, FrameTransport, ResourcePage, Row } from './types';
 
 export interface HttpTransportOptions extends ResourceTransportOptions {
@@ -15,21 +15,10 @@ export interface HttpTransportOptions extends ResourceTransportOptions {
     headers?: HeadersInit | (() => HeadersInit);
 }
 
-/** The Laravel XSRF cookie, when the page has one. */
-function xsrfToken(): string | null {
-    if (typeof document === 'undefined') return null;
-    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/);
-    return match ? decodeURIComponent(match[1]) : null;
-}
-
-function withQuery(url: string, params?: Record<string, string>): string {
-    const query = params ? new URLSearchParams(params).toString() : '';
-    return query ? `${url}${url.includes('?') ? '&' : '?'}${query}` : url;
-}
-
 /**
  * Frame's HTTP adapter: a `FrameTransport` over laravel-frame's socket, with the manifest read.
- * Every request goes same-origin with JSON headers and the XSRF token; every non-2xx answer,
+ * Every request is the published session request (`@schemastud/frame/session`): same-origin, JSON headers and the
+ * XSRF token; every non-2xx answer,
  * reads included, rejects with a `FrameActionError` carrying the status and the parsed body, so
  * `isNotFound` and a 422's field errors work the same on every read and write.
  *
@@ -39,43 +28,9 @@ function withQuery(url: string, params?: Record<string, string>): string {
 export function createHttpTransport(options: HttpTransportOptions = {}): FrameTransport {
     const prefix = (options.prefix ?? '/frame').replace(/\/+$/, '');
     const manifestUrl = options.manifestUrl ?? `${prefix}/manifest`;
-    const send = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
-
-    const headers = (withBody: boolean): Headers => {
-        const merged = new Headers({ Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' });
-        if (withBody) merged.set('Content-Type', 'application/json');
-        const token = xsrfToken();
-        if (token) merged.set('X-XSRF-TOKEN', token);
-        const extra = typeof options.headers === 'function' ? options.headers() : options.headers;
-        new Headers(extra).forEach((value, key) => merged.set(key, value));
-        return merged;
-    };
-
-    async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
-        const res = await send(url, {
-            method,
-            headers: headers(body !== undefined),
-            credentials: 'same-origin',
-            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-        });
-        const text = res.status === 204 ? '' : await res.text();
-        let parsed: unknown = null;
-        if (text !== '') {
-            try {
-                parsed = JSON.parse(text);
-            } catch {
-                parsed = text;
-            }
-        }
-        if (!res.ok) {
-            const where = `${method} ${url} failed (${res.status}).`;
-            const error = new FrameActionError(res.status, parsed, where);
-            // The server's message stays the user-facing one; the request it answered rides as the cause.
-            Object.defineProperty(error, 'cause', { value: new Error(where), enumerable: false, configurable: true, writable: true });
-            throw error;
-        }
-        return parsed as T;
-    }
+    const session = createSessionRequest({ fetch: options.fetch, headers: options.headers });
+    const request = async <T>(method: string, url: string, params?: Record<string, string>, body?: unknown): Promise<T> =>
+        (await session<T>(method, url, params, body)).data;
 
     const resourceUrl = (resource: string) => `${prefix}/resources/${encodeURIComponent(resource)}`;
     const recordUrl = (resource: string, id: string) => `${resourceUrl(resource)}/records/${encodeURIComponent(id)}`;
@@ -83,29 +38,29 @@ export function createHttpTransport(options: HttpTransportOptions = {}): FrameTr
     const transport = createResourceTransport(
         {
             async list<Result>(resource: string, params: Record<string, string>): Promise<ResourcePage<Result>> {
-                return parseResourcePage(await request<ResourcePage<Result>>('GET', withQuery(resourceUrl(resource), params)));
+                return parseResourcePage(await request<ResourcePage<Result>>('GET', resourceUrl(resource), params));
             },
             async get(resource, id, params): Promise<Row> {
-                return (await request<{ data: Row }>('GET', withQuery(recordUrl(resource, id), params))).data;
+                return (await request<{ data: Row }>('GET', recordUrl(resource, id), params)).data;
             },
             async getFormSchema(resource, _form, purpose, params): Promise<SchemaNode> {
                 const query = { ...(purpose === 'read' ? { purpose: 'read' } : {}), ...params };
-                return request<SchemaNode>('GET', withQuery(`${resourceUrl(resource)}/schema`, query));
+                return request<SchemaNode>('GET', `${resourceUrl(resource)}/schema`, query);
             },
             async create<Result>(resource: string, data: unknown, params?: Record<string, string>): Promise<Result> {
-                return (await request<{ data: Result }>('POST', withQuery(resourceUrl(resource), params), data)).data;
+                return (await request<{ data: Result }>('POST', resourceUrl(resource), params, data)).data;
             },
             async save(resource, id, data, params): Promise<Row> {
-                return (await request<{ data: Row }>('PUT', withQuery(recordUrl(resource, id), params), data)).data;
+                return (await request<{ data: Row }>('PUT', recordUrl(resource, id), params, data)).data;
             },
             async remove(resource, id, params): Promise<void> {
-                await request('DELETE', withQuery(recordUrl(resource, id), params));
+                await request('DELETE', recordUrl(resource, id), params);
             },
         },
         {
             resourceUrl,
-            read: (url, params) => request('GET', withQuery(url, params)),
-            write: (method, url, body) => request(method, url, body),
+            read: (url, params) => request('GET', url, params),
+            write: (method, url, body) => request(method, url, undefined, body),
         },
         options,
     );

@@ -1,31 +1,8 @@
 import type { ContextManifest } from './contexts';
 import type { FrameTransport, ResourceActionDefinition, Row } from './types';
 
-/**
- * A non-2xx answer to an action's request, carrying what the shell shows: the server's `message` and, on
- * a 422, the per-field `errors`. A host transport's `write` throws this so the action UI can tell a
- * validation refusal (show it on the form) from any other refusal (show the message).
- */
-export class FrameActionError extends Error {
-    readonly status: number;
-    readonly errors: Record<string, string[]>;
-    readonly body: unknown;
-
-    constructor(status: number, body: unknown, fallback = `The request failed (${status}).`) {
-        const envelope = (body && typeof body === 'object' ? body : {}) as {
-            message?: unknown;
-            errors?: unknown;
-        };
-        super(typeof envelope.message === 'string' && envelope.message !== '' ? envelope.message : fallback);
-        this.name = 'FrameActionError';
-        this.status = status;
-        this.body = body;
-        this.errors =
-            envelope.errors && typeof envelope.errors === 'object'
-                ? (envelope.errors as Record<string, string[]>)
-                : {};
-    }
-}
+// FrameActionError lives with the session request (ticket 48), which imports nothing; the root still exports it from here.
+export { FrameActionError } from './session';
 
 /**
  * The actions of one scope this ACTOR may press, in declared order (ADR-0005).

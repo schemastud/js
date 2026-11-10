@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 
 /**
  * Each public barrel exports exactly the names in its committed list: the root in `src/index.exports.txt`, and each of
- * ruling 02 §8's subpaths (`/editor`, `/cards`, `/picker`, `/wire`) in `src/subpaths/<name>.exports.txt`. The lists are
+ * ruling 02 §8's subpaths (`/editor`, `/cards`, `/picker`, `/wire`, `/session`) in `src/subpaths/<name>.exports.txt`. The lists are
  * the reviewed record of what a host can import from `@schemastud/frame` and its subpaths: adding, removing or moving
  * a name fails here until `npm run export-list` regenerates the lists and they are committed with the change. The
  * check compares and never writes.
@@ -21,6 +21,7 @@ it.each([
     ['/cards', '../src/subpaths/cards.ts'],
     ['/picker', '../src/subpaths/picker.ts'],
     ['/wire', '../src/subpaths/wire.ts'],
+    ['/session', '../src/subpaths/session.ts'],
 ])('%s exports exactly the committed list', { timeout: 60_000 }, (_label, barrel) => {
     const check = spawnSync(process.execPath, [script, resolve(import.meta.dirname, barrel), '--check'], {
         encoding: 'utf8',

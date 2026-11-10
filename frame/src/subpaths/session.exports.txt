@@ -1,0 +1,7 @@
+# What frame/src/subpaths/session.ts exports. A test compares this file with the barrel and never writes it.
+# Regenerate with `npm run export-list`, and commit the result with the change that moved a name.
+type SessionRequest
+type SessionRequestOptions
+type SessionResponse
+value createSessionRequest
+value xsrfHeader

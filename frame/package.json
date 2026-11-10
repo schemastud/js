@@ -35,6 +35,10 @@
       "types": "./dist/wire.d.ts",
       "import": "./dist/wire.js"
     },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "import": "./dist/session.js"
+    },
     "./vocabulary": {
       "types": "./dist/vocabulary.d.ts",
       "import": "./dist/vocabulary.js"
@@ -63,7 +67,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:types": "tsc --project tsconfig.typecheck.json && tsc --project tsconfig.typecheck.registered.json",
-    "export-list": "node ../scripts/export-list.mjs src/index.ts --write && for b in editor cards picker wire; do node ../scripts/export-list.mjs src/subpaths/$b.ts --write; done",
+    "export-list": "node ../scripts/export-list.mjs src/index.ts --write && for b in editor cards picker wire session; do node ../scripts/export-list.mjs src/subpaths/$b.ts --write; done",
     "frame:vocabulary": "tsup && node bin/frame-vocabulary.mjs --out vocabulary.default.json"
   },
   "peerDependencies": {

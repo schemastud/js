@@ -12,6 +12,8 @@ export default defineConfig({
         cards: 'src/subpaths/cards.ts',
         picker: 'src/subpaths/picker.ts',
         wire: 'src/subpaths/wire.ts',
+        // The session request (ticket 48): a zero-import module, so its chunk imports no bare specifier.
+        session: 'src/subpaths/session.ts',
         // The Node-only build-time subpath (`@schemastud/frame/vocabulary`) the `frame-vocabulary` bin runs.
         vocabulary: 'src/vocabulary.ts',
     },
