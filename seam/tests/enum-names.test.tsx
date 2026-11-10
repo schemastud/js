@@ -81,4 +81,19 @@ describe('enum labels reach the form', () => {
 
         expect(ui.status?.['ui:enumNames']).toBeUndefined();
     });
+
+    it('a $ref to a nullable anyOf enum renders its labels (review-r1, 44 amend)', () => {
+        const schema: SchemaNode = {
+            type: 'object',
+            $defs: { Status: STATUS, NullableStatus: { anyOf: [{ $ref: '#/$defs/Status' }, { type: 'null' }] } },
+            properties: { status: { $ref: '#/$defs/NullableStatus' } },
+        };
+
+        const { container } = render(
+            <SchemaForm schema={schema} registry={createWidgetRegistry()} formData={{ status: 'awaiting' }} theme={CORE} />,
+        );
+
+        expect(optionLabels(container)).toEqual(expect.arrayContaining(['Awaiting review', 'Approved']));
+        expect(optionLabels(container)).not.toContain('awaiting');
+    });
 });

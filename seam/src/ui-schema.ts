@@ -75,12 +75,15 @@ function resolveLocalRef(node: SchemaNode, root: SchemaNode): SchemaNode {
     return target && typeof target === 'object' ? (target as SchemaNode) : node;
 }
 
-/** The node that carries an enum for this field: itself after a local `$ref`, else a nullable `anyOf` branch's. */
+/**
+ * The node that carries an enum for this field: itself after a local `$ref`, else a branch of the RESOLVED node's
+ * nullable `anyOf` (each branch resolved too), so a `$ref` to a nullable enum definition is read as RJSF reads it.
+ */
 function enumCarrier(schema: SchemaNode, root: SchemaNode): SchemaNode | undefined {
     const own = resolveLocalRef(schema, root);
     if (Array.isArray(own.enum)) return own;
-    if (!Array.isArray(schema.anyOf)) return undefined;
-    for (const branch of schema.anyOf as SchemaNode[]) {
+    if (!Array.isArray(own.anyOf)) return undefined;
+    for (const branch of own.anyOf as SchemaNode[]) {
         if (!branch || typeof branch !== 'object' || branch.type === 'null') continue;
         const resolved = resolveLocalRef(branch, root);
         if (Array.isArray(resolved.enum)) return resolved;
