@@ -12,6 +12,7 @@ import type {
 import type { ComponentType, ReactNode } from 'react';
 import type { FrameHooks } from './hooks';
 import type { SummaryPayload } from './cards/types';
+import type { ContextManifest } from './contexts';
 
 // =============================================================================
 // Resource-blind shells and slots consume declared resources through one injected contract.
@@ -101,6 +102,25 @@ export interface FrameTransport extends FacetsTransport {
      * with an input and no way to fetch its form renders no button.
      */
     getActionSchema?(resource: string, action: string, params?: Record<string, string>): Promise<SchemaNode>;
+    /**
+     * The socket's manifest — `GET {prefix}/manifest`, or the realm's own manifest URL. Read through
+     * the same client and credentials as every other request. Optional: a transport without it has
+     * no manifest, so a kit over it reads every write affordance as false.
+     */
+    getManifest?(): Promise<FrameManifest>;
+}
+
+/**
+ * What a frame manifest endpoint serves (laravel-frame's `FrameManifestController`). `resources`
+ * and `contexts` are always there. `nav` and `routeContext` are served only when the host binds a
+ * nav contributor (laravel-beam-ux does); `nav`'s shape is the contributor's, so a host that reads
+ * it names it: `FrameManifest<{ items: MyNavNode[] }>`.
+ */
+export interface FrameManifest<Nav = unknown> {
+    resources: AdminResourceDefinition[];
+    contexts: Record<string, ContextManifest>;
+    nav?: Nav;
+    routeContext?: RouteContextEntry[];
 }
 
 /**

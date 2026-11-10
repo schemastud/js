@@ -1,6 +1,6 @@
 import type { SchemaNode } from '@schemastud/seam';
 import { FrameActionError } from '../actions';
-import type { FrameTransport, ResourcePage, Row } from '../types';
+import type { FrameManifest, FrameTransport, ResourcePage, Row } from '../types';
 
 /**
  * What an in-memory transport serves. Keyed maps are keyed by resource (or action key); the
@@ -23,6 +23,8 @@ export interface MemoryTransportFixtures {
     actionMessage?: string;
     /** Make every action's `invoke` fail with this message. */
     actionRefusal?: string;
+    /** The manifest `getManifest` answers. Default: no resources and no contexts. */
+    manifest?: FrameManifest;
 }
 
 const NEVER = new Promise<never>(() => {});
@@ -95,6 +97,10 @@ export function createMemoryTransport(
         invoke: async (action) => {
             if (fixtures.actionRefusal) throw new Error(fixtures.actionRefusal);
             return { message: fixtures.actionMessage ?? `${action.label} done.`, data: null };
+        },
+        getManifest: async () => {
+            if (fixtures.loading) return NEVER;
+            return fixtures.manifest ?? { resources: [], contexts: {} };
         },
     };
 

@@ -76,6 +76,7 @@ value FrameLayoutShell
 type FrameLayoutSidePanel
 type FrameLayoutVariant
 type FrameLayoutWidth
+type FrameManifest
 type FrameNotice
 type FramePrimitives
 value FrameProvider
@@ -83,6 +84,7 @@ type FrameSidePanelEntry
 type FrameTransport
 type GuardComponent
 type GuardRegistry
+type HttpTransportOptions
 value INHERITS
 type IconResolver
 type IdsSelection
@@ -204,6 +206,7 @@ value createFormIntentBus
 value createFormResolver
 value createFrameHooks
 value createGuardRegistry
+value createHttpTransport
 value createMountDispatcher
 value createNoun
 value createResourceTransport

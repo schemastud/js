@@ -242,6 +242,7 @@ export type {
     FrameColumn,
     ResolveColumns,
     AdminResourceDefinition,
+    FrameManifest,
     ResourceCollectionAddress,
     RouteContextEntry,
     RouteMounts,
@@ -293,4 +294,5 @@ export {
 } from './resourceTransport';
 
 export { parseResourcePage } from './resourcePage';
+export { createHttpTransport, type HttpTransportOptions } from './httpTransport';
 export { useBrowserUrlState } from '@schemastud/facets';
