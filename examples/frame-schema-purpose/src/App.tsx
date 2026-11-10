@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react';
 import { QueryClient } from '@tanstack/react-query';
-import { EditShell, createFrameKit, type ContextManifest, type Row, type SchemaPurpose } from '@schemastud/frame';
+import { EditShell, ListShell, createFrameKit, type ContextManifest, type Row, type SchemaPurpose } from '@schemastud/frame';
 import { createMemoryTransport } from '@schemastud/frame/testing';
 import type { SchemaNode } from '@schemastud/seam';
 
@@ -25,11 +25,17 @@ const readSchema: SchemaNode = {
     },
 };
 
-/** What the producer declares for `requests`: create but not update, and one confirm-only record action. */
+/**
+ * What the producer declares for `requests`: Title and Status as list columns (Status as a badge), create but not
+ * update, and one confirm-only record action.
+ */
 const requests: ContextManifest = {
-    byNode: {},
+    byNode: {
+        title: { 'list-column': { participates: true, sort: 0, label: 'Title' } },
+        status: { 'list-column': { participates: true, sort: 1, label: 'Status', widget: 'badge' } },
+    },
     inherits: {},
-    known: [],
+    known: ['list-column'],
     singularLabel: 'request',
     can: { create: true, update: false, delete: false, actions: { approve: true } },
     actions: [
@@ -51,6 +57,29 @@ const requests: ContextManifest = {
 // No Beam, router, PHP backend or authentication is implied, and nothing is durable.
 // ---------------------------------------------------------------------------------------------------------------
 let row: Row = { id: '1', title: 'Replace monitor', status: 'closed', approvalState: 'pending' };
+/** The rest of the queue the list pages through; only `row` is created, read and approved in this fixture. */
+const QUEUE: Row[] = ['Order desk chair', 'Renew VPN licence', 'Fix badge reader', 'Move printer', 'Restock toner']
+    .flatMap((title, i) => [0, 1, 2, 3, 4].map((n) => ({ id: String(100 + i * 5 + n), title: n ? `${title} (${n + 1})` : title, status: (i + n) % 3 ? 'open' : 'closed', approvalState: 'pending' })));
+const PER_PAGE = 25;
+
+/** The filter vocabulary the list's facets bar draws: a search on Title and a select on Status. */
+const filterSchema = {
+    properties: {
+        title: { title: 'Title', 'x-filter': { name: 'title', operator: 'partial', control: 'search' as const }, 'x-sort': { name: 'title' } },
+        status: {
+            title: 'Status',
+            'x-filter': {
+                name: 'status',
+                operator: 'exact',
+                control: 'select' as const,
+                options: [
+                    { value: 'open', label: 'Open' },
+                    { value: 'closed', label: 'Closed' },
+                ],
+            },
+        },
+    },
+};
 let failNextRead = false;
 
 /** The schema requests, shown below the surface. */
@@ -73,8 +102,19 @@ const useCalls = () =>
 const transport = createMemoryTransport(
     { manifest: { resources: [], contexts: { requests } } },
     {
-        list: async () => ({ data: [row], total: 1, page: 1, perPage: 25 }) as never,
+        // Numbered pages over the record and the queue, as a producer's list endpoint would answer them.
+        list: async (_resource, params) => {
+            // The producer applies its own filters: a title search and a status match.
+            const title = (params['filter[title]'] ?? '').toLowerCase();
+            const status = params['filter[status]'];
+            const all = [row, ...QUEUE].filter(
+                (r) => String(r.title).toLowerCase().includes(title) && (!status || r.status === status),
+            );
+            const page = Math.max(1, Number(params.page ?? 1));
+            return { data: all.slice((page - 1) * PER_PAGE, page * PER_PAGE), total: all.length, page, perPage: PER_PAGE } as never;
+        },
         get: async () => ({ ...row }),
+        getFilterSchema: async () => filterSchema as never,
         async getFormSchema(_resource, form, purpose: SchemaPurpose = 'write') {
             record(`${form}:${purpose}`);
             if (purpose === 'read' && failNextRead) {
@@ -107,7 +147,7 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false,
 const frame = createFrameKit({ transport, urlState: 'memory', queryClient });
 
 export function SchemaPurposeDemo() {
-    const [view, setView] = useState<'create' | 'detail' | 'legacy'>('create');
+    const [view, setView] = useState<'list' | 'create' | 'detail' | 'legacy'>('list');
     const schemaCalls = useCalls();
 
     return (
@@ -115,6 +155,7 @@ export function SchemaPurposeDemo() {
             <main className="schema-purpose-example">
                 <h1>Separate write and read schemas</h1>
                 <nav aria-label="Fixture views">
+                    <button onClick={() => setView('list')}>List</button>
                     <button onClick={() => setView('create')}>Create</button>
                     <button onClick={() => setView('detail')}>Read detail</button>
                     <button onClick={() => setView('legacy')}>Legacy disabled edit</button>
@@ -128,6 +169,11 @@ export function SchemaPurposeDemo() {
                         Fail read schema
                     </button>
                 </nav>
+                {view === 'list' ? (
+                    // The list the declarations describe: Title and Status columns, the filter bar, paging, and New
+                    // (the manifest grants create). Opening a row shows its read detail; New opens Create.
+                    <ListShell resource="requests" onOpen={(record) => setView(record.id === null ? 'create' : 'detail')} />
+                ) : (
                 <EditShell
                     key={view}
                     resource="requests"
@@ -137,6 +183,7 @@ export function SchemaPurposeDemo() {
                     container="bare"
                     onSaved={() => setView('detail')}
                 />
+                )}
                 <output aria-label="Schema requests">{schemaCalls.join(', ')}</output>
             </main>
         </frame.Provider>

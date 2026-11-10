@@ -24,6 +24,10 @@ globally installed Frame, a registry release or a live checkout. Build those fou
 a new local candidate before the lock is generated, run `pnpm install` once and retain that lock as
 part of the candidate; replay uses `--frozen-lockfile`. No package release is implied.
 
+It opens on List: the `requests` resource's declared Title and Status columns (Status as a badge), the filter bar
+(a Title search and a Status select, applied by the producer), numbered paging over 26 requests, and New request,
+which opens Create. Tailwind (`vite.config.ts`, `src/style.css`) styles the kit's `@schemastud/ui` primitives.
+
 Create a title and choose open/closed Status, then Save. Detail contains disabled ID/Title/Status/
 Approval and no Save. Approve fixture uses Frame's existing confirmation/result/refetch; Approval
 becomes approved. Switch Create → Read detail → Create to exercise distinct warm schemas. Legacy

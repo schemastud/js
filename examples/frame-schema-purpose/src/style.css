@@ -1,10 +1,75 @@
-:root { font-family: system-ui,sans-serif; color-scheme: light dark; color: #171717; background: #fff; }
-@media (prefers-color-scheme: dark) { :root { color: #f5f5f5; background: #171717; } }
-body { margin: 2rem; }
-.schema-purpose-example { max-width: 48rem; margin: auto; }
-nav { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
-button { padding: .5rem .75rem; cursor: pointer; }
-label { display: block; margin-top: .75rem; }
-input { padding: .5rem; width: min(90%,30rem); }
-output { display: block; margin-top: 1.5rem; }
-[role=alert] { border: 1px solid; padding: .75rem; }
+@import 'tailwindcss';
+
+/* The kit's default primitives and slots are @schemastud/ui and frame's shadcn sets: Tailwind reads their classes. */
+@source '../../../ui/dist';
+@source '../../../frame/dist';
+@source './**/*.tsx';
+
+/* The design tokens those components read: a neutral light palette, and its dark counterpart. */
+@theme {
+    --color-background: #ffffff;
+    --color-foreground: #171717;
+    --color-card: #ffffff;
+    --color-card-foreground: #171717;
+    --color-popover: #ffffff;
+    --color-popover-foreground: #171717;
+    --color-primary: #171717;
+    --color-primary-foreground: #fafafa;
+    --color-secondary: #f4f4f5;
+    --color-secondary-foreground: #171717;
+    --color-muted: #f4f4f5;
+    --color-muted-foreground: #71717a;
+    --color-accent: #f4f4f5;
+    --color-accent-foreground: #171717;
+    --color-destructive: #dc2626;
+    --color-border: #e4e4e7;
+    --color-input: #e4e4e7;
+    --color-ring: #a1a1aa;
+    --color-sidebar: #fafafa;
+    --color-sidebar-foreground: #171717;
+    --color-sidebar-border: #e4e4e7;
+    --radius: 0.5rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-background: #171717;
+        --color-foreground: #f5f5f5;
+        --color-card: #1f1f1f;
+        --color-card-foreground: #f5f5f5;
+        --color-popover: #1f1f1f;
+        --color-popover-foreground: #f5f5f5;
+        --color-primary: #f5f5f5;
+        --color-primary-foreground: #171717;
+        --color-secondary: #262626;
+        --color-secondary-foreground: #f5f5f5;
+        --color-muted: #262626;
+        --color-muted-foreground: #a1a1aa;
+        --color-accent: #262626;
+        --color-accent-foreground: #f5f5f5;
+        --color-border: #3f3f46;
+        --color-input: #3f3f46;
+        --color-sidebar: #1f1f1f;
+        --color-sidebar-foreground: #f5f5f5;
+        --color-sidebar-border: #3f3f46;
+    }
+}
+
+body {
+    margin: 2rem;
+    font-family: system-ui, sans-serif;
+    background: var(--color-background);
+    color: var(--color-foreground);
+}
+
+/* The fixture's own chrome only; the kit's components are styled by their Tailwind classes. */
+.schema-purpose-example { max-width: 56rem; margin: auto; }
+.schema-purpose-example h1 { font-size: 1.5rem; font-weight: 600; }
+.schema-purpose-example > nav { display: flex; gap: .5rem; flex-wrap: wrap; margin: 1rem 0; }
+.schema-purpose-example > nav button {
+    padding: .375rem .75rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+}
+.schema-purpose-example > output { display: block; margin-top: 1.5rem; color: var(--color-muted-foreground); }
