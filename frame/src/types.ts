@@ -436,12 +436,6 @@ export interface RouteContextEntry {
 // host (or the beam realm kit) supplies the concrete instances.
 // =============================================================================
 
-// The identity axis of a realm — the load-bearing distinction. `central` is a
-// single non-tenanted context; `tenant` is the current workspace; `user` is the
-// account/identity across workspaces. On a single-tenant instance tenant+user
-// collapse to one identity.
-export type RealmScope = 'central' | 'tenant' | 'user';
-
 export interface RealmDefinition {
     // Stable realm identity; the manifest fetch key + resource-realm map key.
     key: string;
@@ -450,8 +444,8 @@ export interface RealmDefinition {
     // The default host guard key wrapping this realm's leaves (`root` → RequireRoot; null = the shell's own auth).
     guard: string | null;
     // Whether this realm is the single non-tenanted central context (true = admin/central). The identity
-    // axis rides the realm `key`; `RealmScope` was retired for this boolean (realm-architecture ticket 08),
-    // mirroring the PHP `RealmDefinition` DTO.
+    // axis rides the realm `key`; this boolean replaced the retired three-valued scope (realm-architecture
+    // ticket 08), mirroring the PHP `RealmDefinition` DTO.
     central: boolean;
     // Optional realm route/nav stack composition (PHP `stack: array = []`).
     stack?: string[];

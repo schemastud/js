@@ -1,12 +1,17 @@
 import type { Row } from './types';
 
 /**
- * The resource-key type map (ruling 03). Empty here; a host registers its generated map onto it:
+ * The resource-key type map (ruling 03). Empty here; a host registers its generated map onto it, in a `.ts` module
+ * (the beam shell stamp writes it as `resources/js/frame-resource-map.ts`):
  *
  * ```ts
+ * import type {} from '@schemastud/frame';
  * import type { FrameResources } from '@/generated/frame-resources';
  * declare module '@schemastud/frame' { interface FrameResourceMap extends FrameResources {} }
  * ```
+ *
+ * The first import is what puts frame's declarations in a host program that imports no frame value of its own;
+ * without it the augmentation fails TS2664 (ticket 31's interface decision).
  *
  * Registered, a key that is not in the map does not compile, and a shell's rows, columns and saved records are
  * typed by the key. Unregistered, `ResourceKey` is `string` and every row is `Row`, exactly as before. A host with

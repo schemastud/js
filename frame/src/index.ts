@@ -1,8 +1,15 @@
 // =============================================================================
 // @schemastud/frame — the batteries-UX schema-driven admin editor rung.
+//
+// The root holds what a host mounts and imports (ruling 02 §8): the kit and the provider, the shells and their hooks,
+// the data hooks, transport authoring, the route registries, the wire types, and the few helpers a host still imports.
+// The rest lives on a subpath: `/editor` (the heavyweight-editor chrome), `/cards` (the dashboard card set),
+// `/picker` (the resource picker and its selection model), `/wire` (the manifest vocabulary and its resolvers),
+// `/shadcn` (the shadcn slot sets), `/testing` (the memory transport) and the Node-only `/vocabulary`.
 // =============================================================================
 
-export { FrameProvider, useFrameInjection, useOptionalFrameInjection, registerFrameWidgets } from './context';
+// Mount.
+export { FrameProvider, useFrameInjection, registerFrameWidgets } from './context';
 export {
     createFrameKit,
     createFrameRegistry,
@@ -10,7 +17,9 @@ export {
     type FrameKitOptions,
     type FrameRegistryOptions,
 } from './kit';
-export { ListShell, listItemRendersCards } from './ListShell';
+
+// Shells and their behaviour.
+export { ListShell } from './ListShell';
 export { EditShell } from './EditShell';
 export { useResourceAction, type ResourceActionCall } from './useResourceAction';
 export {
@@ -23,164 +32,22 @@ export {
     type EditShellOptions,
     type EditShellState,
 } from './useEditShell';
-export { WidgetShell, WidgetSurface, type HeavyweightWidgetProps } from './WidgetShell';
+export { FrameLayout, type FrameLayoutProps } from './FrameLayout';
+export { SchemaView, type SchemaViewProps } from './SchemaView';
+export { resolveColumns } from './resolveColumns';
+export {
+    DefaultRowActions,
+    DefaultNotFound,
+    DefaultPagination,
+    DefaultFormBody,
+} from './slots/defaults';
+
+// Routes.
 export {
     createMountDispatcher,
     type MountDispatcher,
     type MountDispatcherOptions,
 } from './mountDispatcher';
-export {
-    FrameLayout,
-    FrameLayoutShell,
-    SingleColumn,
-    SubNavColumn,
-    MasterDetail,
-    type FrameLayoutProps,
-    type FrameLayoutVariant,
-    type FrameLayoutWidth,
-    type FrameLayoutSidePanel,
-    type SingleColumnProps,
-    type SubNavColumnProps,
-    type SubNavItem,
-    type MasterDetailProps,
-    type DetailPresentation,
-    type CollapseMode,
-} from './FrameLayout';
-export { FiveRegionEditShell, type FiveRegionEditShellProps } from './FiveRegionEditShell';
-export { Inspector } from './Inspector';
-export { PalettePane } from './PalettePane';
-export { MissingSlots } from './MissingSlots';
-export { SavePill } from './SavePill';
-export { StatusBar } from './StatusBar';
-export {
-    deriveCollapseLevel,
-    collapseModes,
-    type CollapseLevel,
-    type CollapseModes,
-} from './responsive';
-export {
-    EditShellMountProvider,
-    useEditShellMount,
-    useEditShellMountController,
-    type EditShellMountValue,
-    type NodeAccess,
-    type Conformance,
-    type RequiredSlot,
-    type FlushFn,
-} from './EditShellMount';
-export { resolveColumns } from './resolveColumns';
-export {
-    type TextCellOptions,
-    type BadgeCellOptions,
-    type BadgesCellOptions,
-    type NumberCellOptions,
-    type DateCellOptions,
-} from './columnKinds';
-export { isNotFound } from './errors';
-export { getPath } from './getPath';
-export { createFormResolver, kindOfSchema } from './FormResolver';
-export {
-    resolveWidgetFor,
-    FRAME_CONTEXT_KEYWORD,
-    type ResolvedForContext,
-} from './resolveWidgetFor';
-export { SchemaView, type SchemaViewProps } from './SchemaView';
-export {
-    registerCardWidgets,
-    resolveDashboardCard,
-    CARD_WIDGETS,
-    StatRow,
-    FigureCard,
-    RecentList,
-    RecordLine,
-    formatRecordTime,
-    NavTile,
-    WelcomePanel,
-    DashboardCard,
-    dashboardRowRenders,
-    TrendCard,
-    trendSeries,
-    trendSegments,
-    forecastBoundary,
-    describeTrend,
-    type TrendPoint,
-    type TrendSegment,
-    type RegisterCardWidgetsOptions,
-    type SummaryFigure,
-    type SummaryPayload,
-    type OverviewPayload,
-    type DashboardRow,
-    type WelcomePayload,
-    type WelcomeAction,
-    type NavTilePayload,
-    type IconResolver,
-    type CardLinkRenderer,
-    type CardWidgetOptions,
-    type CardWidgetProps,
-} from './cards';
-export { EditableCell, type EditableCellProps } from './EditableCell';
-export { KNOWN_CONTEXTS, INHERITS } from './contexts';
-export type { FrameContext, NodeParticipation, ContextManifest } from './contexts';
-export {
-    ResourceRefWidget,
-    STUD_RESOURCE_REF_KEYWORD,
-    ResourcePickerWidget,
-    registerResourceRefWidget,
-    readResourceRefConfig,
-    isResourceRefNode,
-    type ResourceRefConfig,
-} from './ResourceRefWidget';
-// ResourcePicker (owner-review-20261102 RP): stage 1 kinds, stage 2 records, one selection model.
-export { ResourcePicker, type ResourcePickerProps } from './resource-picker/ResourcePicker';
-export {
-    ResourceKindPicker,
-    kindsInScope,
-    type ResourceKindPickerProps,
-    type ResourceKindOption,
-    type ResourceKindSection,
-    type ResourceKindIcon,
-    type ResourceKindScopeInput,
-} from './resource-picker/KindPicker';
-export { ResourceRecordPicker, type ResourceRecordPickerProps } from './resource-picker/RecordPicker';
-export {
-    KIND_PLACEMENTS,
-    RECORD_PLACEMENTS,
-    KIND_VARIANT_FOR,
-    resolveKindPlacement,
-    resolveRecordPlacement,
-    type KindPlacement,
-    type RecordPlacement,
-    type ResolvedKindPlacement,
-    type ResolvedRecordPlacement,
-    type ResourceKindScope,
-    type ResourceKindVariant,
-    type ResourcePickerDensity,
-} from './resource-picker/placement';
-export {
-    EMPTY_SELECTION,
-    followFilters,
-    isEmptySelection,
-    isPicked,
-    pageState,
-    selectAllMatching,
-    selectionCount,
-    selectionFromValue,
-    selectionToSearch,
-    selectionToValue,
-    setPagePicked,
-    togglePick,
-    type IdsSelection,
-    type ResourceSelectMode,
-    type ResourceSelection,
-    type SetSelection,
-} from './resource-picker/selection';
-export {
-    createFrameHooks,
-    type FrameHooks,
-    type SubmittedHandler,
-    type SubmittedContext,
-} from './hooks';
-export { useFrameSidePanelStore, type FrameSidePanelEntry } from './frameSidePanel';
 export {
     createRouteRegistry,
     createGuardRegistry,
@@ -197,6 +64,8 @@ export {
     type RealmRouteRegistries,
     type AssertRouteContextOptions,
 } from './routes';
+
+// Data.
 export {
     resourceQueryKey,
     useResourceList,
@@ -205,33 +74,40 @@ export {
     useSaveResource,
     useRemoveResource,
 } from './data';
-export { resolveRowActions, KNOWN_ROW_ACTIONS, type RowAction } from './rowActions';
-export { resolveActions, actionUrl, navigateTarget, FrameActionError } from './actions';
-export {
-    ActionButton,
-    RecordActionButtons,
-    ResourceActionBar,
-    useInlineNotice,
-    type ActionHandlers,
-} from './ResourceActions';
-export {
-    DefaultToolbar,
-    DefaultRowActions,
-    createNoun,
-    DefaultCards,
-    DefaultCell,
-    DefaultEmpty,
-    DefaultErrorState,
-    DefaultNotFound,
-    DefaultLoading,
-    DefaultPagination,
-    DefaultTable,
-    DefaultFormBody,
-    DefaultToggle,
-    DefaultSaveBar,
-    DefaultContainer,
-} from './slots/defaults';
 
+// Transport authoring.
+export {
+    createResourceTransport,
+    type FrameCrudTransport,
+    type ResourceFilterHttp,
+    type ResourceTransportOptions,
+} from './resourceTransport';
+export { parseResourcePage } from './resourcePage';
+export { createHttpTransport, type HttpTransportOptions } from './httpTransport';
+export { FrameActionError } from './actions';
+export { isNotFound } from './errors';
+
+// Still imported by a host, so still here.
+export { createFormResolver } from './FormResolver';
+export {
+    registerCardWidgets,
+    type RegisterCardWidgetsOptions,
+    type IconResolver,
+    type CardLinkRenderer,
+} from './cards';
+export { registerResourceRefWidget } from './ResourceRefWidget';
+export {
+    createFrameHooks,
+    type FrameHooks,
+    type SubmittedHandler,
+    type SubmittedContext,
+} from './hooks';
+export { useFrameSidePanelStore, type FrameSidePanelEntry } from './frameSidePanel';
+export { resolveRowActions, type RowAction } from './rowActions';
+export { KNOWN_CONTEXTS } from './contexts';
+export type { FrameContext, ContextManifest } from './contexts';
+
+// Wire types.
 export type {
     Row,
     Paginated,
@@ -253,9 +129,8 @@ export type {
     ResourceCollectionAddress,
     RouteContextEntry,
     RouteMounts,
-    RealmDefinition,
-    RealmScope,
     ListShellProps,
+    OpenedOf,
     ListSlots,
     ToolbarSlotProps,
     RowActionsSlotProps,
@@ -264,7 +139,6 @@ export type {
     ErrorSlotProps,
     PaginationSlotProps,
     EditShellProps,
-    WidgetShellProps,
     EditSlots,
     FormBodySlotProps,
     SaveBarSlotProps,
@@ -284,34 +158,13 @@ export type {
     FieldOf,
 } from './resources';
 
-// Re-export the seam + facets surface a frame host commonly needs, so a consumer
-// wires against one import (the migration path the facets tracer proved).
+// The seam and facets names a frame host wires against, so a consumer has one import for them.
 export {
     createWidgetRegistry,
     createFormIntentBus,
-    widgetFormContext,
-    SchemaForm,
     type WidgetRegistry,
     type SchemaFetcher,
     type SchemaNode,
     type FormIntentBus,
 } from '@schemastud/seam';
-export {
-    type FacetsTransport,
-    type FacetsPrimitives,
-    type UseUrlState,
-    type FilterSchema,
-    type ListFiltersState,
-} from '@schemastud/facets';
-
-export {
-    createResourceTransport,
-    type FrameCrudTransport,
-    type ResourceFilterHttp,
-    type ResourceTransportOptions,
-    type FilterSchemaResponse,
-} from './resourceTransport';
-
-export { parseResourcePage } from './resourcePage';
-export { createHttpTransport, type HttpTransportOptions } from './httpTransport';
-export { useBrowserUrlState } from '@schemastud/facets';
+export { useBrowserUrlState, type UseUrlState, type ListFiltersState } from '@schemastud/facets';

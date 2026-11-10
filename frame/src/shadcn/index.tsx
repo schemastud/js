@@ -7,13 +7,8 @@
 // of the `@rjsf/core` vs `@rjsf/shadcn` split. Core imports none of this.
 // =============================================================================
 
-export {
-    shadcnListSlots,
-    ShadcnTable,
-    ShadcnCell,
-    ShadcnEmpty,
-    ShadcnToolbar,
-    ShadcnPagination,
-} from './list-slots';
-export { shadcnEditSlots, ShadcnToggle, ShadcnSaveBar } from './edit-slots';
+// The two slot sets and the enrich textarea (ruling 02 §8). The single slot components stay inside their sets: a host
+// that replaces one slot merges its own over the set.
+export { shadcnListSlots } from './list-slots';
+export { shadcnEditSlots } from './edit-slots';
 export { ShadcnEnrichTextarea } from './enrich-textarea';

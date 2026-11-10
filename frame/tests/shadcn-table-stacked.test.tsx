@@ -21,7 +21,7 @@ const viewport = vi.hoisted(() => {
     })) as unknown as typeof window.matchMedia;
     return state;
 });
-import { ShadcnCell, ShadcnTable } from '../src/shadcn';
+import { ShadcnCell, ShadcnTable } from '../src/shadcn/list-slots';
 import type { Row } from '../src/types';
 
 afterEach(cleanup);

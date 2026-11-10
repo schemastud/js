@@ -7,14 +7,9 @@ import { FrameProvider } from '../src/context';
 import { defaultPrimitives } from '../src/primitives';
 import { createMemoryTransport, createMemoryUrlState } from '../src/testing';
 import { createWidgetRegistry } from '@schemastud/seam';
-import {
-    ShadcnCell,
-    ShadcnEmpty,
-    ShadcnEnrichTextarea,
-    ShadcnTable,
-    shadcnEditSlots,
-    shadcnListSlots,
-} from '../src/shadcn';
+import { ShadcnEnrichTextarea, shadcnEditSlots, shadcnListSlots } from '../src/shadcn';
+// The single slot components left the /shadcn entry (ruling 02 §8); this test reaches them in their module.
+import { ShadcnCell, ShadcnEmpty, ShadcnTable } from '../src/shadcn/list-slots';
 import type { FrameInjection, Row } from '../src/types';
 
 afterEach(cleanup);

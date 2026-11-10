@@ -1,7 +1,8 @@
 // The registered program's one fixture (ruling 03 slice 1): the real shells, mounted as JSX, against a
 // registered map. Nothing else goes here.
 import './register';
-import { EditShell, ListShell, useResourceAction, type EditShellProps, type FrameColumn, type ListShellProps, type WidgetShellProps } from '../../src';
+import { EditShell, ListShell, useResourceAction, type EditShellProps, type FrameColumn, type ListShellProps } from '../../src';
+import type { WidgetShellProps } from '../../src/subpaths/editor';
 
 const untyped: FrameColumn[] = [{ field: 'name' }];
 
