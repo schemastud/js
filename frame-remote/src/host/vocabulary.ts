@@ -47,10 +47,11 @@ function asBlockVocabulary(registry: WidgetRegistry): BlockVocabulary {
         ...registry,
         resolveBlock(type: string): HostComponent | undefined {
             const { widget } = registry.resolveEntry(blockNode(type));
-            // Seam types `widget` loosely (string | Component | undefined). Our
-            // vocabulary stores a `HostComponent` render fn as the widget value; a
-            // miss (or any non-fn) means "not in the vocabulary" → refuse.
-            return typeof widget === 'function' ? (widget as HostComponent) : undefined;
+            // Seam types `widget` as RJSF's contract (string | Widget | Field | undefined). A `HostComponent` is
+            // `(element, ctx) => ReactNode`, neither a Widget nor a Field: `registerBlock` stores it through the
+            // `as unknown as` below, and this reads it back through the same narrowing reversed. A miss (or any
+            // non-fn) means "not in the vocabulary" → refuse.
+            return typeof widget === 'function' ? (widget as unknown as HostComponent) : undefined;
         },
     };
 }
