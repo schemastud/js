@@ -67,13 +67,6 @@ export function SubmitButton(props: SubmitButtonProps) {
     );
 }
 
-/**
- * A field's label by displayLabel's property rule (app-walkthrough APP-09b, APP-21; owner-36). RJSF resolves a label as
- * `ui:title`, then `schema.title`, then the raw property key, so an untitled property was labelled "name", "model",
- * "parent_tenant_id". A declared title still wins; the key fallback is humanized. Caller templates win over this one.
- */
-const ThemeFieldTemplate = ShadcnTheme.templates?.FieldTemplate as ComponentType<FieldTemplateProps>;
-
 /** The label rule both a field template and a self-labelling widget apply: a declared title, else the key humanized. */
 function fieldLabel(label: string | undefined, schema: { title?: unknown } | undefined, uiSchema: unknown): string | undefined {
     const ui = (uiSchema ?? {}) as Record<string, unknown>;
@@ -83,16 +76,26 @@ function fieldLabel(label: string | undefined, schema: { title?: unknown } | und
     return declared ?? (label ? humanizeKey(label) : label);
 }
 
-export function FieldTemplate(props: FieldTemplateProps) {
-    return <ThemeFieldTemplate {...props} label={fieldLabel(props.label, props.schema, props.uiSchema) ?? ''} />;
+/**
+ * A field's label by displayLabel's property rule (app-walkthrough APP-09b, APP-21; owner-36), over `Inner`, the active
+ * theme's field template. RJSF resolves a label as `ui:title`, then `schema.title`, then the raw property key, so an
+ * untitled property was labelled "name", "model", "parent_tenant_id". A declared title still wins; the key fallback is
+ * humanized. A theme-neutral rule: it wraps any theme. Caller templates win over it.
+ */
+export function labelledFieldTemplate(Inner: ComponentType<FieldTemplateProps>): ComponentType<FieldTemplateProps> {
+    function SeamFieldTemplate(props: FieldTemplateProps) {
+        return <Inner {...props} label={fieldLabel(props.label, props.schema, props.uiSchema) ?? ''} />;
+    }
+    return SeamFieldTemplate;
 }
 
 /**
  * The checkbox draws its OWN label from the raw key RJSF hands a widget (build.qa), so an untitled boolean read
- * "is_active" past the field template. Same rule, applied where the checkbox reads it.
+ * "is_active" past the field template. Same rule, applied where the checkbox reads it, over the active theme's widget.
  */
-const ThemeCheckboxWidget = ShadcnTheme.widgets?.CheckboxWidget as ComponentType<WidgetProps>;
-
-export function CheckboxWidget(props: WidgetProps) {
-    return <ThemeCheckboxWidget {...props} label={fieldLabel(props.label, props.schema, props.uiSchema) ?? ''} />;
+export function labelledCheckboxWidget(Inner: ComponentType<WidgetProps>): ComponentType<WidgetProps> {
+    function SeamCheckboxWidget(props: WidgetProps) {
+        return <Inner {...props} label={fieldLabel(props.label, props.schema, props.uiSchema) ?? ''} />;
+    }
+    return SeamCheckboxWidget;
 }

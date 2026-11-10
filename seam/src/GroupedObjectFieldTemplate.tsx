@@ -9,7 +9,7 @@ type PropEl = ObjectFieldTemplateProps['properties'][number];
 // `templates.ObjectFieldTemplate` slot is typed as a loose union across the RJSF
 // version surface; narrow it to the component it actually is at runtime so it can be
 // rendered as JSX (and so the package's dts build stays green).
-const DefaultObjectFieldTemplate = ShadcnTheme.templates?.ObjectFieldTemplate as
+const ShadcnObjectFieldTemplate = ShadcnTheme.templates?.ObjectFieldTemplate as
     | ComponentType<ObjectFieldTemplateProps>
     | undefined;
 
@@ -30,9 +30,27 @@ const DefaultObjectFieldTemplate = ShadcnTheme.templates?.ObjectFieldTemplate as
  * `x-tab` anywhere renders exactly as before (stacked sections, no tabs) — fully
  * backward compatible.
  *
- * Wired once through `SchemaForm` (the shared RJSF mount), never per screen.
+ * Wired once through `SchemaForm` (the shared RJSF mount), never per screen, over the
+ * active theme's own object template ({@link groupedObjectFieldTemplate}).
  */
-export function GroupedObjectFieldTemplate(props: ObjectFieldTemplateProps) {
+export const GroupedObjectFieldTemplate = groupedObjectFieldTemplate(ShadcnObjectFieldTemplate);
+
+/**
+ * The `x-group` / `x-tab` sections over `Fallback`, the active theme's object template, which an
+ * object with no section markers renders through unchanged. A theme-neutral rule: it wraps any theme.
+ */
+export function groupedObjectFieldTemplate(
+    Fallback: ComponentType<ObjectFieldTemplateProps> | undefined,
+): ComponentType<ObjectFieldTemplateProps> {
+    function SeamGroupedObjectFieldTemplate(props: ObjectFieldTemplateProps) {
+        return <Grouped {...props} Fallback={Fallback} />;
+    }
+    return SeamGroupedObjectFieldTemplate;
+}
+
+function Grouped({ Fallback: DefaultObjectFieldTemplate, ...props }: ObjectFieldTemplateProps & {
+    Fallback: ComponentType<ObjectFieldTemplateProps> | undefined;
+}) {
     const { properties, schema, title, description } = props;
     const propSchemas = (schema as RJSFSchema).properties as
         | Record<string, { 'x-group'?: unknown; 'x-tab'?: unknown } | undefined>

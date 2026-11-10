@@ -20,6 +20,7 @@ export { StarRatingWidget } from './widgets/star-rating';
 export { resolveExternalRefs } from './refs';
 export { normalizeNullableRefs } from './nullable-refs';
 export { SchemaForm, WidgetRegistryContext, type SchemaFormProps } from './SchemaForm';
+export { RjsfThemeContext, shadcnTheme } from './theme';
 export { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
 export type {
     KeywordVocabulary,

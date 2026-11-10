@@ -1,18 +1,13 @@
-import { withTheme, type FormProps } from '@rjsf/core';
-import { Theme as ShadcnTheme } from '@rjsf/shadcn';
+import type { FormProps, ThemeProps } from '@rjsf/core';
 import type { RJSFSchema, UiSchema } from '@rjsf/utils';
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { defaultRegistry } from './registry';
-import { RadioWidget } from './widgets/radio';
-import { BaseInputTemplate, CheckboxWidget, FieldTemplate, SelectWidget, SubmitButton, TextareaWidget } from './theme-overrides';
 import { resolveExternalRefs } from './refs';
 import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
 import { buildUiSchema, mergeUiSchema } from './ui-schema';
-import { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
+import { themedForm, useRjsfTheme } from './theme';
 import { defaultValidator } from './validator';
-
-const ThemedForm = withTheme(ShadcnTheme);
 
 /**
  * Hosts provide their own extended registry through this context (or the
@@ -28,10 +23,17 @@ export interface SchemaFormProps
     /** Host-injected authed fetcher for external $refs; omit when the schema is self-contained. */
     schemaFetcher?: SchemaFetcher;
     validator?: FormProps['validator'];
+    /**
+     * The RJSF theme to draw with: any `ThemeProps` (what `withTheme` takes; `@rjsf/shadcn` exports one as
+     * `Theme`). Absent, `RjsfThemeContext`, then seam's `shadcnTheme`. It must be a stable object (a module
+     * constant or a memo). Seam's theme-neutral rules (field labels, `x-group` sections) wrap whichever theme
+     * is active; the caller's `templates` and `widgets` still win over it.
+     */
+    theme?: ThemeProps;
 }
 
 /**
- * The base schema-form: RJSF (shadcn theme) driven by the predicate widget
+ * The base schema-form: RJSF on a theme (shadcn by default) driven by the widget
  * registry, tolerant of extension keywords, with external $refs pre-resolved
  * through the injected fetcher.
  */
@@ -45,8 +47,10 @@ export function SchemaForm({
     formContext,
     templates,
     widgets,
+    theme,
     ...rest
 }: SchemaFormProps) {
+    const ThemedForm = themedForm(useRjsfTheme(theme));
     const contextRegistry = useContext(WidgetRegistryContext);
     const activeRegistry = registry ?? contextRegistry ?? defaultRegistry;
 
@@ -100,18 +104,10 @@ export function SchemaForm({
             schema={formSchema as RJSFSchema}
             uiSchema={mergeUiSchema(generatedUiSchema, uiSchema) as UiSchema}
             validator={validator ?? defaultValidator}
-            // Partition `x-group` properties into titled sections; degrades to the
-            // theme default for ungrouped objects. Caller-supplied templates win.
-            // Flush fields and a readable disabled Submit: see theme-overrides.tsx. Caller templates win.
-            templates={{
-                ObjectFieldTemplate: GroupedObjectFieldTemplate,
-                FieldTemplate,
-                BaseInputTemplate,
-                ...templates,
-                ButtonTemplates: { SubmitButton, ...templates?.ButtonTemplates },
-            }}
-            // The theme's RadioWidget never shows a stored value; see widgets/radio.tsx. Caller widgets win.
-            widgets={{ RadioWidget, SelectWidget, TextareaWidget, CheckboxWidget, ...widgets }}
+            // The theme (with seam's neutral rules wrapped round it) supplies templates and widgets;
+            // `withTheme` merges these caller overrides over it, so they win.
+            templates={templates}
+            widgets={widgets}
             formData={safeFormData}
             // The injected fetcher rides formContext so fields that resolve
             // their own refs (rich-content manifests among them) share the
