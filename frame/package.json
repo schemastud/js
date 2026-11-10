@@ -18,6 +18,10 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js"
+    },
+    "./vocabulary": {
+      "types": "./dist/vocabulary.d.ts",
+      "import": "./dist/vocabulary.js"
     }
   },
   "sideEffects": false,
@@ -25,7 +29,9 @@
     "dist",
     "src",
     "README.md",
-    "docs"
+    "docs",
+    "bin",
+    "vocabulary.default.json"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -41,7 +47,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "test:types": "tsc --project tsconfig.typecheck.json && tsc --project tsconfig.typecheck.registered.json",
-    "export-list": "node ../scripts/export-list.mjs src/index.ts --write"
+    "export-list": "node ../scripts/export-list.mjs src/index.ts --write",
+    "frame:vocabulary": "tsup && node bin/frame-vocabulary.mjs --out vocabulary.default.json"
   },
   "peerDependencies": {
     "@rjsf/core": "^6.0.0",
@@ -77,5 +84,8 @@
     "typescript": "^5.7.0",
     "vitest": "^4.1.10",
     "zustand": "^5.0.14"
+  },
+  "bin": {
+    "frame-vocabulary": "bin/frame-vocabulary.mjs"
   }
 }

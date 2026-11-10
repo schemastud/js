@@ -1,9 +1,15 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-    // Object form so the entries keep distinct output names (dist/index.js, dist/shadcn.js,
+    // Object form so the entries keep distinct output names (dist/index.js, dist/shadcn.js, dist/vocabulary.js,
     // dist/testing.js); a bare array would collide on the `index` basename.
-    entry: { index: 'src/index.ts', shadcn: 'src/shadcn/index.tsx', testing: 'src/testing/index.ts' },
+    entry: {
+        index: 'src/index.ts',
+        shadcn: 'src/shadcn/index.tsx',
+        testing: 'src/testing/index.ts',
+        // The Node-only build-time subpath (`@schemastud/frame/vocabulary`) the `frame-vocabulary` bin runs.
+        vocabulary: 'src/vocabulary.ts',
+    },
     format: ['esm'],
     dts: true,
     sourcemap: true,
