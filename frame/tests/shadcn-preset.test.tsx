@@ -2,7 +2,10 @@
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FrameProvider } from '../src/context';
+import { defaultPrimitives } from '../src/primitives';
+import { createMemoryTransport, createMemoryUrlState } from '../src/testing';
 import { createWidgetRegistry } from '@schemastud/seam';
 import {
     ShadcnCell,
@@ -27,18 +30,32 @@ const ROWS: Row[] = [
 
 // The enrich textarea + toolbar/pagination reach primitives.Button through the
 // injection; a tagged fake proves the injected atom (not raw HTML) is used.
-const injection = {
+// A complete injection (a raw FrameProvider refuses a partial one; frame-foundation 25) with only
+// the Button tagged.
+const injection: FrameInjection = {
+    transport: createMemoryTransport(),
     primitives: {
+        ...defaultPrimitives,
         Button: ({ children, ...p }: any) => (
             <button data-injected="Button" {...p}>
                 {children}
             </button>
         ),
     },
-} as unknown as FrameInjection;
+    useUrlState: createMemoryUrlState(),
+    registry: createWidgetRegistry(),
+    schemaFetcher: async (ref) => ({ $id: ref }),
+    can: () => true,
+};
+
+const client = new QueryClient();
 
 function wrap({ children }: { children: ReactNode }) {
-    return <FrameProvider value={injection}>{children}</FrameProvider>;
+    return (
+        <QueryClientProvider client={client}>
+            <FrameProvider value={injection}>{children}</FrameProvider>
+        </QueryClientProvider>
+    );
 }
 
 describe('@schemastud/frame/shadcn preset', () => {

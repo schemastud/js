@@ -3,6 +3,13 @@
 // =============================================================================
 
 export { FrameProvider, useFrameInjection, useOptionalFrameInjection, registerFrameWidgets } from './context';
+export {
+    createFrameKit,
+    createFrameRegistry,
+    type FrameKit,
+    type FrameKitOptions,
+    type FrameRegistryOptions,
+} from './kit';
 export { ListShell, listItemRendersCards } from './ListShell';
 export { EditShell } from './EditShell';
 export { WidgetShell, WidgetSurface } from './WidgetShell';

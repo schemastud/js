@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { createWidgetRegistry, type WidgetRegistry } from '@schemastud/seam';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FrameProvider } from '../src/context';
 import { KNOWN_CONTEXTS, type ContextManifest } from '../src/contexts';
 import { FRAME_CONTEXT_KEYWORD } from '../src/resolveWidgetFor';
@@ -85,7 +86,13 @@ function makeInjection(registry: WidgetRegistry, manifests: Record<string, Conte
 }
 
 function wrap(injection: FrameInjection) {
-    return ({ children }: { children: ReactNode }) => <FrameProvider value={injection}>{children}</FrameProvider>;
+    // A raw FrameProvider reports a missing query client in development (frame-foundation 25).
+    const client = new QueryClient();
+    return ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>
+            <FrameProvider value={injection}>{children}</FrameProvider>
+        </QueryClientProvider>
+    );
 }
 
 const manifest = (root: ContextManifest['byNode']['']): ContextManifest => ({

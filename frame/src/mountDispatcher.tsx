@@ -1,4 +1,5 @@
 import { createElement } from 'react';
+import { useOptionalFrameInjection } from './context';
 import { EditShell } from './EditShell';
 import { ListShell } from './ListShell';
 import type { RouteComponent } from './routes';
@@ -96,6 +97,7 @@ export interface MountDispatcherOptions {
      * (`(resource) => useManifest(realm).data?.contexts[resource]`), so it is called during the dispatched
      * component's render, never at dispatch time. The SAME `ManifestLookup` the injection's
      * `manifestFor` carries (realm-dashboards ticket 03): a host wires one function for both.
+     * Optional: absent, a `list` leaf reads the injection's own lookup, which a kit supplies.
      */
     manifestFor?: ManifestLookup;
 
@@ -190,20 +192,12 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
             }
 
             case 'list': {
-                // A dispatch-time decision about HOST WIRING, not about data: if neither lookup was
-                // supplied there is no path to a column set at any point in the future, so decline once
-                // and say so. Whether a given resource has a manifest is a runtime fact and is decided
-                // at render, below.
-                if (!options.manifestFor && !options.columnsFor) {
-                    return decline(
-                        entry,
-                        "mounts: 'list' needs manifestFor (whose list-column participation IS the column set) or columnsFor",
-                    );
-                }
-
-                return () => {
+                // The manifest lookup defaults to the injection's (a kit supplies it), so a list leaf
+                // always dispatches; whether a given resource has a manifest is decided at render.
+                return function DispatchedList() {
+                    const injected = useOptionalFrameInjection()?.manifestFor;
                     const onOpen = options.onOpenFor?.(entry);
-                    const manifest = options.manifestFor?.(resource);
+                    const manifest = (options.manifestFor ?? injected)?.(resource);
                     // Zero host columns is the normal case: with a manifest, resolveColumns returns the
                     // whole participating set. Host columns are per-field overrides on top of it.
                     const columns = options.columnsFor?.(resource) ?? [];

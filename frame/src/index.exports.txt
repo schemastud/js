@@ -70,6 +70,8 @@ type FrameContext
 type FrameCrudTransport
 type FrameHooks
 type FrameInjection
+type FrameKit
+type FrameKitOptions
 value FrameLayout
 type FrameLayoutProps
 value FrameLayoutShell
@@ -80,6 +82,7 @@ type FrameManifest
 type FrameNotice
 type FramePrimitives
 value FrameProvider
+type FrameRegistryOptions
 type FrameSidePanelEntry
 type FrameTransport
 type GuardComponent
@@ -205,6 +208,8 @@ value collapseModes
 value createFormIntentBus
 value createFormResolver
 value createFrameHooks
+value createFrameKit
+value createFrameRegistry
 value createGuardRegistry
 value createHttpTransport
 value createMountDispatcher

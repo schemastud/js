@@ -26,6 +26,9 @@ import { useListPagination } from './useListPagination';
 import type { ContextManifest } from './contexts';
 import type { FrameColumn, ListShellProps, Row } from './types';
 
+/** No host column overrides: the manifest's `list-column` set is the column set. A constant, so memos stay stable. */
+const NO_COLUMNS: FrameColumn[] = [];
+
 /**
  * The list surface, generalized from the app substrate. Renders any resource from
  * its schema + host-supplied columns with no per-resource UI code: the facets bar
@@ -34,14 +37,16 @@ import type { FrameColumn, ListShellProps, Row } from './types';
  */
 export function ListShell({
     resource,
-    columns,
+    columns = NO_COLUMNS,
     onOpen,
     slots,
-    manifest,
+    manifest: manifestProp,
     onCellCommit,
     paginationPlacement = 'both',
 }: ListShellProps) {
-    const { can, registry, listSlots, transport, useUrlState } = useFrameInjection();
+    const { can, registry, listSlots, transport, useUrlState, manifestFor } = useFrameInjection();
+    // Handed in, else the injection's lookup (a kit's manifest), as EditShell does.
+    const manifest = manifestProp ?? manifestFor?.(resource);
     const [searchParams, setSearchParams] = useUrlState();
     const collections = manifest?.collections ?? [];
     const requestedCollection = searchParams.get('collection');

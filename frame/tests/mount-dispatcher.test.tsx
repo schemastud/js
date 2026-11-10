@@ -46,7 +46,7 @@ describe('createMountDispatcher — what it renders', () => {
         expect(dispatch(entry({ routeName: 'x.show', path: 'x/:id', mounts: 'detail' }))).toBeTypeOf('function');
     });
 
-    it('dispatches a list once the host wires EITHER lookup, and declines with neither', () => {
+    it('dispatches a list with either lookup, or with neither (the injection’s manifest lookup is the default)', () => {
         const withColumns = createMountDispatcher({ columnsFor: () => [{ field: 'name', header: 'Name' }] });
         // The manifest alone is enough — its `list-column` participation IS the column set. This
         // arm used to decline, on the belief that only a host can know a list's columns; see
@@ -56,8 +56,9 @@ describe('createMountDispatcher — what it renders', () => {
 
         expect(withColumns(entry({ routeName: 'x.index', path: 'x', mounts: 'list' }))).toBeTypeOf('function');
         expect(withManifest(entry({ routeName: 'x.index', path: 'x', mounts: 'list' }))).toBeTypeOf('function');
-        // Neither lookup wired = no path to a column set at any future point, so decline once.
-        expect(without(entry({ routeName: 'x.index', path: 'x', mounts: 'list' }))).toBeUndefined();
+        // Neither lookup wired: the leaf reads the injection's lookup at render (a kit supplies one;
+        // frame-foundation 25), so it dispatches, and a provider with no lookup gets the dev warning.
+        expect(without(entry({ routeName: 'x.index', path: 'x', mounts: 'list' }))).toBeTypeOf('function');
     });
 });
 

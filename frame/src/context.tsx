@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { QueryClientContext } from '@tanstack/react-query';
 import { FacetsProvider } from '@schemastud/facets';
 import { WidgetRegistryContext, defaultRegistry, type WidgetRegistry } from '@schemastud/seam';
 import { registerResourceRefWidget } from './ResourceRefWidget';
@@ -47,6 +48,19 @@ function ensureBuiltinWidgets(registry: WidgetRegistry | undefined | null): void
  * context (which SchemaForm resolves widgets through). A host sets this up once.
  */
 export function FrameProvider({ value, children }: { value: FrameInjection; children: ReactNode }) {
+    // The override seam reports everything it lacks at mount, in one message, rather than one
+    // undefined at a time deep inside a shell. A kit's Provider always passes this check. A missing
+    // key throws (a shell would fail on it anyway); a missing query client is reported in development
+    // only, because a subtree that never queries (a card dashboard) works without one.
+    const hasQueryClient = useContext(QueryClientContext) !== undefined;
+    const missing = missingWiring(value, hasQueryClient);
+    if (missing.length > 0) {
+        const message =
+            `@schemastud/frame: <FrameProvider> is missing ${missing.join(', ')}. Mount a kit instead: ` +
+            '`const frame = createFrameKit()` at module scope, then `<frame.Provider>…</frame.Provider>`.';
+        if (missing.length > (hasQueryClient ? 0 : 1)) throw new Error(message);
+        if (isDevelopment()) console.error(message);
+    }
     // Auto-register frame's built-in widgets (the resource-ref picker) into the host's
     // registry once — a frame capability available everywhere, not per-surface. Runs in
     // a useMemo keyed on registry identity so it is side-effect-safe under strict mode
@@ -87,12 +101,26 @@ export function useOptionalFrameInjection(): FrameInjection | null {
 }
 
 /** Read the injection bundle; throws if a frame shell renders outside a provider. */
+const isDevelopment = (): boolean => Boolean((import.meta as any).env?.DEV);
+
+/** The keys a raw `<FrameProvider value>` needs; a kit supplies them all. */
+const REQUIRED_KEYS = ['transport', 'primitives', 'useUrlState', 'registry', 'schemaFetcher', 'can'] as const;
+
+/** The fix first, then everything a raw provider needs (ruling 02 Q15). */
+export const MISSING_PROVIDER_MESSAGE =
+    '@schemastud/frame: no frame Provider above this component. Mount a kit: `const frame = createFrameKit()` at module ' +
+    'scope, then `<frame.Provider>…</frame.Provider>`. A raw <FrameProvider value> needs ' +
+    `${REQUIRED_KEYS.join(', ')}, inside a QueryClientProvider.`;
+
 export function useFrameInjection(): FrameInjection {
     const injection = useContext(FrameContext);
-    if (!injection) {
-        throw new Error(
-            '@schemastud/frame: no FrameProvider found. Wrap your app in <FrameProvider value={{ transport, primitives, useUrlState, registry, schemaFetcher, can }}>.'
-        );
-    }
+    if (!injection) throw new Error(MISSING_PROVIDER_MESSAGE);
     return injection;
+}
+
+/** What a raw provider's value and surroundings lack: every missing key, and the query client, together. */
+function missingWiring(value: Partial<FrameInjection> | null | undefined, hasQueryClient: boolean): string[] {
+    const missing: string[] = REQUIRED_KEYS.filter((key) => value?.[key] == null);
+    if (!hasQueryClient) missing.push('a QueryClientProvider');
+    return missing;
 }

@@ -618,7 +618,8 @@ export type PaginationSlotProps = PaginationCommonProps &
 
 export interface ListShellProps {
     resource: string;
-    columns: FrameColumn[];
+    /** Per-field overrides on the columns. Optional: with a manifest the columns are its `list-column` set. */
+    columns?: FrameColumn[];
     onOpen?: (record: Row) => void;
     slots?: Partial<ListSlots>;
     /**

@@ -247,14 +247,14 @@ describe("createMountDispatcher — mounts: 'list'", () => {
         expect(headers()).toEqual(['Identifier', 'Renamed']);
     });
 
-    it('declines only when the host wired NEITHER lookup, and says which', () => {
+    it('dispatches with NEITHER lookup wired: the injection’s manifest lookup is the default (frame-foundation 25)', () => {
         const seen: string[] = [];
         const dispatch = createMountDispatcher({
             onDecline: (_, reason) => seen.push(reason),
         });
 
-        expect(dispatch(listEntry)).toBeUndefined();
-        expect(seen[0]).toContain('manifestFor');
+        expect(dispatch(listEntry)).toBeTypeOf('function');
+        expect(seen).toEqual([]);
     });
 
     it('renders nothing rather than a headerless table when the manifest has not arrived yet', () => {
