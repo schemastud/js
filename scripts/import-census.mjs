@@ -8,8 +8,11 @@
  *              import the barrel: host apps, starters, other package workspaces.
  *   --barrel   a barrel to count, repeatable (default: the frame root, frame/shadcn and the seam root)
  *   --list     also print every exported name with its importer counts
- *   --names    print the importers of these names, and exit 1 if any file imports one. Run it before
- *              removing names from a barrel.
+ *   --names    print the importers of these names, and exit 1 if any file imports one, with or
+ *              without --json. Run it before removing names from a barrel.
+ *
+ * Exit: 0 counted (and, with --names, nothing imports them), 1 a file imports an asked name,
+ * 2 usage error or a root that does not exist or cannot be read.
  *   --json     print the whole census as JSON
  *
  * Instrument. Each barrel's export list comes from export-list.mjs. Each scanned file that mentions the
@@ -216,22 +219,41 @@ function printList(result) {
     }
 }
 
+/** Every import of one asked name, from source files and tests alike. */
+function importsOf(result, name) {
+    const entry = result.byName.get(name);
+    return entry ? [...entry.source, ...entry.tests] : result.notExported.filter((n) => n.name === name);
+}
+
+/** How many imports of the asked names the census found, across every barrel. */
+function countImports(results, names) {
+    return results.reduce((sum, result) => sum + names.reduce((n, name) => n + importsOf(result, name).length, 0), 0);
+}
+
 /** Importers of the asked names, and a word match of each name in the files that mention the specifier. */
 function printNames(result, names) {
-    let imported = 0;
     for (const name of names) {
         const entry = result.byName.get(name);
-        const hits = entry ? [...entry.source, ...entry.tests] : result.notExported.filter((n) => n.name === name);
+        const hits = importsOf(result, name);
         const importing = new Set(hits.map((hit) => hit.file));
         const word = new RegExp(`(?<![\\w$])${name.replace(/[$]/g, '\\$&')}(?![\\w$])`);
         const mentioned = result.mentions.filter((m) => word.test(m.text) && !importing.has(tilde(m.file)));
         if (hits.length === 0 && mentioned.length === 0) continue;
-        imported += hits.length;
         console.log(`  ${name}${entry ? '' : '  (not exported)'}`);
         for (const hit of hits) console.log(`    imports   ${hit.file}`);
         for (const m of mentioned) console.log(`    mentions  ${tilde(m.file)}`);
     }
-    return imported;
+}
+
+/** An explicit scan root must be a readable directory: a missing tree is not a tree with no importers. */
+function unreadableRoot(root) {
+    try {
+        if (!statSync(root).isDirectory()) return 'not a directory';
+        readdirSync(root);
+        return null;
+    } catch (error) {
+        return error.code ?? String(error);
+    }
 }
 
 function main(argv) {
@@ -255,10 +277,21 @@ function main(argv) {
         } else roots.push(arg);
     }
 
+    const unreadable = roots.map((root) => [root, unreadableRoot(root)]).filter(([, why]) => why !== null);
+    if (unreadable.length > 0) {
+        for (const [root, why] of unreadable) console.error(`cannot scan ${root}: ${why}`);
+        console.error('Refusing to count: a root that cannot be read would report its importers as none.');
+        return 2;
+    }
+
     const results = census(
         roots.length > 0 ? roots : [WORKSPACE],
         barrels.length > 0 ? barrels : DEFAULT_BARRELS.map(([specifier, entry]) => [specifier, join(WORKSPACE, entry)]),
     );
+
+    // The exit status is the same whatever the output format.
+    const imported = names ? countImports(results, names) : 0;
+    const status = imported > 0 ? 1 : 0;
 
     if (json) {
         console.log(JSON.stringify(results.map((r) => ({
@@ -268,19 +301,19 @@ function main(argv) {
             exported: r.exported,
             notExported: r.notExported,
             other: r.other,
+            ...(names ? { asked: Object.fromEntries(names.map((name) => [name, importsOf(r, name)])) } : {}),
         })), null, 2));
-        return 0;
+        return status;
     }
 
-    let imported = 0;
     for (const result of results) {
         printSummary(result);
         if (list) printList(result);
-        if (names) imported += printNames(result, names);
+        if (names) printNames(result, names);
         console.log('');
     }
     if (names) console.log(imported === 0 ? 'No file imports any of the asked names.' : `${imported} imports of the asked names.`);
-    return names && imported > 0 ? 1 : 0;
+    return status;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

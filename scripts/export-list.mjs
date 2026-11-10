@@ -34,19 +34,60 @@ export function exportList(entry) {
     const moduleSymbol = checker.getSymbolAtLocation(source);
     if (!moduleSymbol) return [];
 
+    const viaTypeOnlyStar = typeOnlyStarNames(source, checker, new Set());
     return checker
         .getExportsOfModule(moduleSymbol)
-        .map((symbol) => `${kindOf(symbol, checker)} ${symbol.getName()}`)
+        .map((symbol) => `${kindOf(symbol, checker, viaTypeOnlyStar)} ${symbol.getName()}`)
         .sort((a, b) => compareNames(a.split(' ')[1], b.split(' ')[1]));
 }
 
-function kindOf(symbol, checker) {
+function kindOf(symbol, checker, viaTypeOnlyStar) {
     const typeOnly = (symbol.declarations ?? []).some(
-        (d) => ts.isExportSpecifier(d) && (d.isTypeOnly || d.parent.parent.isTypeOnly),
+        (d) =>
+            (ts.isExportSpecifier(d) && (d.isTypeOnly || d.parent.parent.isTypeOnly)) ||
+            (ts.isNamespaceExport(d) && d.parent.isTypeOnly),
     );
-    if (typeOnly) return 'type';
+    if (typeOnly || viaTypeOnlyStar.has(symbol.getName())) return 'type';
     const target = symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol;
     return target.flags & ts.SymbolFlags.Value ? 'value' : 'type';
+}
+
+/**
+ * The names a file exports only through a type-only star (`export type * from`), directly or
+ * through a plain `export *` of a file that does. A star never re-exports a name the file
+ * exports itself, so the file's own names are left out.
+ */
+function typeOnlyStarNames(source, checker, visiting) {
+    const names = new Set();
+    if (visiting.has(source.fileName)) return names;
+    visiting.add(source.fileName);
+
+    const own = new Set();
+    for (const statement of source.statements) {
+        if (ts.isExportDeclaration(statement)) {
+            const clause = statement.exportClause;
+            if (clause && ts.isNamedExports(clause)) for (const el of clause.elements) own.add(el.name.text);
+            else if (clause && ts.isNamespaceExport(clause)) own.add(clause.name.text);
+        } else if (ts.canHaveModifiers(statement) && ts.getModifiers(statement)?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword)) {
+            if (statement.name && ts.isIdentifier(statement.name)) own.add(statement.name.text);
+            if (ts.isVariableStatement(statement)) {
+                for (const d of statement.declarationList.declarations) if (ts.isIdentifier(d.name)) own.add(d.name.text);
+            }
+        }
+    }
+
+    for (const statement of source.statements) {
+        if (!ts.isExportDeclaration(statement) || statement.exportClause || !statement.moduleSpecifier) continue;
+        const target = checker.getSymbolAtLocation(statement.moduleSpecifier);
+        if (!target) continue;
+        const reached = statement.isTypeOnly
+            ? checker.getExportsOfModule(target).map((s) => s.getName())
+            : [...(target.declarations ?? [])]
+                  .filter(ts.isSourceFile)
+                  .flatMap((file) => [...typeOnlyStarNames(file, checker, visiting)]);
+        for (const name of reached) if (!own.has(name)) names.add(name);
+    }
+    return names;
 }
 
 function compareNames(a, b) {
