@@ -12,6 +12,16 @@ export {
 } from './kit';
 export { ListShell, listItemRendersCards } from './ListShell';
 export { EditShell } from './EditShell';
+export {
+    useListShell,
+    type ListShellOptions,
+    type ListShellState,
+} from './useListShell';
+export {
+    useEditShell,
+    type EditShellOptions,
+    type EditShellState,
+} from './useEditShell';
 export { WidgetShell, WidgetSurface } from './WidgetShell';
 export {
     createMountDispatcher,
@@ -295,6 +305,7 @@ export {
     type FacetsPrimitives,
     type UseUrlState,
     type FilterSchema,
+    type ListFiltersState,
 } from '@schemastud/facets';
 
 export {

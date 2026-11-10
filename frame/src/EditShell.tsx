@@ -1,13 +1,9 @@
-import { createFormIntentBus } from '@schemastud/seam';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { ResourceKey } from './resources';
-import { flushSync } from 'react-dom';
 import { useFrameInjection } from './context';
-import { DefaultContainer, DefaultFormBody, DefaultNotFound, DefaultSaveBar, DefaultToggle } from './slots/defaults';
-import { useFormSchema, useRowRecord, useRowSave } from './data';
-import { isNotFound } from './errors';
-import { RecordActionButtons, useInlineNotice } from './ResourceActions';
-import type { EditShellProps, EditShellPropsOf, FormMode, Row } from './types';
+import { DefaultContainer, DefaultNotFound } from './slots/defaults';
+import { useEditShell, type EditShellOptions } from './useEditShell';
+import type { EditShellProps, EditShellPropsOf } from './types';
 
 /**
  * The edit surface (create when id === null; detail = <EditShell readOnly/> — no
@@ -16,6 +12,9 @@ import type { EditShellProps, EditShellPropsOf, FormMode, Row } from './types';
  * and submits via `transport.save`. The host's
  * persist strategy sits BELOW the transport; the shell is blind to which strategy
  * runs. Every slot has a frame default the host may override.
+ *
+ * It is `useEditShell`'s default rendering and reads nothing else: a custom form takes the same behaviour from
+ * the hook and draws its own markup.
  */
 export function EditShell<K extends ResourceKey = ResourceKey>(typed: EditShellProps<K>) {
     // Typed by the key at the boundary (ruling 03); the shell itself reads records as `Row`.
@@ -25,55 +24,15 @@ export function EditShell<K extends ResourceKey = ResourceKey>(typed: EditShellP
 }
 
 function EditShellRecord({
-    resource,
-    id,
-    readOnly = false,
-    schemaPurpose = 'write',
     container = 'panel',
-    form: formProp = 'enriched',
     showModeToggle = false,
-    onSaved,
     onCancel,
-    slots,
-    manifest: manifestProp,
-    onNavigate,
+    ...options
 }: EditShellPropsOf<string>) {
-    const { can, hooks, editSlots, primitives, manifestFor } = useFrameInjection();
-    // The record ACTIONS a detail page draws (ADR-0005) come from the resource's manifest — handed in,
-    // else looked up through the injection (a hook at a real host, so it is read during render).
-    const manifest = manifestProp ?? manifestFor?.(resource);
-    const notice = useInlineNotice();
-    const [form, setForm] = useState<FormMode>(formProp);
-    const [formData, setFormData] = useState<Row>({});
-
-    const submitHandler = useRef<(() => void) | null>(null);
-    const [canSubmit, setCanSubmit] = useState(false);
-    const registerSubmit = useCallback((handler: (() => void) | null) => {
-        submitHandler.current = handler;
-        setCanSubmit(handler !== null);
-    }, []);
-
-    const dirty = useRef(false);
-    const intentBus = useMemo(() => createFormIntentBus(), []);
-
-    const schemaQuery = useFormSchema(resource, form, id === null ? 'write' : schemaPurpose);
-    const recordQuery = useRowRecord(resource, id);
-    const saveMutation = useRowSave(resource);
-    // A stable schema keeps SchemaForm's asynchronous ref resolution from remounting
-    // its controls on each keystroke or read-status change. The served schema reaches the form
-    // body as served: the form mode acts in the form's resolver (`plainData`), not on the schema.
-    const schema = useMemo(() => schemaQuery.data ?? { type: 'object', properties: {} }, [schemaQuery.data]);
-
-    // Seed the form once the record arrives (create starts empty).
-    useEffect(() => {
-        if (recordQuery.data && !dirty.current) setFormData(recordQuery.data);
-    }, [recordQuery.data]);
-
-    // Per-slot across three tiers — this page's `slots`, the injection's app-wide `editSlots`,
-    // then frame's default. See FrameInjection.editSlots.
-    const FormBody = slots?.FormBody ?? editSlots?.FormBody ?? DefaultFormBody;
-    const Toggle = slots?.Toggle ?? editSlots?.Toggle ?? DefaultToggle;
-    const SaveBar = slots?.SaveBar ?? editSlots?.SaveBar ?? DefaultSaveBar;
+    const edit = useEditShell(options as unknown as EditShellOptions<string>);
+    const { editSlots, primitives } = useFrameInjection();
+    const { FormBody, Toggle, SaveBar } = edit.slots;
+    const slots = options.slots;
     // ⚠️ Container is the one slot where the app-wide default sits BELOW the `container` prop.
     // `container: 'page'` is an explicit per-render statement that this shell is a full page and
     // not a drawer — the `mounts: 'edit'` dispatcher relies on it — so an injection-level
@@ -90,100 +49,47 @@ function EditShellRecord({
             ? BareContainer
             : editSlots?.Container ?? DefaultContainer);
 
-    // Detail (readOnly) still resolves against `view`; create/update gate on their action.
-    const effectiveReadOnly = readOnly || !can(id === null ? 'create' : 'update', resource);
-
-    const readFailed = schemaQuery.isError || (id !== null && recordQuery.isError);
-    const ready = schemaQuery.data !== undefined && (id === null || recordQuery.data !== undefined);
-    // C17 create-chrome + terminal states. A 404 record read is a DISTINCT not-found state; the
-    // heading reads from the resource's singularLabel ("New <noun>" when creating), which create
-    // mode previously lacked entirely.
-    const recordNotFound = id !== null && recordQuery.isError && isNotFound(recordQuery.error);
-    const singularLabel = manifest?.singularLabel ?? resource;
-    const heading = id === null ? `New ${singularLabel}` : singularLabel;
-    const submit = (data: Row) => {
-        if (effectiveReadOnly || readFailed || !ready) return;
-        saveMutation.mutate(
-            { id, data },
-            {
-                onSuccess: (saved) => {
-                    dirty.current = false;
-                    setFormData(saved);
-                    // Fire the host-side onSubmitted hook (opt-in) with the saved/returned
-                    // record BEFORE the onSaved prop; both run, neither replaces the other.
-                    hooks?.fireSubmitted(resource, saved, {
-                        resource,
-                        mode: id == null ? 'create' : 'edit',
-                    });
-                    onSaved?.(saved);
-                },
-            },
-        );
-    };
-
-    if (schemaQuery.isLoading || (id !== null && recordQuery.isLoading)) {
+    if (edit.status === 'loading') {
         return <div data-frame-shell="edit-loading">Loading…</div>;
     }
 
     const RetryButton = primitives.Button;
     // A 404 record read is a DISTINCT terminal state — not-found, no retry (the record is gone).
     // Any other read failure keeps the retryable generic error. (C17)
-    const terminal = recordNotFound ? (
-        <DefaultNotFound message={`This ${singularLabel.toLowerCase()} was not found.`} />
-    ) : readFailed ? (
+    const failure = edit.readFailure;
+    const terminal = edit.status === 'not-found' ? (
+        <DefaultNotFound message={`This ${edit.singularLabel.toLowerCase()} was not found.`} />
+    ) : !failure ? null : (
         <div role="alert" data-frame-shell="edit-error">
-            <p>
-                {schemaQuery.isError ? 'Could not load this form.' : 'Could not load this record.'}
-            </p>
-            <RetryButton
-                type="button"
-                onClick={() => {
-                    if (schemaQuery.isError) void schemaQuery.refetch();
-                    if (id !== null && recordQuery.isError) void recordQuery.refetch();
-                }}
-            >
+            <p>{failure.message}</p>
+            <RetryButton type="button" onClick={failure.retry}>
                 Retry
             </RetryButton>
         </div>
-    ) : null;
-    if (!ready) return <Container>{terminal}</Container>;
+    );
+    if (edit.status !== 'ready') return <Container>{terminal}</Container>;
 
     return (
         <Container>
             <div data-frame-shell="edit">
-                <h1 data-frame-shell="edit-heading">{heading}</h1>
+                <h1 data-frame-shell="edit-heading">{edit.heading}</h1>
                 {terminal}
-                {id !== null ? (
-                    <>
-                        {notice.element}
-                        <RecordActionButtons
-                            resource={resource}
-                            manifest={manifest}
-                            record={{ ...(recordQuery.data ?? {}), id }}
-                            onNavigate={onNavigate}
-                            onNotice={notice.onNotice}
-                        />
-                    </>
-                ) : null}
-                {showModeToggle && !effectiveReadOnly ? (
-                    <Toggle value={form} onChange={setForm} />
-                ) : null}
+                {edit.notice.element}
+                {edit.actions.RecordActions ? <edit.actions.RecordActions /> : null}
+                {showModeToggle && !edit.readOnly ? <Toggle value={edit.form} onChange={edit.setForm} /> : null}
                 <FormBody
-                    schema={schema}
-                    formData={formData}
-                    intentBus={intentBus}
-                    readOnly={effectiveReadOnly || readFailed}
-                    form={form}
-                    onChange={(data) => {
-                        dirty.current = true;
-                        setFormData(data);
-                    }}
-                    onSubmit={submit}
-                    registerSubmit={registerSubmit}
+                    schema={edit.schema}
+                    formData={edit.draft}
+                    intentBus={edit.intentBus}
+                    readOnly={edit.readOnly}
+                    form={edit.form}
+                    onChange={edit.setDraft}
+                    onSubmit={edit.save.submit}
+                    registerSubmit={edit.save.registerSubmit}
                 />
-                {saveMutation.isError && (
+                {edit.save.error && (
                     <div role="alert" data-frame-shell="save-error">
-                        {saveMutation.error?.message || 'Could not save changes.'}
+                        {edit.save.error.message || 'Could not save changes.'}
                     </div>
                 )}
                 {/* C17: scroll space between the last field and the sticky Save bar, so the bar
@@ -194,17 +100,10 @@ function EditShellRecord({
                     style={{ height: '4rem', flex: 'none' }}
                 />
                 <SaveBar
-                    saving={saveMutation.isPending}
-                    canSubmit={canSubmit}
-                    readOnly={effectiveReadOnly || readFailed}
-                    onSave={() => {
-                        if (!submitHandler.current || effectiveReadOnly || readFailed || !ready)
-                            return;
-                        // Commit buffered widget state, including controlled form reconciliation,
-                        // before the registered body validates and submits its current draft.
-                        flushSync(() => intentBus.flushCommits());
-                        submitHandler.current?.();
-                    }}
+                    saving={edit.save.saving}
+                    canSubmit={edit.save.canSubmit}
+                    readOnly={edit.readOnly}
+                    onSave={edit.save.request}
                     onCancel={onCancel}
                 />
             </div>
