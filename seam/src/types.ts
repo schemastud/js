@@ -31,24 +31,60 @@ export interface RegistryEntry {
 export interface ResolvedWidget {
     widget: WidgetResolution;
     config?: Record<string, unknown>;
+    /**
+     * The options the widget gets: the matched entry's config with the node's declared
+     * `x-widget-options` deep-merged over it.
+     */
+    options?: Record<string, unknown>;
+    /**
+     * Whether the node's declared `x-widget` name is bound: registered by name, unscoped or
+     * scoped to the context asked. Absent when the node declares no name. A predicate
+     * registration never binds a name, even when it matched.
+     */
+    bound?: boolean;
+}
+
+/** How a name registration is scoped. */
+export interface WidgetScope {
+    /**
+     * The contexts the name is bound in. Omitted, it is bound in every context. A scoped
+     * registration beats an unscoped one for its contexts, whatever the registration order.
+     */
+    contexts?: readonly string[];
+}
+
+/** One name a registry binds, and where. */
+export interface RegisteredName {
+    name: string;
+    /** `null` when the name is registered unscoped (bound in every context); else the contexts it is scoped to. */
+    contexts: readonly string[] | null;
 }
 
 export interface WidgetRegistry {
     /**
-     * Register a widget. A function argument is a predicate over the schema node;
-     * a string argument matches `schema.type === key || schema['x-widget'] === key`.
-     * Later registrations take precedence (they are consulted first). The optional
-     * third argument attaches data-valued config (see WidgetConfig).
+     * Register a widget, by name or by predicate. Later registrations take precedence (they
+     * are consulted first). The optional third argument attaches data-valued config (see
+     * WidgetConfig).
+     *
+     * - **By name** (`registerWidget('star-rating', …)`): binds the name, matched against the
+     *   node's `x-widget` and nothing else, optionally scoped to contexts.
+     * - **By predicate**: infers a widget from the node (its type, format, keywords or the
+     *   context frame stamps). A predicate never binds a name.
      */
-    registerWidget: (
-        predicateOrKey: string | ((schema: SchemaNode) => boolean),
-        widget: WidgetResolution,
-        config?: WidgetConfig,
-    ) => void;
+    registerWidget: {
+        (name: string, widget: WidgetResolution, config?: WidgetConfig, scope?: WidgetScope): void;
+        (predicate: (schema: SchemaNode) => boolean, widget: WidgetResolution, config?: WidgetConfig): void;
+    };
     /** First matching entry wins; falls through to `undefined` (RJSF default). */
-    resolveWidget: (schema: SchemaNode) => WidgetResolution;
-    /** Like resolveWidget, but also computes the matched entry's config. */
-    resolveEntry: (schema: SchemaNode) => ResolvedWidget;
+    resolveWidget: (schema: SchemaNode, context?: string) => WidgetResolution;
+    /**
+     * Like resolveWidget, but also computes the matched entry's config, the merged options and
+     * whether the declared name is bound. `context` selects scoped name registrations; without
+     * it only unscoped ones bind.
+     */
+    resolveEntry: (schema: SchemaNode, context?: string) => ResolvedWidget;
+    /** Every name registered by name, sorted, with the contexts it is bound in. */
+    names: () => RegisteredName[];
 }
 
 /** A block node a skin renders — its node-type plus resting attribute values. */

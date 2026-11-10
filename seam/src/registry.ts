@@ -1,11 +1,14 @@
 import type {
+    RegisteredName,
     RegistryEntry,
     ResolvedWidget,
     SchemaNode,
     WidgetConfig,
     WidgetRegistry,
     WidgetResolution,
+    WidgetScope,
 } from './types';
+import { mergeUiSchema } from './ui-schema';
 import { ButtonGroupWidget } from './widgets/button-group';
 import { ComboboxWidget } from './widgets/combobox';
 import { StarRatingWidget } from './widgets/star-rating';
@@ -14,23 +17,41 @@ import { JsonField } from './widgets/json';
 const FORMAT_INPUTS = ['date', 'date-time', 'email', 'uri'];
 
 /**
- * The default resolution chain over RJSF's named widgets:
- *
- *   1. `x-widget` explicit override
- *   2. enum: ≤4 entries → radio, otherwise select
- *   3. format: file → file widget; date/date-time/email/uri → native format inputs
- *   4. type: boolean/number/integer → RJSF defaults
- *   5. fallback → RJSF's string default
- *
- * Entries resolving to `undefined` mean RJSF's own default already matches the
- * contract, so the uiSchema walker emits nothing for them.
+ * An entry in resolution order. A name entry carries the name it binds and, when scoped, its
+ * contexts; its predicate matches the node's `x-widget` only. A predicate entry has no name.
  */
-const defaultEntries: RegistryEntry[] = [
-    // x-widget explicit overrides (checked first)
-    { predicate: (s) => s['x-widget'] === 'textarea', widget: 'textarea' },
-    { predicate: (s) => s['x-widget'] === 'radio', widget: 'radio' },
-    { predicate: (s) => s['x-widget'] === 'file', widget: 'file' },
-    { predicate: (s) => s['x-widget'] === 'select', widget: 'select' },
+interface Entry extends RegistryEntry {
+    name?: string;
+    contexts?: readonly string[];
+}
+
+/**
+ * Seam's built-in names, registered by name and unscoped: the four RJSF widget names a node
+ * selects with `x-widget`, and seam's own four widgets.
+ */
+const BUILTIN_NAMES: ReadonlyArray<readonly [string, WidgetResolution]> = [
+    ['textarea', 'textarea'],
+    ['radio', 'radio'],
+    ['file', 'file'],
+    ['select', 'select'],
+    ['combobox', ComboboxWidget],
+    ['json', JsonField],
+    ['button-group', ButtonGroupWidget],
+    ['star-rating', StarRatingWidget],
+];
+
+/**
+ * The inference that runs after the names: what RJSF draws for a node that names no widget.
+ *
+ *   1. enum: ≤4 entries → radio, otherwise select
+ *   2. format: file → file widget; date/date-time/email/uri → native format inputs
+ *   3. type: boolean/number/integer → RJSF defaults
+ *   4. fallback → RJSF's string default
+ *
+ * Entries resolving to `undefined` mean RJSF's own default already matches the contract, so the
+ * uiSchema walker emits nothing for them.
+ */
+const INFERENCE: Entry[] = [
     // enum → radio for small sets (≤4); RJSF's default select covers the rest
     {
         predicate: (s) => Array.isArray(s.enum) && (s.enum as unknown[]).length <= 4,
@@ -46,58 +67,121 @@ const defaultEntries: RegistryEntry[] = [
     // type-based and string fallback: RJSF defaults are the contract
 ];
 
-export function createWidgetRegistry(): WidgetRegistry {
-    // Baked into the FACTORY (not registered onto the `defaultRegistry` singleton
-    // only, the way `button-group`/`star-rating` are below) — a host that calls
-    // `createWidgetRegistry()` for its own instance (frame's `FrameProvider` does
-    // this, not the singleton) still gets it, no separate host-side registration.
-    const entries: RegistryEntry[] = [
-        { predicate: (s) => s['x-widget'] === 'combobox', widget: ComboboxWidget },
-        { predicate: (s) => s['x-widget'] === 'json', widget: JsonField },
-        ...defaultEntries,
-    ];
+function nameEntry(name: string, widget: WidgetResolution, config?: WidgetConfig, scope?: WidgetScope): Entry {
+    return {
+        predicate: (s) => s['x-widget'] === name,
+        widget,
+        config,
+        name,
+        ...(scope?.contexts ? { contexts: [...scope.contexts] } : {}),
+    };
+}
 
-    function registerWidget(
-        predicateOrKey: string | ((schema: SchemaNode) => boolean),
-        widget: WidgetResolution,
-        config?: WidgetConfig,
-    ): void {
-        const predicate =
-            typeof predicateOrKey === 'function'
-                ? predicateOrKey
-                : (s: SchemaNode) => s.type === predicateOrKey || s['x-widget'] === predicateOrKey;
-        // Later registrations take precedence.
-        entries.unshift({ predicate, widget, config });
-    }
+function inScope(entry: Entry, context: string | undefined): boolean {
+    return entry.contexts === undefined || (context !== undefined && entry.contexts.includes(context));
+}
 
-    function resolveEntry(schema: SchemaNode): ResolvedWidget {
-        for (const { predicate, widget, config } of entries) {
-            if (predicate(schema)) {
-                const computed = typeof config === 'function' ? config(schema) : config;
-                return { widget, config: computed };
-            }
-        }
-        return { widget: undefined };
-    }
+function plainObject(value: unknown): Record<string, unknown> | undefined {
+    return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
 
-    function resolveWidget(schema: SchemaNode): WidgetResolution {
-        return resolveEntry(schema).widget;
-    }
-
-    return { registerWidget, resolveWidget, resolveEntry };
+function mergeOptions(a?: Record<string, unknown>, b?: Record<string, unknown>): Record<string, unknown> | undefined {
+    if (!a) return b;
+    if (!b) return a;
+    return mergeUiSchema(a, b);
 }
 
 /**
- * Default singleton — used by SchemaForm when no registry prop/context is
- * given; extended by registerWidget calls in consuming apps.
+ * A registry holding every seam built-in: the eight names in `BUILTIN_NAMES`, then the
+ * inference in `INFERENCE`. Each call returns a new, independent registry.
+ */
+export function createWidgetRegistry(): WidgetRegistry {
+    const entries: Entry[] = [...BUILTIN_NAMES.map(([name, widget]) => nameEntry(name, widget)), ...INFERENCE];
+
+    function registerWidget(
+        nameOrPredicate: string | ((schema: SchemaNode) => boolean),
+        widget: WidgetResolution,
+        config?: WidgetConfig,
+        scope?: WidgetScope,
+    ): void {
+        const entry: Entry =
+            typeof nameOrPredicate === 'function'
+                ? { predicate: nameOrPredicate, widget, config }
+                : nameEntry(nameOrPredicate, widget, config, scope);
+        // Later registrations take precedence.
+        entries.unshift(entry);
+    }
+
+    /** The registration that binds `name` in `context`: the latest scoped one, else the latest unscoped one. */
+    function binding(name: string, context: string | undefined): Entry | undefined {
+        const named = entries.filter((e) => e.name === name);
+        return (
+            named.find((e) => e.contexts !== undefined && inScope(e, context)) ??
+            named.find((e) => e.contexts === undefined)
+        );
+    }
+
+    function resolveEntry(schema: SchemaNode, context?: string): ResolvedWidget {
+        const declared = typeof schema['x-widget'] === 'string' ? schema['x-widget'] : undefined;
+        const bound = declared === undefined ? undefined : binding(declared, context);
+        const declaredOptions = plainObject(schema['x-widget-options']);
+
+        const result = (entry: Entry | undefined): ResolvedWidget => {
+            const config = entry === undefined
+                ? undefined
+                : typeof entry.config === 'function' ? entry.config(schema) : entry.config;
+            const options = mergeOptions(config, declaredOptions);
+            return {
+                widget: entry?.widget,
+                ...(config !== undefined ? { config } : {}),
+                ...(options !== undefined ? { options } : {}),
+                ...(declared !== undefined ? { bound: bound !== undefined } : {}),
+            };
+        };
+
+        // One pass in registration order, as before: the first entry that applies wins. A name
+        // entry applies when it names the declared widget and its scope admits the context, and
+        // then the name's binding (scoped beats unscoped) answers, whichever registration of the
+        // name came first in the order.
+        for (const entry of entries) {
+            if (entry.name !== undefined) {
+                if (entry.name === declared && inScope(entry, context)) return result(bound);
+                continue;
+            }
+            if (entry.predicate(schema)) return result(entry);
+        }
+        return result(undefined);
+    }
+
+    function resolveWidget(schema: SchemaNode, context?: string): WidgetResolution {
+        return resolveEntry(schema, context).widget;
+    }
+
+    function names(): RegisteredName[] {
+        const byName = new Map<string, Set<string> | null>();
+        for (const entry of entries) {
+            if (entry.name === undefined) continue;
+            const known = byName.get(entry.name);
+            if (entry.contexts === undefined || known === null) {
+                byName.set(entry.name, null);
+            } else {
+                byName.set(entry.name, new Set([...(known ?? []), ...entry.contexts]));
+            }
+        }
+        return [...byName]
+            .map(([name, contexts]) => ({ name, contexts: contexts === null ? null : [...contexts].sort() }))
+            .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    }
+
+    return { registerWidget, resolveWidget, resolveEntry, names };
+}
+
+/**
+ * Default singleton — used by SchemaForm when no registry prop/context is given; extended by
+ * registerWidget calls in consuming apps. It is one `createWidgetRegistry()` and holds nothing
+ * a fresh registry lacks.
  */
 export const defaultRegistry = createWidgetRegistry();
-
-// Generic presentation widgets, registered on the default (unshifted, so they
-// precede the `enum ≤ 4 → radio` fallback). They fire only on an explicit
-// `x-widget` opt-in, so an attr without one keeps its cardinality default.
-defaultRegistry.registerWidget((s) => s['x-widget'] === 'button-group', ButtonGroupWidget);
-defaultRegistry.registerWidget((s) => s['x-widget'] === 'star-rating', StarRatingWidget);
 
 export const registerWidget = defaultRegistry.registerWidget;
 export const resolveWidget = defaultRegistry.resolveWidget;

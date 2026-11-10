@@ -87,8 +87,9 @@ const installed = new WeakSet<WidgetRegistry>();
  * would flip tower's threads/compositions tables into card grids. `recent-list` picks it by
  * name, and only where the target declared no name.
  *
- * A host replaces any of them by registering a later predicate on the same name or the same
- * `x-frame-context` — the seam registry's ordinary override path, no hook here.
+ * A host replaces a named one by registering the same name again, and a context default by a
+ * later predicate on the same `x-frame-context` — the seam registry's ordinary override path,
+ * no hook here.
  */
 export function registerCardWidgets(registry: WidgetRegistry, options: RegisterCardWidgetsOptions = {}): void {
     if (installed.has(registry)) return;
@@ -105,7 +106,7 @@ export function registerCardWidgets(registry: WidgetRegistry, options: RegisterC
         config,
     );
     for (const [name, widget] of Object.entries(CARD_WIDGETS)) {
-        registry.registerWidget((s) => s['x-widget'] === name, widget, config);
+        registry.registerWidget(name, widget, config);
     }
 
     installed.add(registry);

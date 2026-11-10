@@ -81,6 +81,29 @@ describe('resolveWidgetFor', () => {
         expect(seen?.['x-widget-options']).toEqual({ mask: { a: 1, b: 2 } });
     });
 
+    it('options: entry config, then the node’s declared options, then the lender’s and the entry’s', () => {
+        const r = makeRegistry();
+        r.registerWidget('masked', EmailInput, { mask: 'entry', tone: 'entry', size: 'entry', align: 'entry' });
+        const declared: SchemaNode = { type: 'string', 'x-widget-options': { tone: 'node', size: 'node', align: 'node' } };
+        const lender = part({ widget: 'masked', options: { size: 'lender', align: 'lender' } });
+
+        const res = resolveWidgetFor(declared, 'row-cell', part({ inheritsBinding: true, options: { align: 'cell' } }), lender, r);
+
+        expect(res.options).toEqual({ mask: 'entry', tone: 'node', size: 'lender', align: 'cell' });
+        expect(res.bound).toBe(true);
+    });
+
+    it('a name scoped to a context binds there, and an unscoped registration of it binds elsewhere', () => {
+        const r = makeRegistry();
+        const ListDate = () => null;
+        const FormDate = () => null;
+        r.registerWidget('date', ListDate, undefined, { contexts: ['list-column'] });
+        r.registerWidget('date', FormDate);
+
+        expect(resolveWidgetFor(node, 'list-column', part({ widget: 'date' }), undefined, r).widget).toBe(ListDate);
+        expect(resolveWidgetFor(node, 'detail', part({ widget: 'date' }), undefined, r).widget).toBe(FormDate);
+    });
+
     it('heavyweight suppression: heavyweight parent edit → row-cell does NOT inherit', () => {
         const r = makeRegistry();
         const parent = part({ widget: 'circuit-graph', heavyweight: true });

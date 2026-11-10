@@ -10,7 +10,7 @@ describe('registerWidget config argument', () => {
         expect(registry.resolveWidget({ 'x-widget': 'citation' })).toBe('citation-widget');
         expect(registry.resolveEntry({ 'x-widget': 'citation' })).toEqual({
             widget: 'citation-widget',
-            config: undefined,
+            bound: true,
         });
     });
 

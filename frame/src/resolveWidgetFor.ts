@@ -44,6 +44,12 @@ export interface ResolvedForContext extends ResolvedWidget {
     participates: boolean;
     /** A widget NAME was bound but the registry resolved no component. */
     unbound?: boolean;
+    /**
+     * The options the widget gets in this context: the registry entry's config, the node's
+     * declared `x-widget-options` merged over it, then the context entry's options (its
+     * lender's first) merged over both.
+     */
+    options?: Record<string, unknown>;
 }
 
 export function resolveWidgetFor(
@@ -69,7 +75,18 @@ export function resolveWidgetFor(
         'x-widget-options': folded,
         [FRAME_CONTEXT_KEYWORD]: ctx,
     };
-    const resolved = registry.resolveEntry(schema);
+    const resolved = registry.resolveEntry(schema, ctx);
     const unbound = Boolean(name) && resolved.widget === undefined;
-    return { ...resolved, participates: true, unbound };
+    const declared = node['x-widget-options'];
+    const options = mergeOptions(
+        mergeOptions(
+            resolved.config,
+            declared && typeof declared === 'object' && !Array.isArray(declared)
+                ? (declared as Record<string, unknown>)
+                : undefined,
+        ),
+        folded,
+    );
+    const { options: _, ...rest } = resolved;
+    return { ...rest, ...(options !== undefined ? { options } : {}), participates: true, unbound };
 }

@@ -294,7 +294,7 @@ function DashboardHarness({
 }
 
 const registerActivityLine = (registry: WidgetRegistry) =>
-    registry.registerWidget((s) => s['x-widget'] === 'activity-line', ActivityLine);
+    registry.registerWidget('activity-line', ActivityLine);
 
 const awaitCards: Story['play'] = async ({ canvasElement }) => {
     await within(canvasElement).findByText('Total tenants');

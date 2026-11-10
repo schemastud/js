@@ -12,7 +12,7 @@ describe('widget resolution contract', () => {
         expect(registry.resolveWidget({ type: 'string', 'x-widget': 'file' })).toBe('file');
     });
 
-    it('combobox is baked into every fresh registry (not singleton-only, unlike button-group/star-rating)', () => {
+    it('combobox is baked into every fresh registry', () => {
         expect(registry.resolveWidget({ type: 'string', 'x-widget': 'combobox' })).toBe(ComboboxWidget);
         const fresh = createWidgetRegistry();
         expect(fresh.resolveWidget({ type: 'string', 'x-widget': 'combobox' })).toBe(ComboboxWidget);
@@ -48,13 +48,13 @@ describe('widget resolution contract', () => {
         );
     });
 
-    it('string keys match on type or x-widget', () => {
+    it('a string key is a name: it matches x-widget and never the JSON type', () => {
         const scoped = createWidgetRegistry();
         scoped.registerWidget('citation', 'citation-widget');
         expect(scoped.resolveWidget({ type: 'string', 'x-widget': 'citation' })).toBe(
             'citation-widget',
         );
-        expect(scoped.resolveWidget({ type: 'citation' })).toBe('citation-widget');
+        expect(scoped.resolveWidget({ type: 'citation' })).toBeUndefined();
     });
 
     it('registries are isolated — the default singleton is not polluted', () => {

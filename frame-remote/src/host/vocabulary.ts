@@ -12,8 +12,9 @@
  * nothing (`{ widget: undefined }`, total by construction) → the block is refused.
  *
  * Concretely we treat a block type `"Card"` as a schema node `{ type: 'Card' }` and
- * register it with `registerWidget('Card', renderer)`. Seam's built-in key predicate
- * (`s.type === key`) then routes `resolveEntry({ type: 'Card' })` to that renderer.
+ * register a predicate on it (`s.type === 'Card'`), which routes
+ * `resolveEntry({ type: 'Card' })` to that renderer. A string key would register a widget
+ * NAME, matched against `x-widget` only, which a block node never carries.
  * Seam's RJSF-flavoured default entries (`x-widget` / `enum` / `format`) never match a
  * bare `{ type }` node, so an unregistered block falls straight through to `undefined`
  * — the drop-the-unknown property we want, inherited from seam rather than re-coded.
@@ -67,7 +68,10 @@ export function registerBlock(
     // Seam's `widget` slot carries our render fn; the cast is the seam-boundary
     // adaptation (seam types `widget` as string | Component | undefined), not a
     // bypass — registration + resolution stay entirely inside seam's registry.
-    registry.registerWidget(type, component as unknown as Parameters<WidgetRegistry['registerWidget']>[1]);
+    registry.registerWidget(
+        (node) => node.type === type,
+        component as unknown as Parameters<WidgetRegistry['registerWidget']>[1],
+    );
 }
 
 /**

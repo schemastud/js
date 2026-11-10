@@ -7,9 +7,11 @@ described one widget flavor riding the socket, not the socket itself.)
 
 Generally-useful additions over [react-jsonschema-form](https://rjsf-team.github.io/react-jsonschema-form/) — none of which RJSF core has:
 
-- **Predicate widget registry** — `registerWidget(predicateOrKey, widget)` resolves widgets by
-  predicate over the schema node instead of RJSF's name-based model; first match wins, later
-  registrations take precedence.
+- **Widget registry** — `registerWidget('<name>', widget, config?, { contexts? })` binds a name a
+  node selects with `x-widget`, optionally scoped to contexts (a scoped registration beats an
+  unscoped one); `registerWidget(predicate, widget)` infers a widget from the node and never binds
+  a name. First match wins, later registrations take precedence, and `names()` lists every name
+  with its contexts.
 - **Form intent bus** — `createFormIntentBus()` is the medium-neutral channel a form emits edit
   intents on, decoupled from any host transport.
 - **Uniform `SelectionChrome`** — the grammar-blind selection/presence chrome primitive: it draws the
@@ -46,7 +48,7 @@ Peer dependencies: `@rjsf/core`, `@rjsf/shadcn`, `@rjsf/utils`, `@rjsf/validator
 import { SchemaForm, createWidgetRegistry } from '@schemastud/seam';
 
 const registry = createWidgetRegistry();
-registry.registerWidget((s) => s['x-widget'] === 'citation', CitationWidget);
+registry.registerWidget('citation', CitationWidget);
 
 <SchemaForm
     schema={schema}
@@ -58,7 +60,9 @@ registry.registerWidget((s) => s['x-widget'] === 'citation', CitationWidget);
 
 ### Default resolution chain
 
-1. `x-widget` explicit override (`textarea`, `radio`, `file`, `select`)
+1. `x-widget` names a registered widget. A fresh registry binds eight names: RJSF's `textarea`,
+   `radio`, `file` and `select`, and seam's `combobox`, `json`, `button-group` and `star-rating`.
+   `resolveEntry` reports `bound: false` for a declared name nothing registered.
 2. enum: ≤4 entries → radio; larger → RJSF's select default
 3. format: `file` → file widget; `date`/`date-time`/`email`/`uri` → native inputs
 4. everything else → RJSF defaults (the registry emits nothing)

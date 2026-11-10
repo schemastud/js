@@ -24,6 +24,7 @@ export { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
 export type {
     KeywordVocabulary,
     KeywordVocabularyConfig,
+    RegisteredName,
     RegistryEntry,
     ResolvedWidget,
     SchemaFetcher,
@@ -35,6 +36,7 @@ export type {
     WidgetConfig,
     WidgetRegistry,
     WidgetResolution,
+    WidgetScope,
 } from './types';
 export { buildUiSchema, mergeUiSchema } from './ui-schema';
 export { displayLabel, humanizeKey } from './display-label';

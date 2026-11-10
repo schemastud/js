@@ -63,7 +63,7 @@ function SelectableDemoBlock({ editShellMount }: { editShellMount?: EditShellMou
 }
 
 const registerSelectableBlock = (registry: WidgetRegistry) => {
-    registry.registerWidget((node) => node['x-widget'] === 'demo-editor', SelectableDemoBlock);
+    registry.registerWidget('demo-editor', SelectableDemoBlock);
 };
 
 const awaitCanvas: Story['play'] = async ({ canvasElement }) => {

@@ -47,7 +47,7 @@ function CellTextWidget({
 
 function boundRegistry(): WidgetRegistry {
     const registry = createWidgetRegistry();
-    registry.registerWidget((s) => s['x-widget'] === 'cell-text', CellTextWidget);
+    registry.registerWidget('cell-text', CellTextWidget);
     return registry;
 }
 

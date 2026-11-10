@@ -468,5 +468,5 @@ function DemoEditorWidget({ record, readOnly, editShellMount }: DemoEditorProps)
 /** Register the demo heavyweight editor under a widget name a WidgetShell resolves. */
 export function registerDemoEditor(name = 'demo-editor') {
     return (registry: WidgetRegistry) =>
-        registry.registerWidget((s) => s['x-widget'] === name, DemoEditorWidget);
+        registry.registerWidget(name, DemoEditorWidget);
 }
