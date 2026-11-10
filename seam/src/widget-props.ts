@@ -130,7 +130,15 @@ export function widgetProps(input: WidgetMountInput): WidgetProps {
     // `ui:enumNames` unless the caller set its own, and the widget receives the lifted uiSchema.
     const uiSchema = liftEnumNames(schema as SchemaNode, input.uiSchema ?? {}) as UiSchema;
     const enumOptions = choicesFor(schema, uiSchema, registry);
-    const options = { ...input.options, ...(enumOptions ? { enumOptions } : {}) };
+    const readonly = input.readonly ?? true;
+    const disabled = input.disabled ?? false;
+    const options = {
+        ...input.options,
+        ...(enumOptions ? { enumOptions } : {}),
+        // A locked widget offers no action that writes. RJSF's alt-date widgets draw their Now and Clear buttons
+        // whatever `readonly` says, and hide them only through these two options of their own.
+        ...(readonly || disabled ? { hideNowButton: true, hideClearButton: true } : {}),
+    };
 
     return {
         id,
@@ -142,8 +150,8 @@ export function widgetProps(input: WidgetMountInput): WidgetProps {
         options,
         label: input.label ?? fieldLabel(name, schema, uiSchema) ?? '',
         hideLabel: true,
-        readonly: input.readonly ?? true,
-        disabled: input.disabled ?? false,
+        readonly,
+        disabled,
         required: input.required ?? false,
         autofocus: input.autofocus ?? false,
         placeholder: input.placeholder ?? '',

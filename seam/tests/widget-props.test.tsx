@@ -66,9 +66,13 @@ const PRIMITIVE_CASES: Array<[name: string, schema: SchemaNode, value: unknown, 
     ['updown', { type: 'integer' }, 7, '7'],
     ['range', { type: 'number', minimum: 0, maximum: 10 }, 4, '4'],
     ['checkbox', { type: 'boolean', title: 'Active' }, true, 'true'],
+    ['date-time', { type: 'string', format: 'date-time' }, '2026-11-10T12:00:00.000Z', '2026-11-10'],
+    ['datetime', { type: 'string', format: 'date-time' }, '2026-11-10T12:00:00.000Z', '2026-11-10'],
+    ['alt-date', { type: 'string', format: 'date' }, '2026-11-10', '2026'],
+    ['alt-datetime', { type: 'string', format: 'date-time' }, '2026-11-10T12:00:00.000Z', '2026'],
 ];
 // RJSF routes these only on arrays or files; outside a form they are excluded by name (ruling 04 §4).
-const EXCLUDED = ['checkboxes', 'files', 'file', 'data-url', 'alt-date', 'alt-datetime', 'datetime', 'date-time'];
+const EXCLUDED = ['checkboxes', 'files', 'file', 'data-url'];
 
 /** Every value a rendered widget shows: input values, selected or checked controls, and text. */
 function shownValues(container: HTMLElement): string[] {
