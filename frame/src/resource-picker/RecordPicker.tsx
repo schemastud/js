@@ -34,21 +34,19 @@ import { ListShell } from '../ListShell';
 
 // The picker's resource is a runtime key, so it mounts the list untyped, cast once here (ruling 03).
 const UntypedListShell = ListShell as unknown as ComponentType<ListShellPropsOf<string>>;
-import { useRowList } from '../data';
 import { ShadcnTable, shadcnListSlots } from '../shadcn/list-slots';
 import type { ContextManifest } from '../contexts';
-import type { FrameColumn, FrameInjection, ListShellPropsOf, ResourcePage, Row } from '../types';
+import type { FrameColumn, FrameInjection, ListShellPropsOf, Row } from '../types';
+import { useListShellOf } from '../useListShell';
 import { resolveRecordPlacement, type RecordPlacement, type ResourcePickerDensity } from './placement';
+import { useListSelectionOf } from './useListSelection';
 import {
     EMPTY_SELECTION,
-    followFilters,
     isEmptySelection,
     isPicked,
     pageState,
     selectAllMatching,
-    selectionCount,
     selectionToSearch,
-    setPagePicked,
     togglePick,
     type ResourceSelectMode,
     type ResourceSelection,
@@ -313,35 +311,30 @@ interface BodyProps {
     onCount?: (count: number | null) => void;
 }
 
-function filterKeyOf(filter: Record<string, string>): string {
-    return JSON.stringify(Object.entries(filter).filter(([, v]) => v !== '').sort());
-}
-
 function SelectionBar({
     select,
     selection,
     onChange,
     noun,
-    rows,
     total,
-    liveExcluded,
-    filterValues,
-    sort,
+    count,
+    exact,
+    canSelectAllMatching,
+    onSelectAllMatching,
     isLoading,
     isError,
     retry,
     describeFilter,
     disabled,
-    address,
     allowSet,
 }: Pick<BodyProps, 'select' | 'selection' | 'onChange' | 'noun'> & {
-    address: { collection: string | null; filterVariant: string | null };
     allowSet: boolean;
-    rows: Row[];
     total: number | null;
-    liveExcluded: number;
-    filterValues: Record<string, string>;
-    sort: string | null;
+    /** The list selection's count and exactness (`useListSelection`). */
+    count: number | null;
+    exact: boolean;
+    canSelectAllMatching: boolean;
+    onSelectAllMatching: () => void;
     isLoading: boolean;
     isError: boolean;
     retry: () => void;
@@ -350,7 +343,6 @@ function SelectionBar({
 }) {
     const [undo, setUndo] = useState<ResourceSelection | null>(null);
     const isSet = selection.mode === 'set';
-    const { count, exact } = selectionCount(selection, total, liveExcluded);
     const n = count ?? 0;
     const plural = (k: number) => (k === 1 ? noun[0] : noun[1]);
 
@@ -435,7 +427,7 @@ function SelectionBar({
                     </span>
                 )}
             </span>
-            {allowSet && select !== 'single' && !isSet && total !== null && total > rows.length ? (
+            {allowSet && canSelectAllMatching && total !== null ? (
                 <Button
                     type="button"
                     variant="outline"
@@ -443,7 +435,7 @@ function SelectionBar({
                     disabled={disabled}
                     onClick={() => {
                         setUndo(null);
-                        onChange(selectAllMatching(filterValues, sort, address));
+                        onSelectAllMatching();
                     }}
                 >
                     Select all {fmt(total)} matching
@@ -512,76 +504,40 @@ function Tray({
 /** Must render INSIDE a PickerScope: it reads the picker's own URL state through facets. */
 function BrowseBody(body: BodyProps) {
     const { props, select, selection, onChange, labels, manifest, noun, valueField, labelField } = body;
-    // The SAME effective query ListShell builds (ListShell.tsx: the selected Collection, defaulting to
-    // the first offered, threaded into the filter schema and the list request), so the count and the
-    // serialized set describe exactly the rows on screen.
-    const { useUrlState } = useFrameInjection();
-    const [urlParams] = useUrlState();
-    const collections = manifest?.collections ?? [];
-    const requested = urlParams.get('collection');
-    const collection = collections.find((c) => c.stem === requested)?.stem ?? collections[0]?.stem;
-    const filters = (useListFilters as (resource: string, collection?: string) => ReturnType<typeof useListFilters>)(
-        props.resource,
-        collection,
+    const columns = useMemo(
+        () => pickColumns(manifest, labelField, select, props.columns),
+        [manifest, labelField, select, props.columns],
     );
-    const requestParams = collection ? { ...filters.requestParams, collection } : filters.requestParams;
-    const page = useRowList(props.resource, requestParams);
-    const data = page.data as ResourcePage<Row> | undefined;
-    const rows: Row[] = data?.data ?? [];
-    const total = data && 'total' in data ? data.total : null;
-    const address = { collection: collection ?? null, filterVariant: filters.filterVariant };
-    const filterKey = `${filterKeyOf(filters.filterValues)}|${collection ?? ''}|${filters.filterVariant ?? ''}`;
-
-    // Which ids have been SEEN matching each filter — so a set subtracts only exclusions known to
-    // still match, and says "up to" while any are unverified.
-    const seen = useRef(new Map<string, Set<string>>());
-    if (rows.length > 0 && !page.isPlaceholderData) {
-        const bucket = seen.current.get(filterKey) ?? new Set<string>();
-        rows.forEach((r) => bucket.add(idOf(r, valueField)));
-        seen.current.set(filterKey, bucket);
-    }
+    const shellManifest = useMemo(() => pickerManifest(manifest), [manifest]);
+    // The list's behaviour, from the same options the ListShell below renders: one request (the selected
+    // collection, the filters, the page), so the count and the serialized set describe exactly the rows on screen.
+    const list = useListShellOf({ resource: props.resource, manifest: shellManifest, columns });
+    const pick = useListSelectionOf(list, { value: selection, onChange, select, idField: valueField });
+    const rows = list.rows as Row[];
     rows.forEach((r) => labels.set(idOf(r, valueField), String(r[labelField] ?? idOf(r, valueField))));
-    const liveExcluded =
-        selection.mode === 'set'
-            ? selection.exclude.filter((id) => seen.current.get(filterKey)?.has(id)).length
-            : 0;
 
-    const named = selectionCount(selection, total, liveExcluded).count;
     useEffect(() => {
-        body.onCount?.(named);
+        body.onCount?.(pick.count);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [named]);
-
-    // A set FOLLOWS the facets, keeping its exclusions.
-    useEffect(() => {
-        const next = followFilters(selection, filters.filterValues, filters.sort, address);
-        if (next !== selection) onChange(next);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filterKey, filters.sort]);
+    }, [pick.count]);
 
     const onToggle = useCallback(
         (row: Row) => {
             if (props.disabled) return;
             const id = idOf(row, valueField);
             labels.set(id, String(row[labelField] ?? id));
-            onChange(togglePick(selection, id, select));
+            pick.toggle(row);
         },
-        [props.disabled, valueField, labelField, labels, onChange, selection, select],
+        [props.disabled, valueField, labelField, labels, pick],
     );
     const onPage = useCallback(
-        (pageRows: Row[], picked: boolean) => {
+        (_pageRows: Row[], picked: boolean) => {
             if (props.disabled) return;
-            const ids = pageRows.map((r) => idOf(r, valueField));
-            onChange(setPagePicked(selection, ids, picked));
+            pick.setPage(picked);
         },
-        [props.disabled, valueField, onChange, selection],
+        [props.disabled, pick],
     );
-    const columns = useMemo(
-        () => pickColumns(manifest, labelField, select, props.columns),
-        [manifest, labelField, select, props.columns],
-    );
-    const shellManifest = useMemo(() => pickerManifest(manifest), [manifest]);
-    const describeFilter = describeFilters(filters.filterValues, filters.schema);
+    const describeFilter = describeFilters(list.filters.filterValues, list.filters.schema);
 
     const ctx: PickContextValue = {
         select,
@@ -602,17 +558,16 @@ function BrowseBody(body: BodyProps) {
                     selection={selection}
                     onChange={onChange}
                     noun={noun}
-                    rows={rows}
-                    total={total}
-                    liveExcluded={liveExcluded}
-                    filterValues={filters.filterValues}
-                    sort={filters.sort}
-                    isLoading={page.isLoading}
-                    isError={page.isError}
-                    retry={() => void page.refetch()}
+                    total={list.total}
+                    count={pick.count}
+                    exact={pick.exact}
+                    canSelectAllMatching={pick.canSelectAllMatching}
+                    onSelectAllMatching={pick.selectAllMatching}
+                    isLoading={list.status === 'loading'}
+                    isError={list.status === 'error'}
+                    retry={list.retry}
                     describeFilter={describeFilter}
                     disabled={props.disabled}
-                    address={address}
                     allowSet={select === 'set' || props.allowSet !== false}
                 />
                 <Tray selection={selection} onChange={onChange} labels={labels} select={select} noun={noun} disabled={props.disabled} />

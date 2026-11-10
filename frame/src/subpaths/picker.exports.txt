@@ -5,6 +5,8 @@ type IdsSelection
 value KIND_PLACEMENTS
 value KIND_VARIANT_FOR
 type KindPlacement
+type ListSelection
+type ListSelectionOptions
 value RECORD_PLACEMENTS
 type RecordPlacement
 type ResolvedKindPlacement
@@ -44,3 +46,4 @@ value selectionToSearch
 value selectionToValue
 value setPagePicked
 value togglePick
+value useListSelection

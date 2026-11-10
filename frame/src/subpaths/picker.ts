@@ -56,3 +56,9 @@ export {
     type ResourceSelection,
     type SetSelection,
 } from '../resource-picker/selection';
+// The selection hook over `useListShell`'s result (ruling 02 §6, slice 12; ticket 41). The record picker renders it.
+export {
+    useListSelection,
+    type ListSelection,
+    type ListSelectionOptions,
+} from '../resource-picker/useListSelection';

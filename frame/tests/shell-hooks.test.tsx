@@ -6,8 +6,9 @@ import { useEditShell, useListShell, useResourceAction } from '../src';
 import { KNOWN_CONTEXTS } from '../src/contexts';
 import { createFrameKit } from '../src/kit';
 import { ListShell } from '../src/ListShell';
+import { useListSelection } from '../src/subpaths/picker';
 import { createMemoryTransport } from '../src/testing';
-import type { FrameManifest, ResourceActionDefinition, Row } from '../src/types';
+import type { FrameManifest, ResourceActionDefinition, ResourcePage, Row } from '../src/types';
 
 afterEach(cleanup);
 
@@ -77,6 +78,164 @@ describe('useListShell', () => {
 
         expect(shell).toEqual([['Ada Lovelace', 'Grace Hopper'], ['Katherine Johnson']]);
         expect(hook).toEqual(shell);
+    });
+});
+
+/** A custom table that selects (ruling 02 slice 12): `useListSelection` beside `useListShell`, its own markup. */
+function SelectingList() {
+    const list = useListShell({ resource: 'members' });
+    const selection = useListSelection(list);
+    const page = list.pagination.props;
+    if (list.status === 'loading') return <p>Loading</p>;
+    return (
+        <div>
+            <ul>
+                {list.rows.map((row) => (
+                    <li key={String(row.id)}>
+                        <label>
+                            <input type="checkbox" checked={selection.isPicked(row)} onChange={() => selection.toggle(row)} />
+                            {String(row.name)}
+                        </label>
+                    </li>
+                ))}
+            </ul>
+            <button type="button" onClick={() => selection.setPage(selection.page !== 'all')}>
+                Tick page ({selection.page})
+            </button>
+            {page?.mode === 'cursor' && (
+                <button type="button" disabled={!page.hasNext} onClick={page.onNext}>
+                    Next
+                </button>
+            )}
+            <button type="button" onClick={selection.selectAllMatching}>
+                All matching
+            </button>
+            <button type="button" onClick={() => list.filters.onFilterChange('role', 'admin')}>
+                Admins only
+            </button>
+            <output data-testid="count">{selection.count ?? 'unknown'}</output>
+            <output data-testid="value">{JSON.stringify(selection.value)}</output>
+        </div>
+    );
+}
+
+describe('useListSelection', () => {
+    it('a custom list ticks a row, ticks the page, pages forward and still counts; "all matching" follows the filters', async () => {
+        const frame = createFrameKit({ transport, urlState: 'memory' });
+        render(
+            <frame.Provider>
+                <SelectingList />
+            </frame.Provider>,
+        );
+        const count = () => screen.getByTestId('count').textContent;
+        const value = () => JSON.parse(screen.getByTestId('value').textContent ?? 'null');
+
+        // One row, then the whole page.
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Ada Lovelace' }));
+        expect(count()).toBe('1');
+        expect(screen.getByRole('button', { name: 'Tick page (some)' })).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: 'Tick page (some)' }));
+        expect(count()).toBe('2');
+        expect(value()).toEqual({ mode: 'ids', ids: ['1', '2'] });
+
+        // Page forward: the picks from page one are kept and still counted; this page starts unticked.
+        fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+        fireEvent.click(await screen.findByRole('checkbox', { name: 'Katherine Johnson' }));
+        expect(count()).toBe('3');
+        expect(screen.getByRole('button', { name: 'Tick page (all)' })).toBeTruthy();
+
+        // "All matching" is a set over the list's facets, and it follows a filter change.
+        fireEvent.click(screen.getByRole('button', { name: 'All matching' }));
+        expect(value()).toMatchObject({ mode: 'set', filter: {}, exclude: [] });
+        fireEvent.click(screen.getByRole('button', { name: 'Admins only' }));
+        await waitFor(() => expect(value()).toMatchObject({ mode: 'set', filter: { role: 'admin' }, exclude: [] }));
+    });
+
+    /** A bare probe: the selection's calls as buttons, and its value, count and exactness as text. */
+    function SelectionProbe({ select }: { select?: 'single' | 'multi' }) {
+        const list = useListShell({ resource: 'members' });
+        const selection = useListSelection(list, { select });
+        if (list.status === 'loading') return <p>Loading</p>;
+        return (
+            <div>
+                {list.rows.map((row) => (
+                    <button key={String(row.id)} type="button" onClick={() => selection.toggle(row)}>
+                        Toggle {String(row.name)}
+                    </button>
+                ))}
+                <button type="button" onClick={() => selection.setPage(true)}>
+                    Tick page
+                </button>
+                <button type="button" onClick={selection.selectAllMatching}>
+                    All matching
+                </button>
+                <button type="button" onClick={() => list.filters.onFilterChange('role', 'admin')}>
+                    Admins only
+                </button>
+                <output data-testid="value">{JSON.stringify(selection.value)}</output>
+                <output data-testid="count">{String(selection.count)}</output>
+                <output data-testid="exact">{String(selection.exact)}</output>
+            </div>
+        );
+    }
+
+    it('in single mode, ticking the page and "all matching" do nothing: at most one id', async () => {
+        const frame = createFrameKit({ transport: createMemoryTransport({ rows: { members: MEMBERS } }), urlState: 'memory' });
+        render(
+            <frame.Provider>
+                <SelectionProbe select="single" />
+            </frame.Provider>,
+        );
+        const value = () => JSON.parse(screen.getByTestId('value').textContent ?? 'null');
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Tick page' }));
+        fireEvent.click(screen.getByRole('button', { name: 'All matching' }));
+        expect(value()).toEqual({ mode: 'ids', ids: [] });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Toggle Ada Lovelace' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Toggle Grace Hopper' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Tick page' }));
+        fireEvent.click(screen.getByRole('button', { name: 'All matching' }));
+        expect(value()).toEqual({ mode: 'ids', ids: ['2'] });
+    });
+
+    it('while the rows shown are the previous request\'s, count is null and exact false, until the current result arrives', async () => {
+        // Two filters with different totals; the filtered answer waits until the test releases it.
+        let release: () => void = () => {};
+        const transport = createMemoryTransport(
+            {},
+            {
+                list: async <Result,>(_resource: string, params: Record<string, string>) => {
+                    if (params['filter[role]'] === 'admin') {
+                        await new Promise<void>((resolve) => (release = resolve));
+                        return { data: [MEMBERS[0]], total: 1, page: 1, perPage: 2 } as unknown as ResourcePage<Result>;
+                    }
+                    return { data: MEMBERS, total: 5, page: 1, perPage: 2 } as unknown as ResourcePage<Result>;
+                },
+            },
+        );
+        const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, placeholderData: keepPreviousData } } });
+        const frame = createFrameKit({ transport, queryClient, urlState: 'memory' });
+        render(
+            <frame.Provider>
+                <SelectionProbe />
+            </frame.Provider>,
+        );
+        const count = () => screen.getByTestId('count').textContent;
+        const exact = () => screen.getByTestId('exact').textContent;
+
+        // "All matching" over five: the set's count is the total.
+        fireEvent.click(await screen.findByRole('button', { name: 'All matching' }));
+        expect([count(), exact()]).toEqual(['5', 'true']);
+
+        // The filter changes; the previous request's rows (and its total of five) stay on screen meanwhile.
+        fireEvent.click(screen.getByRole('button', { name: 'Admins only' }));
+        await waitFor(() => expect([count(), exact()]).toEqual(['null', 'false']));
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        expect([count(), exact()]).toEqual(['null', 'false']);
+
+        await act(async () => release());
+        await waitFor(() => expect([count(), exact()]).toEqual(['1', 'true']));
     });
 });
 
