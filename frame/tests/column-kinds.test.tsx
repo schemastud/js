@@ -3,6 +3,8 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry } from '@schemastud/seam';
+import { getDefaultRegistry } from '@rjsf/core';
+import type { WidgetProps } from '@rjsf/utils';
 import { FrameProvider, registerFrameWidgets } from '../src/context';
 import { ListShell } from '../src/ListShell';
 import { resolveColumns } from '../src/resolveColumns';
@@ -171,6 +173,42 @@ describe('resolveColumns — the declared kind becomes the cell', () => {
 
         expect(column.cell).toBeTypeOf('function');
         expect(column.field).toBe('commerce.plan');
+    });
+
+    it('a list column takes the widget contract: a stock RJSF widget gets id, registry and readonly, and badges gets the array (29)', () => {
+        // RJSF core's own TextWidget, registered for `list-column` under a name; the wrapper only records what reached it.
+        const { TextWidget } = getDefaultRegistry().widgets;
+        const seen: WidgetProps[] = [];
+        const Recorded = (props: WidgetProps) => {
+            seen.push(props);
+            return <TextWidget {...props} />;
+        };
+        const registry = createWidgetRegistry();
+        registerFrameWidgets(registry);
+        registry.registerWidget('plain', Recorded as never, undefined, { contexts: ['list-column'] });
+        const manifest = manifestOf({
+            conceptId: { 'list-column': { participates: true, sort: 1, widget: 'plain' } },
+            statuses: { 'list-column': { participates: true, sort: 2, widget: 'badges' } },
+        });
+
+        const [plain, badges] = resolveColumns('concepts', undefined, [], manifest, registry);
+        render(
+            <Harness>
+                <div data-cell="plain">{plain.cell?.(ROWS[0])}</div>
+                <div data-cell="badges">{badges.cell?.({ ...ROWS[0], statuses: ['awaiting_approval', 'approved'] })}</div>
+            </Harness>,
+        );
+
+        const props = seen.at(-1)!;
+        expect(typeof props.id).toBe('string');
+        expect(props.id.length).toBeGreaterThan(0);
+        expect(typeof props.registry.schemaUtils.retrieveSchema).toBe('function');
+        expect(props.readonly).toBe(true);
+        expect((document.querySelector('[data-cell="plain"] input') as HTMLInputElement).value).toBe('CPT-1');
+
+        const drawn = document.querySelectorAll('[data-cell="badges"] [data-variant]');
+        expect(drawn).toHaveLength(2);
+        expect([...drawn].map((b) => b.textContent)).toEqual(['Awaiting approval', 'Approved']);
     });
 
     it('frame registers exactly the five derived kinds for list-column — a sixth is a decision, not a typo', () => {
