@@ -2,7 +2,7 @@
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Node as PMNode } from '@tiptap/pm/model';
-import { BlockChromeFallback, createSkinRegistry } from '@schemastud/seam';
+import { BlockChromeFallback, createSkinRegistry } from '../src/react';
 import { GenericNodeView, resolveNodeViewComponents } from '../src/react/node-views';
 import type { NodeViewComponentProps } from '../src/react/node-views';
 import type { BlockdocManifest } from '../src/core';

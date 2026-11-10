@@ -84,7 +84,6 @@ export {
     FRAME_CONTEXT_KEYWORD,
     type ResolvedForContext,
 } from './resolveWidgetFor';
-export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';
 export { SchemaView, type SchemaViewProps } from './SchemaView';
 export {
     registerCardWidgets,

@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { BlockChromeFallback } from './block-chrome';
-import type { SchemaNode, SkinContext, SkinNode } from './types';
+import type { SchemaNode } from '@schemastud/seam';
+import type { SkinContext, SkinNode } from './skin-types';
 
 /**
  * Seam/BlockChromeFallback (component-seams ticket 17). The built-in fallback skin: when
@@ -20,7 +21,7 @@ import type { SchemaNode, SkinContext, SkinNode } from './types';
  * catalog defect (re-treating to tokens is ticket 32).
  */
 const meta = {
-    title: 'Seam/BlockChromeFallback',
+    title: 'Blockdoc/BlockChromeFallback',
     parameters: { layout: 'centered' },
 } satisfies Meta;
 

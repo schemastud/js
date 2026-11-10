@@ -25,11 +25,11 @@ export {
 } from './node-views';
 export type { NodeViewComponentProps, NodeViewRegistry, ResolvedNodeView } from './node-views';
 export { selectionForNodeId, selectionNodeId } from './selection';
-// SelectionChrome now lives in the medium-neutral seam socket; re-exported here
-// for blockdoc consumers that imported it from this entry.
-export { SelectionChrome } from '@schemastud/seam';
-export type { RemoteSelection, SelectionChromeProps } from '@schemastud/seam';
-// The skin socket the generic node-view composes (ED-06): re-exported so a
-// blockdoc consumer wires skins against one import.
-export { BlockChromeFallback, createSkinRegistry, defaultSkinRegistry, resolveSkin } from '@schemastud/seam';
-export type { SkinComponent, SkinContext, SkinNode, SkinRegistry } from '@schemastud/seam';
+// Selection chrome and the skin socket the generic node-view composes (ED-06) live here, beside the editor that
+// draws them (ruling 02 slice 7): one import for a blockdoc consumer that wires skins.
+export { SelectionChrome } from './selection-chrome';
+export type { RemoteSelection, SelectionChromeProps } from './selection-chrome';
+export { BlockChromeFallback } from './block-chrome';
+export { createSkinRegistry, defaultSkinRegistry, resolveSkin } from './skin-registry';
+export type { SkinComponent, SkinContext, SkinNode, SkinRegistry } from './skin-types';
+export { resolveSkinFor, type ResolvedSkin } from './resolveSkinFor';

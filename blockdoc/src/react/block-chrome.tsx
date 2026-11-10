@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { SkinContext, SkinNode } from './types';
+import type { SkinContext, SkinNode } from './skin-types';
 
 // The built-in fallback skin. When a node-type has no registered skin, the
 // registry resolves to this: a striped "resting card" that names the node-type,

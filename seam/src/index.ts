@@ -7,13 +7,6 @@ export {
     type FormIntentHandler,
 } from './intent-bus';
 export { createWidgetRegistry, defaultRegistry, registerWidget, resolveWidget } from './registry';
-export {
-    createSkinRegistry,
-    defaultSkinRegistry,
-    registerSkin,
-    resolveSkin,
-} from './skin-registry';
-export { BlockChromeFallback } from './block-chrome';
 export { ButtonGroupWidget } from './widgets/button-group';
 export { ComboboxWidget } from './widgets/combobox';
 export { StarRatingWidget } from './widgets/star-rating';
@@ -39,10 +32,6 @@ export type {
     ResolvedWidget,
     SchemaFetcher,
     SchemaNode,
-    SkinComponent,
-    SkinContext,
-    SkinNode,
-    SkinRegistry,
     WidgetConfig,
     WidgetRegistry,
     WidgetResolution,
@@ -51,5 +40,3 @@ export type {
 export { buildUiSchema, isCompositeNode, mergeUiSchema, type UiSchemaOptions } from './ui-schema';
 export { displayLabel, humanizeKey } from './display-label';
 export { createFormValidator, defaultValidator } from './validator';
-export { SelectionChrome } from './selection-chrome';
-export type { RemoteSelection, SelectionChromeProps } from './selection-chrome';

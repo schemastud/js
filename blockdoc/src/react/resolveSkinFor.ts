@@ -1,4 +1,5 @@
-import type { SchemaNode, SkinComponent, SkinRegistry } from '@schemastud/seam';
+import type { SchemaNode } from '@schemastud/seam';
+import type { SkinComponent, SkinRegistry } from './skin-types';
 
 // ED-12 — the **resting-skin face** of the shared layered binding primitive, the
 // sibling of resolveWidgetFor's edit-widget face (designed jointly, ADR-0082's

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { SelectionChrome } from '../src/selection-chrome';
+import { SelectionChrome } from '../src/react/selection-chrome';
 
 afterEach(() => {
     cleanup();

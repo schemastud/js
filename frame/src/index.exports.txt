@@ -140,7 +140,6 @@ type ResolveColumns
 type ResolvedForContext
 type ResolvedKindPlacement
 type ResolvedRecordPlacement
-type ResolvedSkin
 value ResourceActionBar
 type ResourceActionCall
 type ResourceActionDefinition
@@ -255,7 +254,6 @@ value resolveDashboardCard
 value resolveKindPlacement
 value resolveRecordPlacement
 value resolveRowActions
-value resolveSkinFor
 value resolveWidgetFor
 value resourceQueryKey
 value selectAllMatching

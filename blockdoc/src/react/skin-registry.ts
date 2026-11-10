@@ -1,5 +1,5 @@
 import { BlockChromeFallback } from './block-chrome';
-import type { SkinComponent, SkinRegistry } from './types';
+import type { SkinComponent, SkinRegistry } from './skin-types';
 
 /**
  * A peer of `createWidgetRegistry()` for **skins** — a node-type's resting look.
@@ -35,5 +35,4 @@ export function createSkinRegistry(fallback: SkinComponent = BlockChromeFallback
  * Extended by `registerSkin` calls; isolated from any `createSkinRegistry()`.
  */
 export const defaultSkinRegistry = createSkinRegistry();
-export const registerSkin = defaultSkinRegistry.registerSkin;
 export const resolveSkin = defaultSkinRegistry.resolveSkin;

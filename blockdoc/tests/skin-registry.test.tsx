@@ -1,8 +1,9 @@
+// @vitest-environment jsdom
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { BlockChromeFallback } from '../src/block-chrome';
-import { createSkinRegistry } from '../src/skin-registry';
-import type { SkinNode } from '../src/types';
+import { BlockChromeFallback } from '../src/react/block-chrome';
+import { createSkinRegistry } from '../src/react/skin-registry';
+import type { SkinNode } from '../src/react/skin-types';
 
 describe('skin registry', () => {
     it('resolves a registered skin by node-type', () => {

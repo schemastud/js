@@ -10,7 +10,7 @@ import {
     NODE_ID_ATTR,
 } from '../core';
 import type { BlockdocManifest, MarkManifestEntry, NodeManifestEntry } from '../core';
-import type { SkinRegistry } from '@schemastud/seam';
+import type { SkinRegistry } from './skin-types';
 import { resolveNodeViewComponents, tiptapNodeView } from './node-views';
 import type { NodeViewRegistry, ResolvedNodeView } from './node-views';
 

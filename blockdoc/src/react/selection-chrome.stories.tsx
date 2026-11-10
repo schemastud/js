@@ -19,7 +19,7 @@ import { SelectionChrome } from './selection-chrome';
  * hardcoded-hex note; re-treating to tokens is ticket 32).
  */
 const meta = {
-    title: 'Seam/SelectionChrome',
+    title: 'Blockdoc/SelectionChrome',
     parameters: { layout: 'centered' },
 } satisfies Meta;
 

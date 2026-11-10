@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BlockChromeFallback, createSkinRegistry } from '@schemastud/seam';
-import { resolveSkinFor } from '../src/resolveSkinFor';
+import { BlockChromeFallback, createSkinRegistry, resolveSkinFor } from '../src/react';
 
 const productSkin = () => null;
 const fancySkin = () => null;
