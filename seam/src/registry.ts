@@ -135,7 +135,7 @@ export function createWidgetRegistry(): WidgetRegistry {
                 widget: entry?.widget,
                 ...(config !== undefined ? { config } : {}),
                 ...(options !== undefined ? { options } : {}),
-                ...(declared !== undefined ? { bound: bound !== undefined } : {}),
+                ...(declared !== undefined ? { bound: bound !== undefined, name: declared } : {}),
             };
         };
 
@@ -157,19 +157,28 @@ export function createWidgetRegistry(): WidgetRegistry {
         return resolveEntry(schema, context).widget;
     }
 
+    /**
+     * Per name, its registrations in the order they win: every scoped one, latest first and shadowed
+     * ones included, then the latest unscoped one. An earlier unscoped one never answers, so it is
+     * not listed.
+     */
     function names(): RegisteredName[] {
-        const byName = new Map<string, Set<string> | null>();
-        for (const entry of entries) {
-            if (entry.name === undefined) continue;
-            const known = byName.get(entry.name);
-            if (entry.contexts === undefined || known === null) {
-                byName.set(entry.name, null);
-            } else {
-                byName.set(entry.name, new Set([...(known ?? []), ...entry.contexts]));
-            }
-        }
-        return [...byName]
-            .map(([name, contexts]) => ({ name, contexts: contexts === null ? null : [...contexts].sort() }))
+        const named = [...new Set(entries.flatMap((e) => (e.name === undefined ? [] : [e.name])))];
+        return named
+            .map((name) => {
+                const own = entries.filter((e) => e.name === name);
+                const answering = [
+                    ...own.filter((e) => e.contexts !== undefined),
+                    ...own.filter((e) => e.contexts === undefined).slice(0, 1),
+                ];
+                return {
+                    name,
+                    registrations: answering.map((e) => ({
+                        contexts: e.contexts ? [...e.contexts].sort() : null,
+                        widget: e.widget,
+                    })),
+                };
+            })
             .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     }
 

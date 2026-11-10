@@ -11,6 +11,7 @@ describe('registerWidget config argument', () => {
         expect(registry.resolveEntry({ 'x-widget': 'citation' })).toEqual({
             widget: 'citation-widget',
             bound: true,
+            name: 'citation',
         });
     });
 

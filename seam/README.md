@@ -11,7 +11,7 @@ Generally-useful additions over [react-jsonschema-form](https://rjsf-team.github
   node selects with `x-widget`, optionally scoped to contexts (a scoped registration beats an
   unscoped one); `registerWidget(predicate, widget)` infers a widget from the node and never binds
   a name. First match wins, later registrations take precedence, and `names()` lists every name
-  with its contexts.
+  with its registrations in the order they win.
 - **Form intent bus** — `createFormIntentBus()` is the medium-neutral channel a form emits edit
   intents on, decoupled from any host transport.
 - **Uniform `SelectionChrome`** — the grammar-blind selection/presence chrome primitive: it draws the

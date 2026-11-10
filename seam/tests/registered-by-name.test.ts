@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createWidgetRegistry } from '../src/registry';
 import { ButtonGroupWidget } from '../src/widgets/button-group';
+import { ComboboxWidget } from '../src/widgets/combobox';
+import { JsonField } from '../src/widgets/json';
 import { StarRatingWidget } from '../src/widgets/star-rating';
 
 /**
@@ -10,11 +12,19 @@ import { StarRatingWidget } from '../src/widgets/star-rating';
  * the resolver hands over the entry's config with the node's declared options merged over it.
  */
 describe('a fresh createWidgetRegistry()', () => {
-    it('lists its eight names, each bound in every context', () => {
+    it('lists its eight names, each with one unscoped registration', () => {
+        const builtins: Array<[string, unknown]> = [
+            ['button-group', ButtonGroupWidget],
+            ['combobox', ComboboxWidget],
+            ['file', 'file'],
+            ['json', JsonField],
+            ['radio', 'radio'],
+            ['select', 'select'],
+            ['star-rating', StarRatingWidget],
+            ['textarea', 'textarea'],
+        ];
         expect(createWidgetRegistry().names()).toEqual(
-            ['button-group', 'combobox', 'file', 'json', 'radio', 'select', 'star-rating', 'textarea'].map(
-                (name) => ({ name, contexts: null }),
-            ),
+            builtins.map(([name, widget]) => ({ name, registrations: [{ contexts: null, widget }] })),
         );
     });
 
@@ -23,6 +33,7 @@ describe('a fresh createWidgetRegistry()', () => {
         expect(registry.resolveEntry({ type: 'string', enum: ['a', 'b'], 'x-widget': 'button-group' })).toEqual({
             widget: ButtonGroupWidget,
             bound: true,
+            name: 'button-group',
         });
         expect(registry.resolveWidget({ type: 'integer', 'x-widget': 'star-rating' })).toBe(StarRatingWidget);
     });
@@ -43,15 +54,25 @@ describe('a fresh createWidgetRegistry()', () => {
         registry.registerWidget('date', 'list-date', undefined, { contexts: ['list-column'] });
         registry.registerWidget('date', 'form-date');
 
-        expect(registry.resolveEntry({ 'x-widget': 'date' }, 'list-column')).toEqual({ widget: 'list-date', bound: true });
-        expect(registry.resolveEntry({ 'x-widget': 'date' }, 'edit')).toEqual({ widget: 'form-date', bound: true });
-        expect(registry.resolveEntry({ 'x-widget': 'date' })).toEqual({ widget: 'form-date', bound: true });
+        expect(registry.resolveEntry({ 'x-widget': 'date' }, 'list-column')).toEqual({ widget: 'list-date', bound: true, name: 'date' });
+        expect(registry.resolveEntry({ 'x-widget': 'date' }, 'edit')).toEqual({ widget: 'form-date', bound: true, name: 'date' });
+        expect(registry.resolveEntry({ 'x-widget': 'date' })).toEqual({ widget: 'form-date', bound: true, name: 'date' });
 
         const scopedOnly = createWidgetRegistry();
         scopedOnly.registerWidget('badge', 'badge-cell', undefined, { contexts: ['list-column'] });
         expect(scopedOnly.resolveEntry({ 'x-widget': 'badge' }, 'detail').bound).toBe(false);
-        expect(scopedOnly.names().find((n) => n.name === 'badge')).toEqual({ name: 'badge', contexts: ['list-column'] });
-        expect(registry.names().find((n) => n.name === 'date')).toEqual({ name: 'date', contexts: null });
+        expect(scopedOnly.names().find((n) => n.name === 'badge')).toEqual({
+            name: 'badge',
+            registrations: [{ contexts: ['list-column'], widget: 'badge-cell' }],
+        });
+        // The list-column registration answers ahead of the unscoped one, as resolveEntry does.
+        expect(registry.names().find((n) => n.name === 'date')).toEqual({
+            name: 'date',
+            registrations: [
+                { contexts: ['list-column'], widget: 'list-date' },
+                { contexts: null, widget: 'form-date' },
+            ],
+        });
     });
 
     it('returns a node’s declared options merged over the entry’s config', () => {

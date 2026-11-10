@@ -27,7 +27,10 @@ export interface RegistryEntry {
     config?: WidgetConfig;
 }
 
-/** A resolution result: the widget plus the matched entry's computed config. */
+/**
+ * A resolution result: the widget, the matched entry's computed config, the merged options, and,
+ * when the node declares a name, that name and whether it is bound.
+ */
 export interface ResolvedWidget {
     widget: WidgetResolution;
     config?: Record<string, unknown>;
@@ -42,6 +45,8 @@ export interface ResolvedWidget {
      * registration never binds a name, even when it matched.
      */
     bound?: boolean;
+    /** The declared `x-widget` name `bound` describes; present exactly when `bound` is. */
+    name?: string;
 }
 
 /** How a name registration is scoped. */
@@ -53,11 +58,20 @@ export interface WidgetScope {
     contexts?: readonly string[];
 }
 
-/** One name a registry binds, and where. */
+/** One registration of a name, as it answers. */
+export interface NameRegistration {
+    /** `null` when unscoped (every context); else the contexts it was registered for. */
+    contexts: readonly string[] | null;
+    widget: WidgetResolution;
+}
+
+/**
+ * One name a registry binds: its registrations in the order they win (every scoped one, latest
+ * first, then the latest unscoped one).
+ */
 export interface RegisteredName {
     name: string;
-    /** `null` when the name is registered unscoped (bound in every context); else the contexts it is scoped to. */
-    contexts: readonly string[] | null;
+    registrations: readonly NameRegistration[];
 }
 
 export interface WidgetRegistry {
@@ -83,7 +97,7 @@ export interface WidgetRegistry {
      * it only unscoped ones bind.
      */
     resolveEntry: (schema: SchemaNode, context?: string) => ResolvedWidget;
-    /** Every name registered by name, sorted, with the contexts it is bound in. */
+    /** Every name registered by name, sorted, with its registrations in the order they win. */
     names: () => RegisteredName[];
 }
 

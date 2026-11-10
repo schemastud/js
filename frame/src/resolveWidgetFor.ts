@@ -39,6 +39,7 @@ export const isWidgetComponent = (
 ): widget is Exclude<ResolvedWidget['widget'], string | undefined> =>
     widget !== undefined && typeof widget !== 'string';
 
+/** `name` (from `ResolvedWidget`) is the per-context name: the entry's, else the lender's, else the node's own. */
 export interface ResolvedForContext extends ResolvedWidget {
     /** Whether the node participates in this context at all. */
     participates: boolean;

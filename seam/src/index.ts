@@ -24,6 +24,7 @@ export { GroupedObjectFieldTemplate } from './GroupedObjectFieldTemplate';
 export type {
     KeywordVocabulary,
     KeywordVocabularyConfig,
+    NameRegistration,
     RegisteredName,
     RegistryEntry,
     ResolvedWidget,
