@@ -13,19 +13,9 @@
 //   • <MockMount> + makeMount — a static EditShellMountValue, for the mount-driven
 //     edit panes (StatusBar / SavePill / Inspector / PalettePane / MissingSlots).
 // =============================================================================
-import { useMemo, type ComponentType, type ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import {
-    Badge,
-    Button,
-    Input,
-    Label,
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-    SimpleSelect,
-    cn,
-} from '@schemastud/ui';
+import { defaultPrimitives } from './primitives';
 import {
     WidgetRegistryContext,
     createWidgetRegistry,
@@ -49,15 +39,8 @@ import type {
 } from './types';
 
 // ── Primitives ────────────────────────────────────────────────────────────────
-// The workbench binding of frame's `FramePrimitives` seam — the @schemastud/ui
-// foundation set (the exact primitives the app binds in ui/src/frame/primitives.tsx),
-// plus two workbench-local chrome primitives so the shells read as panels inline in a
-// story (the app passes these through to its own Sheet/table chrome).
-
-/** No standalone Skeleton primitive ships from foundation; a token-skinned shimmer covers the loading slot. */
-function Skeleton({ className }: { className?: string }) {
-    return <div className={cn('animate-pulse rounded-md bg-muted', className ?? 'h-24 w-full')} />;
-}
+// The workbench binding of frame's `FramePrimitives` seam: frame's default bundle, with the
+// two overlays swapped for an inline panel so the shells read as panels in a story.
 
 /** A bordered inline panel so EditShell's DefaultContainer reads as a docked side-panel in the catalog. */
 function InlinePanel({
@@ -88,20 +71,8 @@ function InlinePanel({
     );
 }
 
-/** A minimal inline table so the ListShell default renders without host chrome. */
-const PlainTable: ComponentType<any> = ({ children }: { children?: ReactNode }) => <>{children}</>;
-
 export const mockPrimitives: FramePrimitives = {
-    Button,
-    Input,
-    Label,
-    Badge,
-    Popover,
-    PopoverTrigger,
-    PopoverContent,
-    SimpleSelect,
-    Skeleton,
-    Table: PlainTable,
+    ...defaultPrimitives,
     SidePanel: InlinePanel,
     Dialog: InlinePanel,
 };

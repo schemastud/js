@@ -148,7 +148,11 @@ export interface FrameNotice {
 // supplies its design system; frame renders resource-blind through it.
 // -----------------------------------------------------------------------------
 export interface FramePrimitives extends FacetsPrimitives {
-    Table: ComponentType<any>;
+    /**
+     * No shell reads it: the list's table is the `Table` slot. Optional, and deleted from this
+     * type by the change that removes the last bundle's `Table:` line (ruling 02, row 02-2).
+     */
+    Table?: ComponentType<any>;
     Skeleton: ComponentType<any>;
     SidePanel: ComponentType<any>;
     Dialog?: ComponentType<any>;

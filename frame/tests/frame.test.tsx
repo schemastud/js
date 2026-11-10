@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 afterEach(cleanup);
 import { FrameProvider } from '../src/context';
+import { defaultPrimitives } from '../src/primitives';
 import { ListShell } from '../src/ListShell';
 import { DefaultLoading } from '../src/slots/defaults';
 import { EditShell } from '../src/EditShell';
@@ -69,21 +70,17 @@ function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport 
     };
 }
 
-// Tagged primitive stubs so a test can prove the injected set (not a default) rendered.
+// Frame's default bundle with tagged stubs for the members a test inspects, so a test can prove
+// the injected member (not a default) rendered. Only the members that differ are set.
 const primitives: FramePrimitives = {
+    ...defaultPrimitives,
     Button: ({ children, ...p }: any) => (
         <button data-injected="Button" {...p}>
             {children}
         </button>
     ),
     Input: (p: any) => <input data-injected="Input" {...p} />,
-    Label: ({ children, ...p }: any) => <label {...p}>{children}</label>,
-    Popover: ({ children }: any) => <div>{children}</div>,
-    PopoverTrigger: ({ children }: any) => <>{children}</>,
-    PopoverContent: ({ children }: any) => <div>{children}</div>,
     SimpleSelect: (p: any) => <select data-injected="SimpleSelect" {...p} />,
-    Badge: ({ children }: any) => <span>{children}</span>,
-    Table: ({ children }: any) => <div data-injected="Table">{children}</div>,
     Skeleton: (p: any) => <div data-injected="Skeleton" {...p} />,
     SidePanel: ({ children }: any) => <aside data-injected="SidePanel">{children}</aside>,
 };
