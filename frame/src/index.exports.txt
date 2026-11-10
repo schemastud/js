@@ -204,7 +204,6 @@ value createFormIntentBus
 value createFormResolver
 value createFrameHooks
 value createGuardRegistry
-value createMemoryUrlState
 value createMountDispatcher
 value createNoun
 value createResourceTransport

@@ -6,7 +6,8 @@ import { createWidgetRegistry } from '@schemastud/seam';
 import { FrameProvider } from '../src/context';
 import { EditShell } from '../src/EditShell';
 import { ShadcnSaveBar } from '../src/shadcn/edit-slots';
-import { mockPrimitives, createMockTransport } from '../src/story-harness';
+import { mockPrimitives } from '../src/story-harness';
+import { createMemoryTransport } from '../src/testing';
 import { DefaultFormBody } from '../src/slots/defaults';
 import type { FormBodySlotProps, FrameInjection } from '../src/types';
 import schema from './fixtures/beam-schema-input.json';
@@ -21,7 +22,7 @@ function mount(
     shadcn: boolean,
     body?: ComponentType<FormBodySlotProps>,
 ) {
-    const transport = createMockTransport({ formSchema: { schemas: schema } });
+    const transport = createMemoryTransport({ formSchema: { schemas: schema } });
     const save = vi.fn(async (_resource, data) => Response.json({ id: 'new-schema', ...data }).json());
     const injection: FrameInjection = {
         transport: { ...transport, create: save },

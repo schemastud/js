@@ -4,7 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createWidgetRegistry } from '@schemastud/seam';
 import { FrameProvider } from '../src/context';
 import { EditShell } from '../src/EditShell';
-import { mockPrimitives, createMockTransport } from '../src/story-harness';
+import { mockPrimitives } from '../src/story-harness';
+import { createMemoryTransport } from '../src/testing';
 import type { FrameInjection } from '../src/types';
 import schema from './fixtures/beam-ux-entry-edit-schema.json';
 
@@ -33,7 +34,7 @@ const record = {
 };
 
 function mountEdit(form: 'bare' | 'enriched') {
-    const transport = createMockTransport({
+    const transport = createMemoryTransport({
         formSchema: { 'beam-ux-entry': schema },
         rows: { 'beam-ux-entry': [record] },
     });

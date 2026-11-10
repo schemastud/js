@@ -14,7 +14,8 @@ import { FrameProvider } from '../src/context';
 import { useListPagination } from '../src/useListPagination';
 import type { ReactNode } from 'react';
 import { ListShell } from '../src/ListShell';
-import { createMockTransport, mockPrimitives } from '../src/story-harness';
+import { mockPrimitives } from '../src/story-harness';
+import { createMemoryTransport } from '../src/testing';
 import { createWidgetRegistry } from '@schemastud/seam';
 import { ShadcnPagination } from '../src/shadcn/list-slots';
 import type { FrameTransport } from '../src/types';
@@ -54,7 +55,7 @@ function mount(
             nextCursor: 'second+/=',
         };
     });
-    const transport = { ...createMockTransport(), list };
+    const transport = { ...createMemoryTransport(), list };
     const client = new QueryClient({
         defaultOptions: {
             queries: {
@@ -149,7 +150,7 @@ it('replays browser Back through the shared URL state', async () => {
 
 it('resets size and scopes known predecessors by resource, authority and nonpagination query', () => {
     window.history.replaceState(null, '', '/events?per_page=25');
-    let transport = createMockTransport();
+    let transport = createMemoryTransport();
     const wrapper = ({ children }: { children: ReactNode }) => (
         <FrameProvider
             value={{
@@ -189,7 +190,7 @@ it('resets size and scopes known predecessors by resource, authority and nonpagi
     expect(props().hasPrevious).toBe(false);
     act(() => props().onNext());
     expect(props().hasPrevious).toBe(true);
-    transport = createMockTransport();
+    transport = createMemoryTransport();
     hook.rerender({ resource: 'other', nextCursor: 'fourth' });
     expect(props().hasPrevious).toBe(false);
     act(() => props().onNext());

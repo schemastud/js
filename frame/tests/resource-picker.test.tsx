@@ -18,7 +18,7 @@ import {
     type ResourceSelection,
 } from '../src/resource-picker/selection';
 import { resolveKindPlacement, resolveRecordPlacement } from '../src/resource-picker/placement';
-import { createMemoryUrlState } from '../src/resource-picker/RecordPicker';
+import { createMemoryUrlState } from '../src/testing';
 import { PICKER_KINDS, PICKER_MANIFESTS, PICKER_SECTIONS, createPickerTransport } from '../src/resource-picker/fixtures';
 import { mockPrimitives } from '../src/story-harness';
 import type { FrameInjection, FrameTransport } from '../src/types';

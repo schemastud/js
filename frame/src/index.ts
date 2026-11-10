@@ -134,11 +134,7 @@ export {
     type ResourceKindIcon,
     type ResourceKindScopeInput,
 } from './resource-picker/KindPicker';
-export {
-    ResourceRecordPicker,
-    createMemoryUrlState,
-    type ResourceRecordPickerProps,
-} from './resource-picker/RecordPicker';
+export { ResourceRecordPicker, type ResourceRecordPickerProps } from './resource-picker/RecordPicker';
 export {
     KIND_PLACEMENTS,
     RECORD_PLACEMENTS,

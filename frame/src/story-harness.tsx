@@ -13,7 +13,7 @@
 //   • <MockMount> + makeMount — a static EditShellMountValue, for the mount-driven
 //     edit panes (StatusBar / SavePill / Inspector / PalettePane / MissingSlots).
 // =============================================================================
-import { useMemo, useSyncExternalStore, type ComponentType, type ReactNode } from 'react';
+import { useMemo, type ComponentType, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
     Badge,
@@ -33,7 +33,7 @@ import {
     type WidgetRegistry,
 } from '@schemastud/seam';
 import { FrameProvider } from './context';
-import type { UseUrlState } from '@schemastud/facets';
+import { createMemoryTransport, createMemoryUrlState, type MemoryTransportFixtures } from './testing';
 import {
     EditShellMountProvider,
     type Conformance,
@@ -45,7 +45,6 @@ import type {
     FrameInjection,
     FramePrimitives,
     FrameTransport,
-    ResourcePage,
     Row,
 } from './types';
 
@@ -108,25 +107,11 @@ export const mockPrimitives: FramePrimitives = {
 };
 
 // ── Transport fixtures ──────────────────────────────────────────────────────────
-export interface TransportFixtures {
-    /** Rows returned by `list` / `get`, keyed by resource. */
-    rows?: Record<string, Row[]>;
-    /** The form schema returned by `getFormSchema`, keyed by resource. */
-    formSchema?: Record<string, SchemaNode>;
-    /** Force `list` to resolve empty (the ListShell Empty state). */
-    empty?: boolean;
-    /** Never-resolving promises so the shell parks on its Loading state (deterministic). */
-    loading?: boolean;
-    /** Deterministic cursor pages, keyed by the request token (empty string is the first page). */
-    cursorPages?: Record<string, { data: Row[]; perPage: number; nextCursor: string | null }>;
-    initialQuery?: string;
-    /** A declared action's form schema, keyed by action key (ADR-0005). */
-    actionSchema?: Record<string, SchemaNode>;
-    /** The message an action's request answers with. */
-    actionMessage?: string;
-    /** Make every action's request fail with this message. */
-    actionRefusal?: string;
-}
+/**
+ * A story's fixtures: the memory transport's (`@schemastud/frame/testing`), over the demo
+ * members, form schema and action schema below, plus the URL the story opens on.
+ */
+export type TransportFixtures = MemoryTransportFixtures & { initialQuery?: string };
 
 const DEMO_MEMBERS: Row[] = [
     {
@@ -170,72 +155,14 @@ const DEMO_FORM_SCHEMA: SchemaNode = {
     },
 } as SchemaNode;
 
-const NEVER = new Promise<never>(() => {});
-
-/** An in-memory `FrameTransport` — resolves list/get/schema from fixtures; save/remove echo. */
-export function createMockTransport(fixtures: TransportFixtures = {}): FrameTransport {
-    const rowsFor = (resource: string): Row[] =>
-        fixtures.empty ? [] : (fixtures.rows?.[resource] ?? DEMO_MEMBERS);
-
-    return {
-        // CRUD
-        list: <Result,>(
-            resource: string,
-            params: Record<string, string>,
-        ): Promise<ResourcePage<Result>> => {
-            if (fixtures.loading) return NEVER;
-            if (fixtures.cursorPages)
-                return Response.json(fixtures.cursorPages[params.cursor ?? '']).json();
-            const data = rowsFor(resource);
-            return Response.json({
-                data,
-                total: data.length,
-                page: 1,
-                perPage: 25,
-            }).json();
-        },
-        summary: async () => {
-            throw new Error('No summary fixture was configured.');
-        },
-        get: (resource, id) => {
-            if (fixtures.loading) return NEVER;
-            const row = rowsFor(resource).find((r) => String(r.id) === String(id));
-            return Promise.resolve(row ?? {});
-        },
-        getFormSchema: (resource) => {
-            if (fixtures.loading) return NEVER;
-            return Promise.resolve(fixtures.formSchema?.[resource] ?? DEMO_FORM_SCHEMA);
-        },
-        create: async (_resource: string, data: unknown) =>
-            Response.json({ id: 'new', ...(data as object) }).json(),
-        save: (_resource, id, data) => Promise.resolve({ id, ...(data as Row) }),
-        remove: () => Promise.resolve(),
-        // Facets seam — minimal valid shapes so the filter bar mounts without error.
-        getFilterSchema: () => Promise.resolve({ properties: {} }),
-        getFilterVariants: (resource) => Promise.resolve({ resource, variants: [] }),
-        getFilterOptions: () => Promise.resolve([]),
-        getSavedFilters: () => Promise.resolve([]),
-        saveFilter: (resource, payload) =>
-            Promise.resolve({
-                id: 'saved-1',
-                name: payload.name,
-                resource,
-                queryParameters: payload.queryParameters,
-                visibility: 'private',
-                isDefault: false,
-            }),
-        deleteSavedFilter: () => Promise.resolve(),
-        // Declared actions (ADR-0005): a form schema per action key, and an invoke that answers with the
-        // fixture's message — or refuses, when the fixture says so.
-        getActionSchema: (_resource, action) => {
-            if (fixtures.loading) return NEVER;
-            return Promise.resolve(fixtures.actionSchema?.[action] ?? DEMO_ACTION_SCHEMA);
-        },
-        invoke: (action) => {
-            if (fixtures.actionRefusal) return Promise.reject(new Error(fixtures.actionRefusal));
-            return Promise.resolve({ message: fixtures.actionMessage ?? `${action.label} done.`, data: null });
-        },
-    };
+/** The demo transport: the memory transport over the demo members, schema and action, unless a fixture names its own. */
+function demoTransport(fixtures: TransportFixtures = {}): FrameTransport {
+    return createMemoryTransport({
+        ...fixtures,
+        rows: { '*': DEMO_MEMBERS, ...fixtures.rows },
+        formSchema: { '*': DEMO_FORM_SCHEMA, ...fixtures.formSchema },
+        actionSchema: { '*': DEMO_ACTION_SCHEMA, ...fixtures.actionSchema },
+    });
 }
 
 const DEMO_ACTION_SCHEMA: SchemaNode = {
@@ -260,29 +187,6 @@ function makeQueryClient(): QueryClient {
             queries: { retry: false, refetchOnWindowFocus: false, gcTime: Infinity },
         },
     });
-}
-
-/** One store per provider, shared by independent facets and pagination hook consumers. */
-function createMemoryUrlState(initial = ''): UseUrlState {
-    let current = new URLSearchParams(initial);
-    const listeners = new Set<() => void>();
-    const snapshot = () => current;
-    const subscribe = (notify: () => void) => {
-        listeners.add(notify);
-        return () => {
-            listeners.delete(notify);
-        };
-    };
-    return function useMemoryUrlState() {
-        const params = useSyncExternalStore(subscribe, snapshot, snapshot);
-        return [
-            params,
-            (updater) => {
-                current = updater(new URLSearchParams(current));
-                listeners.forEach((notify) => notify());
-            },
-        ] as const;
-    };
 }
 
 export interface MockFrameProviderProps {
@@ -316,7 +220,7 @@ export function MockFrameProvider({
         const registry = createWidgetRegistry();
         registerWidgets?.(registry);
         return {
-            transport: createMockTransport(fixtures),
+            transport: demoTransport(fixtures),
             primitives: mockPrimitives,
             useUrlState: createMemoryUrlState(fixtures?.initialQuery),
             registry,

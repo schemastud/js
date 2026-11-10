@@ -6,7 +6,8 @@ import { DefaultSaveBar } from '../src/slots/defaults';
 import { createWidgetRegistry } from '@schemastud/seam';
 import type { ReactNode } from 'react';
 import { FrameProvider } from '../src/context';
-import { MockMount, createMockTransport, makeMount, mockPrimitives } from '../src/story-harness';
+import { MockMount, makeMount, mockPrimitives } from '../src/story-harness';
+import { createMemoryTransport } from '../src/testing';
 import type { FrameInjection } from '../src/types';
 
 afterEach(cleanup);
@@ -73,7 +74,7 @@ describe('SavePill (B1)', () => {
 
 function Frame({ children }: { children: ReactNode }) {
     const injection: FrameInjection = {
-        transport: createMockTransport({}),
+        transport: createMemoryTransport({}),
         primitives: mockPrimitives,
         registry: createWidgetRegistry(),
         schemaFetcher: async () => ({}),

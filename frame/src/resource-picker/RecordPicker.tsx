@@ -7,12 +7,12 @@ import {
     useMemo,
     useRef,
     useState,
-    useSyncExternalStore,
     type ComponentProps,
     type ReactNode,
 } from 'react';
 import { QueryClient, QueryClientContext, QueryClientProvider } from '@tanstack/react-query';
-import { useListFilters, type UseUrlState } from '@schemastud/facets';
+import { useListFilters } from '@schemastud/facets';
+import { createMemoryUrlState } from '../memoryUrlState';
 import {
     Button,
     Popover,
@@ -128,41 +128,11 @@ function nounFor(props: ResourceRecordPickerProps, manifest: ContextManifest | u
 
 /* ─────────────────────────────── scoped URL state ─────────────────────────────── */
 
-/**
- * In-memory URL state for ONE picker. ListShell, the facets bar and pagination all read and write
- * `useUrlState`; on a host page that is the page URL, which would mix the picker's `filter[…]` and
- * `page` into the host's own list (and the host's params into the picker's request — facets'
- * `requestParams` is every entry). A picker is a nested surface, so it gets its own.
- *
- * `fixed` params are ENFORCED, not seeded: they are re-applied after every write, so no facet
- * clear, saved view or vocabulary change can drop a reference field's scope. On a collision the
- * scope wins — a scoped field never browses records outside its scope.
- */
-export function createMemoryUrlState(initial = '', fixed: Record<string, string> = {}): UseUrlState {
-    const enforce = (params: URLSearchParams) => {
-        for (const [key, value] of Object.entries(fixed)) params.set(key, value);
-        return params;
-    };
-    let current = enforce(new URLSearchParams(initial));
-    const listeners = new Set<() => void>();
-    const snapshot = () => current;
-    const subscribe = (notify: () => void) => {
-        listeners.add(notify);
-        return () => {
-            listeners.delete(notify);
-        };
-    };
-    return function useMemoryUrlState() {
-        const params = useSyncExternalStore(subscribe, snapshot, snapshot);
-        return [
-            params,
-            (updater: (previous: URLSearchParams) => URLSearchParams) => {
-                current = enforce(updater(new URLSearchParams(current)));
-                listeners.forEach((notify) => notify());
-            },
-        ] as const;
-    };
-}
+// Each picker gets its own memory URL state (`createMemoryUrlState`): on a host page
+// `useUrlState` is the page URL, which would mix the picker's `filter[…]` and `page` into the
+// host's own list (and the host's params into the picker's request — facets' `requestParams` is
+// every entry). The reference field's scope rides in `fixed`, so a scoped field never browses
+// records outside its scope.
 
 /** A picker reads; it never offers New, Edit or Delete — nor declared actions, inline edits or cards. */
 function pickerManifest(manifest: ContextManifest | undefined): ContextManifest | undefined {

@@ -8,7 +8,7 @@ import { shadcnListSlots } from '../shadcn/list-slots';
 import { mockPrimitives } from '../story-harness';
 import type { FrameInjection } from '../types';
 import { ResourcePicker } from './ResourcePicker';
-import { createMemoryUrlState } from './RecordPicker';
+import { createMemoryUrlState } from '../memoryUrlState';
 import { EMPTY_SELECTION, type ResourceSelection } from './selection';
 import type { KindPlacement, RecordPlacement } from './placement';
 import { PICKER_KINDS, PICKER_MANIFESTS, PICKER_SECTIONS, createPickerTransport } from './fixtures';

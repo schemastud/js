@@ -4,11 +4,12 @@
 // and an empty list must render ONE pagination boundary, never the top+bottom pair.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FrameProvider } from '../src/context';
 import { ListShell } from '../src/ListShell';
 import { EditShell } from '../src/EditShell';
+import { createMemoryTransport, createMemoryUrlState } from '../src/testing';
 import type {
     FrameCan,
     FrameInjection,
@@ -28,30 +29,10 @@ const ROWS: Row[] = [
 ];
 
 function makeTransport(overrides: Partial<FrameTransport> = {}): FrameTransport {
-    return {
-        getFilterSchema: vi.fn(async () => ({ properties: {} })),
-        getFilterVariants: vi.fn(async (resource) => ({ resource, variants: [] })),
-        getFilterOptions: vi.fn(async () => []),
-        getSavedFilters: vi.fn(async () => []),
-        saveFilter: vi.fn(async () => ({
-            id: '1',
-            name: 'v',
-            resource: 'thing',
-            queryParameters: {},
-            visibility: 'private',
-            isDefault: false,
-        })),
-        deleteSavedFilter: vi.fn(async () => undefined),
-        list: vi.fn(
-            async (): Promise<Paginated<Row>> => ({ data: ROWS, total: 2, page: 1, perPage: 25 }),
-        ),
-        get: vi.fn(async (_r, id) => ({ id, title: 'Alpha' })),
-        getFormSchema: vi.fn(async () => ({ type: 'object', properties: { title: { type: 'string' } } })),
-        create: vi.fn(async (_resource: string, data: unknown) => ({ id: '3', ...(data as object) })),
-        save: vi.fn(async (_r, id, data) => ({ id, ...(data as Row) })),
-        remove: vi.fn(async () => undefined),
-        ...overrides,
-    };
+    return createMemoryTransport(
+        { rows: { widgets: ROWS }, formSchema: { widgets: { type: 'object', properties: { title: { type: 'string' } } } } },
+        overrides,
+    );
 }
 
 const primitives: FramePrimitives = {
@@ -68,18 +49,11 @@ const primitives: FramePrimitives = {
     SidePanel: ({ children }: any) => <aside>{children}</aside>,
 };
 
-function useMemoryUrlState() {
-    const [params, setParams] = useState(() => new URLSearchParams());
-    const set = (updater: (prev: URLSearchParams) => URLSearchParams) =>
-        setParams((prev) => new URLSearchParams(updater(new URLSearchParams(prev))));
-    return [params, set] as const;
-}
-
 function makeInjection(transport: FrameTransport, can: FrameCan = () => true): FrameInjection {
     return {
         transport,
         primitives,
-        useUrlState: useMemoryUrlState,
+        useUrlState: createMemoryUrlState(),
         registry: createWidgetRegistry(),
         schemaFetcher: async (ref) => ({ $id: ref }),
         can,
