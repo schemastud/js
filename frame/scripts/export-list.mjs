@@ -109,7 +109,8 @@ export function readList(path) {
 }
 
 function render(lines, entry) {
-    const root = dirname(dirname(fileURLToPath(import.meta.url)));
+    // The workspace root (this script lives in frame/scripts/), so a list's header names its barrel as frame/src/….
+    const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
     const header = [
         `# What ${relative(root, resolve(entry))} exports. A test compares this file with the barrel and never writes it.`,
         '# Regenerate with `npm run export-list`, and commit the result with the change that moved a name.',

@@ -13,7 +13,7 @@ import { expect, it } from 'vitest';
  * The check builds a TypeScript program over the barrel's whole import graph: about a second on
  * an idle machine, and ten on a loaded one, past vitest's 5 s default. Hence the explicit timeout.
  */
-const script = resolve(import.meta.dirname, '../../scripts/export-list.mjs');
+const script = resolve(import.meta.dirname, '../scripts/export-list.mjs');
 
 it.each([
     ['the root', '../src/index.ts'],

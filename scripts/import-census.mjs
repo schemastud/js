@@ -35,7 +35,7 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import { exportList } from './export-list.mjs';
+import { exportList } from '../frame/scripts/export-list.mjs';
 
 const WORKSPACE = dirname(dirname(fileURLToPath(import.meta.url)));
 const DEFAULT_BARRELS = [

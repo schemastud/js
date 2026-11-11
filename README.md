@@ -26,7 +26,7 @@ npm install          # one install links all workspaces
 npm run build        # build every package (tsup)
 npm run typecheck
 npm run test
-npm run export-list  # regenerate frame/src/index.exports.txt after changing what the frame root exports
+npm run export-list  # regenerate frame's export lists (frame/scripts/export-list.mjs) after changing what a frame barrel exports
 npm run census       # which root exports any file imports by name (pass the trees to scan)
 ```
 
