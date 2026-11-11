@@ -116,6 +116,27 @@ export class HostReceiver {
      */
     applyMutations(records: readonly RemoteMutationRecord[]): void {
         this.receiver.connection.mutate(records.map((record) => this.hostRecord(record)));
+        this.releaseUnmountedListeners();
+    }
+
+    /**
+     * Keep in the cache only listeners a node in the live tree still holds. The cache is host memory outside the
+     * guest VM's cap, so a removed subtree, a replaced listener and a cleared one must release their ids. It is
+     * derived from the tree after the whole batch, so an id removed and reinserted within one batch keeps its function.
+     */
+    private releaseUnmountedListeners(): void {
+        if (this.listeners.size === 0) return;
+        const live = new Set<unknown>();
+        const visit = (node: unknown): void => {
+            if (!node || typeof node !== 'object') return;
+            const element = node as { eventListeners?: Record<string, unknown>; children?: unknown[] };
+            for (const listener of Object.values(element.eventListeners ?? {})) live.add(listener);
+            for (const child of element.children ?? []) visit(child);
+        };
+        visit(this.receiver.root);
+        for (const [handlerId, listener] of this.listeners) {
+            if (!live.has(listener)) this.listeners.delete(handlerId);
+        }
     }
 
     /**

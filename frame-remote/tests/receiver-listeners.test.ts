@@ -61,6 +61,17 @@ describe('HostReceiver: guest handler refs become host listeners', () => {
         expect(childAt(receiver, 0).eventListeners.onClick).toBe(first);
     });
 
+    it('does not store or invoke a function supplied as a guest listener value (review-r1)', () => {
+        const { receiver, dispatchToGuest } = host();
+        const injected = vi.fn();
+        receiver.applyMutations([insert(element('1', { onClick: injected }))]);
+        expect(childAt(receiver, 0).eventListeners).toEqual({});
+        receiver.applyMutations([[3, '1', 'onClick', injected, 3] as unknown as RemoteMutationRecord]);
+        expect(childAt(receiver, 0).eventListeners.onClick).toBeUndefined();
+        expect(injected).not.toHaveBeenCalled();
+        expect(dispatchToGuest).not.toHaveBeenCalled();
+    });
+
     it('converts a ref sent as an event update', () => {
         const { receiver, dispatchToGuest } = host();
         receiver.applyMutations([insert(element('1', {}))]);
@@ -69,5 +80,52 @@ describe('HostReceiver: guest handler refs become host listeners', () => {
         expect(typeof listener).toBe('function');
         receiver.fire(listener, {});
         expect(dispatchToGuest).toHaveBeenCalledWith('1:onClick', {});
+    });
+});
+
+/**
+ * The cache from handler id to host listener is host memory outside the guest VM's cap, so it holds only ids a node in
+ * the live tree still carries (review-r1 on 69e49f4): a removed subtree, a replaced listener and a cleared one release
+ * theirs, while a still-mounted id keeps its function and a same-batch remove-and-reinsert keeps it too.
+ */
+describe('HostReceiver: the listener cache holds only live ids', () => {
+    const cache = (r: HostReceiver) => (r as unknown as { listeners: Map<string, unknown> }).listeners;
+
+    it('releases the ids of removed nodes, subtrees included (100 cycles leave none)', () => {
+        const { receiver } = host();
+        for (let i = 0; i < 100; i++) {
+            receiver.applyMutations([insert(element(String(i), { onClick: ref(`unique-${i}`) }, [element(`${i}c`, { onInput: ref(`child-${i}`) })]))]);
+            receiver.applyMutations([[1, ROOT, 0] as unknown as RemoteMutationRecord]);
+        }
+        expect(receiver.root.children).toHaveLength(0);
+        expect(cache(receiver).size).toBe(0);
+    });
+
+    it('releases a replaced listener and a cleared one (100 replacements, then null, leave none)', () => {
+        const { receiver } = host();
+        receiver.applyMutations([insert(element('1', { onClick: ref('initial') }))]);
+        for (let i = 0; i < 100; i++) receiver.applyMutations([[3, '1', 'onClick', ref(`replacement-${i}`), 3] as unknown as RemoteMutationRecord]);
+        expect(cache(receiver).size).toBe(1);
+        receiver.applyMutations([[3, '1', 'onClick', null, 3] as unknown as RemoteMutationRecord]);
+        expect(cache(receiver).size).toBe(0);
+    });
+
+    it('keeps a still-mounted id on the same function while other nodes come and go', () => {
+        const { receiver } = host();
+        receiver.applyMutations([insert(element('1', { onClick: ref('kept') }))]);
+        const kept = childAt(receiver, 0).eventListeners.onClick;
+        receiver.applyMutations([[0, ROOT, element('2', { onClick: ref('other') }), 1] as unknown as RemoteMutationRecord]);
+        receiver.applyMutations([[1, ROOT, 1] as unknown as RemoteMutationRecord]);
+        expect(childAt(receiver, 0).eventListeners.onClick).toBe(kept);
+        expect([...cache(receiver).keys()]).toEqual(['kept']);
+    });
+
+    it('keeps an id removed and reinserted within the same batch, on the same function', () => {
+        const { receiver } = host();
+        receiver.applyMutations([insert(element('1', { onClick: ref('1:onClick') }))]);
+        const first = childAt(receiver, 0).eventListeners.onClick;
+        receiver.applyMutations([[1, ROOT, 0] as unknown as RemoteMutationRecord, insert(element('1', { onClick: ref('1:onClick') }))]);
+        expect(childAt(receiver, 0).eventListeners.onClick).toBe(first);
+        expect(cache(receiver).size).toBe(1);
     });
 });
