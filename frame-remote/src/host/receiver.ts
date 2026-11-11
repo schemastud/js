@@ -115,8 +115,12 @@ export class HostReceiver {
      * the isolated guest — wire it to the VM's `onMutate`.
      */
     applyMutations(records: readonly RemoteMutationRecord[]): void {
-        this.receiver.connection.mutate(records.map((record) => this.hostRecord(record)));
-        this.releaseUnmountedListeners();
+        try {
+            this.receiver.connection.mutate(records.map((record) => this.hostRecord(record)));
+        } finally {
+            // Also when the receiver rejects the batch: the handlers it cached must not outlive it.
+            this.releaseUnmountedListeners();
+        }
     }
 
     /**

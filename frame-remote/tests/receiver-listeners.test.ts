@@ -120,6 +120,16 @@ describe('HostReceiver: the listener cache holds only live ids', () => {
         expect([...cache(receiver).keys()]).toEqual(['kept']);
     });
 
+    it('releases the ids a rejected batch cached (10 refused __proto__ inserts leave none)', () => {
+        const { receiver } = host();
+        for (let i = 0; i < 10; i++) {
+            const bad = { ...element(`bad${i}`, { onClick: ref(`bad-handler-${i}`) }), properties: JSON.parse('{"__proto__":1}') };
+            expect(() => receiver.applyMutations([insert(bad)])).toThrow();
+        }
+        expect(receiver.root.children).toHaveLength(0);
+        expect(cache(receiver).size).toBe(0);
+    });
+
     it('keeps an id removed and reinserted within the same batch, on the same function', () => {
         const { receiver } = host();
         receiver.applyMutations([insert(element('1', { onClick: ref('1:onClick') }))]);
