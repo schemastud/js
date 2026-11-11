@@ -144,8 +144,20 @@ describe('both registry populations (research 10-S1 ii)', () => {
         const registry = createWidgetRegistry();
         const spy = vi.spyOn(registry, 'registerWidget');
         registerFrameWidgets(registry);
+        const installed = spy.mock.calls.length;
+        // One install is frame's built-ins: the resource-ref picker (a predicate) and, since ticket 27, the five column
+        // kinds, registered by name and scoped to list-column.
+        expect(spy.mock.calls.filter(([key]) => typeof key === 'function')).toHaveLength(1);
+        expect(spy.mock.calls.flatMap(([key]) => (typeof key === 'string' ? [key] : [])).sort()).toEqual([
+            'badge',
+            'badges',
+            'date',
+            'number',
+            'text',
+        ]);
+        // Once: a second install registers nothing.
         registerFrameWidgets(registry);
-        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenCalledTimes(installed);
         expect(registry.resolveWidget(node)).toBe(ResourceRefWidget);
     });
 
