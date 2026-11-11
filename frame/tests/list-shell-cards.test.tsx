@@ -353,6 +353,12 @@ describe('listItemRendersCards — the gate, as a pure function', () => {
         ).toBe(false);
     });
 
+    it("false for a root's OWN x-widget with a nameless list-item entry: that name is the form's, not the card's (ticket 42, gate B)", () => {
+        // The root schema declares a name nothing binds, and the list-item entry names nothing. The root's own name must
+        // not turn the list into cards of markers: only a name the ENTRY declares counts.
+        expect(listItemRendersCards(PARTICIPATES_UNBOUND, { type: 'object', 'x-widget': 'not-registered' }, fresh())).toBe(false);
+    });
+
     it('true for a NAME nothing binds: each card is the unbound marker, never a table hiding the typo (ticket 42)', () => {
         expect(
             listItemRendersCards(

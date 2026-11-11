@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, waitFor, type RenderResult } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, waitFor, type RenderResult } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry, type SchemaNode } from '@schemastud/seam';
@@ -162,13 +162,19 @@ describe('an unbound widget name is one visible state', () => {
             // Inference did not run for the misspelled name: no radio group stood in for it.
             expect(container.querySelector('input[type="radio"]')).toBeNull();
 
-            const reported = unboundErrors(error);
+            // The development diagnostic is effect-driven: await it rather than read the spy in the same tick as the DOM.
             if (env === 'development') {
-                expect(reported.length).toBeGreaterThanOrEqual(1);
+                const reported = await waitFor(() => {
+                    const calls = unboundErrors(error);
+                    expect(calls.length).toBeGreaterThanOrEqual(1);
+                    return calls;
+                });
                 expect(String(reported[0][0])).toContain(`"${name}"`);
                 expect(String(reported[0][0])).toContain(`"${context}"`);
             } else {
-                expect(reported).toHaveLength(0);
+                // Let every pending effect run before asserting there was none.
+                await act(async () => {});
+                expect(unboundErrors(error)).toHaveLength(0);
             }
             vi.unstubAllEnvs();
         },
