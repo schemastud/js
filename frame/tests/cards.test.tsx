@@ -154,7 +154,7 @@ describe('registerCardWidgets', () => {
 
     it('a declared name registered BEFORE the card set still wins over the context default', () => {
         const registry = createWidgetRegistry();
-        registry.registerWidget((s) => s['x-widget'] === 'tenant-card', HostCard);
+        registry.registerWidget('tenant-card', HostCard);
         registerCardWidgets(registry);
 
         expect(
@@ -197,7 +197,7 @@ describe('registerCardWidgets', () => {
 
 describe('resolveDashboardCard — overview → summary → the context default', () => {
     const registry = createWidgetRegistry();
-    registry.registerWidget((s) => s['x-widget'] === 'tenant-card', HostCard);
+    registry.registerWidget('tenant-card', HostCard);
     registerCardWidgets(registry);
 
     it('a declared overview binding wins for an overview row', () => {
@@ -247,9 +247,9 @@ describe('resolveDashboardCard — overview → summary → the context default'
         });
         const resolved = resolveDashboardCard(row({ context: 'overview' }), m, registry);
 
-        expect(resolved.unbound).toBe(true);
+        expect(resolved.bound).toBe(false);
         expect(resolved.widget).toBeUndefined();
-        expect(resolved.declared).toBe('unregistered-overview');
+        expect(resolved.name).toBe('unregistered-overview');
     });
 
     it('a summary row reads the SUMMARY tier — an overview binding never answers for it', () => {
@@ -445,9 +445,11 @@ describe('DashboardCard', () => {
             { wrapper },
         );
 
-        expect(container.querySelector('[data-frame-view-error]')?.textContent).toBe('Unable to display this field');
+        expect(container.querySelector('[data-frame-unbound="overview"] [data-frame-unbound-message]')?.textContent).toBe(
+            'Unable to display this field',
+        );
         expect(container.textContent).not.toContain('typo');
-        expect(container.querySelector('[data-frame-view-widget="typo"]')?.getAttribute('title')).toBeNull();
+        expect(container.querySelector('[data-frame-unbound-widget="typo"]')?.getAttribute('title')).toBeNull();
         expect(container.querySelector('[data-frame-card="figure-card"]')).toBeNull();
         expect(container.querySelector('[data-frame-card="stat-row"]')).toBeNull();
     });
@@ -565,7 +567,7 @@ describe('RecentList', () => {
 
     it('renders overview.items through the target resource list-item widget, plus "View all"', () => {
         const registry = createWidgetRegistry();
-        registry.registerWidget((s) => s['x-widget'] === 'activity-line', ActivityLine);
+        registry.registerWidget('activity-line', ActivityLine);
         registerCardWidgets(registry);
         const wrapper = wrap(
             makeInjection(registry, {
@@ -629,7 +631,7 @@ describe('RecentList', () => {
         // Populated-and-wrong shows RAW, never `Invalid Date`.
         expect(times[2].textContent).toBe('not a date');
         expect(container.innerHTML).not.toContain('Invalid Date');
-        expect(container.querySelector('[data-frame-view-error]')).toBeNull();
+        expect(container.querySelector('[data-frame-unbound]')).toBeNull();
         expect(screen.queryByText('5')).toBeNull();
         expect(container.innerHTML).not.toContain('{"id"');
     });
@@ -673,11 +675,11 @@ describe('RecentList', () => {
 
         const { container } = render(<RecentList value={centralRow.summary!} row={centralRow} />, { wrapper });
 
-        expect(container.querySelector('[data-frame-view="unbound-list-item"] [data-frame-view-error]')?.textContent).toBe(
+        expect(container.querySelector('[data-frame-unbound="list-item"] [data-frame-unbound-message]')?.textContent).toBe(
             'Unable to display this field',
         );
         expect(container.textContent).not.toContain('activity-lien');
-        expect(container.querySelector('[data-frame-view-widget="activity-lien"]')?.getAttribute('title')).toBeNull();
+        expect(container.querySelector('[data-frame-unbound-widget="activity-lien"]')?.getAttribute('title')).toBeNull();
         expect(container.querySelector('[data-frame-record-line]')).toBeNull();
         expect(container.querySelector('[data-frame-recent-items]')).toBeNull();
         expect(container.innerHTML).not.toContain('{"id"');
@@ -688,7 +690,7 @@ describe('RecentList', () => {
     it('a host that registers a LATER record-line replaces the default for unbound targets', () => {
         const registry = createWidgetRegistry();
         registerCardWidgets(registry);
-        registry.registerWidget((s) => s['x-widget'] === 'record-line', ActivityLine);
+        registry.registerWidget('record-line', ActivityLine);
         const wrapper = wrap(makeInjection(registry, { activity: manifest({ 'list-item': { participates: true } }) }));
 
         render(<RecentList value={activityRow.summary!} row={activityRow} />, { wrapper });

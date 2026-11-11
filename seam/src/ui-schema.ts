@@ -1,4 +1,5 @@
 import type { SchemaNode, WidgetRegistry } from './types';
+import { unboundFormControl } from './unbound-form-control';
 
 type UiSchema = Record<string, unknown>;
 
@@ -103,7 +104,14 @@ function walkUiSchema(
 
     // `bare` acts here, on the resolved schema: a name a fetched reference carried is suppressed too.
     const node = walk.plainData && !isRoot ? withoutDeclaredName(schema) : schema;
-    let { widget, config } = registry.resolveEntry(node, walk.context);
+    const resolved = registry.resolveEntry(node, walk.context);
+    let { widget, config } = resolved;
+    // A declared name nothing binds: the marker replaces the control (ruling 01 §3). It never calls onChange, so the
+    // value saves unchanged; on create a required field under it has no value, and validation stops the save.
+    if (resolved.bound === false && resolved.name !== undefined) {
+        widget = unboundFormControl(resolved.name, walk.context ?? 'edit');
+        config = undefined;
+    }
     // Plain open-object editing belongs to forms, not to general widget/card resolution.
     if (
         widget === undefined &&

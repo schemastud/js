@@ -93,7 +93,7 @@ describe('a column kind is a widget', () => {
             mood: { 'list-column': { participates: true, sort: 2, widget: 'sparkline-from-the-future' } },
         });
 
-        expect(document.querySelector('[data-frame-view="unbound-column"]')).not.toBeNull();
+        expect(document.querySelector('[data-frame-unbound="list-column"][data-frame-unbound-widget="sparkline-from-the-future"]')).not.toBeNull();
     });
 
     it("the column entry's options win a key both set; the node's own x-widget-options stay beneath (edit B)", async () => {

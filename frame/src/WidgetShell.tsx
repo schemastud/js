@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState, type ComponentType } from 'react';
 import type { ResourceKey } from './resources';
-import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
+import { UnboundWidget, WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from './context';
 import {
     EditShellMountProvider,
@@ -77,8 +77,12 @@ export function WidgetSurface({
         undefined,
         registry,
     );
-    // A heavyweight widget resolves to a component; a bare RJSF widget name (or a
-    // miss) cannot mount full-surface — surface that rather than crash.
+    // The route's name, unbound: the one marker (ruling 01 §3), in development and production alike.
+    if (resolved.bound === false) {
+        return <UnboundWidget context="widget-route" name={widget} />;
+    }
+    // A bound heavyweight resolves to a component; a bound RJSF stock name cannot mount
+    // full-surface — surface that rather than crash.
     if (typeof resolved.widget !== 'function') {
         return (
             <div data-frame-shell="widget-unbound" data-widget={widget}>

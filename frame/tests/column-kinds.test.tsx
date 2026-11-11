@@ -161,7 +161,7 @@ describe('resolveColumns — the declared kind becomes the cell', () => {
         expect(() => resolveColumns('concepts', undefined, [], manifest, REGISTRY)).not.toThrow();
         const [column] = resolveColumns('concepts', undefined, [], manifest, REGISTRY);
         render(<>{column.cell?.(ROWS[0])}</>);
-        expect(document.querySelector('[data-frame-view="unbound-column"]')).not.toBeNull();
+        expect(document.querySelector('[data-frame-unbound="list-column"][data-frame-unbound-widget="sparkline-from-the-future"]')).not.toBeNull();
     });
 
     it('resolves a DOTTED pointer through the same path resolution the default cell uses', () => {

@@ -341,7 +341,7 @@ describe('listItemRendersCards — the gate, as a pure function', () => {
         return registry;
     };
 
-    it('false without a root entry, without participation, or with a name nothing resolves', () => {
+    it('false without a root entry, without participation, or participating with no name', () => {
         expect(listItemRendersCards(TABLE, schema, fresh())).toBe(false);
         expect(listItemRendersCards(PARTICIPATES_UNBOUND, schema, fresh())).toBe(false);
         expect(
@@ -351,13 +351,16 @@ describe('listItemRendersCards — the gate, as a pure function', () => {
                 fresh(),
             ),
         ).toBe(false);
+    });
+
+    it('true for a NAME nothing binds: each card is the unbound marker, never a table hiding the typo (ticket 42)', () => {
         expect(
             listItemRendersCards(
                 { ...TABLE, byNode: { '': { 'list-item': { participates: true, widget: 'not-registered' } } } },
                 schema,
                 fresh(),
             ),
-        ).toBe(false);
+        ).toBe(true);
     });
 
     it('true when the bound name resolves a component, or a host registered a list-item default', () => {

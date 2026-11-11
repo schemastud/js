@@ -7,8 +7,8 @@ import { StarRatingWidget } from '../src/widgets/star-rating';
 
 /**
  * Widget names are registered by name (frame-foundation ticket 07, ruling 01 slice 1). A fresh
- * registry says which names it binds and where, a misspelled name is reported as not bound even
- * where inference would still draw something, a scoped registration beats an unscoped one, and
+ * registry says which names it binds and where, a misspelled name is reported as not bound and
+ * inference does not run for it (ticket 42), a scoped registration beats an unscoped one, and
  * the resolver hands over the entry's config with the node's declared options merged over it.
  */
 describe('a fresh createWidgetRegistry()', () => {
@@ -38,15 +38,13 @@ describe('a fresh createWidgetRegistry()', () => {
         expect(registry.resolveWidget({ type: 'integer', 'x-widget': 'star-rating' })).toBe(StarRatingWidget);
     });
 
-    it('reports a misspelled name on a three-value enum as not bound', () => {
+    it('reports a misspelled name on a three-value enum as not bound, and runs no inference for it', () => {
         const resolved = createWidgetRegistry().resolveEntry({
             type: 'string',
             enum: ['draft', 'live', 'archived'],
             'x-widget': 'buton-group',
         });
-        expect(resolved.bound).toBe(false);
-        // Rendering is unchanged in this slice: inference still draws the short enum as radio.
-        expect(resolved.widget).toBe('radio');
+        expect(resolved).toEqual({ widget: undefined, bound: false, name: 'buton-group' });
     });
 
     it('lets a scoped registration beat an unscoped one in its context, whatever the order', () => {

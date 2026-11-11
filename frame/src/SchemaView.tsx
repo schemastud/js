@@ -1,6 +1,7 @@
 import { useContext, useId, type ReactNode } from 'react';
 import type { Registry } from '@rjsf/utils';
 import {
+    UnboundWidget,
     WidgetRegistryContext,
     asWidget,
     isCompositeNode,
@@ -19,10 +20,10 @@ import type { ContextManifest, FrameContext, NodeParticipation } from './context
 //
 // A resolved component mounts read-only with RJSF `WidgetProps`, built by seam's
 // `widgetProps` over an RJSF registry on the record's root schema (ruling 04). A
-// non-participating field, an RJSF stock name (`asWidget` is undefined), an unbound
-// non-heavyweight field, or a composite node whose name is the FORM's (`detail` only)
-// falls to a sensible read-only default (label + value). An unbound HEAVYWEIGHT
-// widget is a hard dev error.
+// declared name nothing binds draws seam's `UnboundWidget` (ruling 01 §3). A
+// non-participating field, an RJSF stock name (`asWidget` is undefined), a node that
+// names nothing, or a composite node whose name is the FORM's (`detail` only) falls to
+// a sensible read-only default (label + value).
 // =============================================================================
 
 export interface SchemaViewProps {
@@ -34,7 +35,6 @@ export interface SchemaViewProps {
     registry?: WidgetRegistry;
 }
 
-const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
 function labelize(key: string, cm?: NodeParticipation): string {
     if (cm?.label) return cm.label;
@@ -52,35 +52,6 @@ function scalar(value: unknown): string {
 
 /** A stable `formContext` for the read registry: a module constant, so the memoized registry keeps its identity. */
 const READ_FORM_CONTEXT: Record<string, unknown> = {};
-
-/**
- * How frame shows a binding that NAMED a widget the registry could not resolve — the honest
- * marker, never a plausible-looking default standing in for a typo. `SchemaView` draws it for
- * an unbound heavyweight field; `dashboard-card` draws it for an unbound summary/overview tier.
- *
- * This is the PRODUCTION path (the dev path throws loudly at the call site before ever reaching
- * it). The user sees a plain unavailable-field state rather than the raw `[unbound widget: …]`
- * marker; the widget that failed to resolve is retained for diagnostics ONLY on a `data-*`
- * attribute (inspectable in devtools), never a native `title`/tooltip or other user-visible copy —
- * a tooltip would just relocate the wiring-identifier leak. The binding is still repaired at its
- * declaration, not here. (C03)
- */
-export function UnboundWidget({
-    label,
-    widget,
-    kind = 'unbound-heavyweight',
-}: {
-    label: string;
-    widget: unknown;
-    kind?: string;
-}): ReactNode {
-    return (
-        <div data-frame-view={kind} data-frame-view-widget={String(widget)}>
-            <span data-frame-view-label>{label}</span>
-            <span data-frame-view-error>Unable to display this field</span>
-        </div>
-    );
-}
 
 /**
  * The read-only fallback for a node with no resolved component. A scalar renders as its string
@@ -151,23 +122,19 @@ function ViewNode({
     const id = useId();
     const resolved: ResolvedForContext = resolveWidgetFor(node, ctx, cm, undefined, registry);
 
-    if (resolved.participates && resolved.unbound && cm?.heavyweight) {
-        // A heavyweight binding that resolved no component is a wiring error — the
-        // shell treats `unbound && heavyweight` as a hard dev error.
-        if (isDev()) {
-            throw new Error(
-                `[frame] SchemaView: heavyweight widget "${cm.widget}" is unbound (no registry match) for context "${ctx}".`,
-            );
-        }
-        return <UnboundWidget label={label} widget={cm?.widget} />;
+    // In `detail`, a composite node whose name is the FORM's (the node's own `x-widget`, not this entry's) is the
+    // form's field: the detail view shows its structured read (ruling 04 §5), bound here or not.
+    const formsField = ctx === 'detail' && !cm?.widget && isCompositeNode(node, rootSchema);
+
+    // A declared name nothing binds in this context draws the one marker (ruling 01 §3), heavyweight or not, in
+    // development and production alike. The name is the resolver's, never worked out again here.
+    if (resolved.participates && resolved.bound === false && resolved.name !== undefined && !formsField) {
+        return <UnboundWidget context={ctx} name={resolved.name} label={label} pointer={`/${name}`.replace(/^\/$/, '')} />;
     }
 
     // A resolved COMPONENT renders read-only; an RJSF stock name or a miss falls to the read
-    // default. In `detail`, a composite node whose name is the FORM's (the node's own
-    // `x-widget`, not this entry's) is the form's field: the detail view shows its structured
-    // read (ruling 04 §5). A name this entry declares itself is a read-surface widget and mounts.
+    // default. A name this entry declares itself is a read-surface widget and mounts.
     const component = resolved.participates ? asWidget(resolved.widget) : undefined;
-    const formsField = ctx === 'detail' && !cm?.widget && isCompositeNode(node, rootSchema);
     const Widget = formsField ? undefined : component;
 
     return (

@@ -42,7 +42,7 @@ describe('resolveWidgetFor', () => {
         const res = resolveWidgetFor(node, 'edit', part({ widget: 'email-input' }), undefined, r);
         expect(res.participates).toBe(true);
         expect(res.widget).toBe(EmailInput);
-        expect(res.unbound).toBe(false);
+        expect(res.bound).toBe(true);
     });
 
     it('row-cell inheritsBinding:true, no own widget → inherits the parent edit name', () => {
@@ -51,7 +51,7 @@ describe('resolveWidgetFor', () => {
         const res = resolveWidgetFor(node, 'row-cell', part({ inheritsBinding: true }), parent, r);
         expect(res.participates).toBe(true);
         expect(res.widget).toBe(EmailInput);
-        expect(res.unbound).toBe(false);
+        expect(res.bound).toBe(true);
     });
 
     it('row-cell inheritsBinding:false → does NOT inherit (name undefined → miss)', () => {
@@ -60,7 +60,7 @@ describe('resolveWidgetFor', () => {
         const res = resolveWidgetFor(node, 'row-cell', part({ inheritsBinding: false }), parent, r);
         expect(res.participates).toBe(true);
         expect(res.widget).toBeUndefined();
-        expect(res.unbound).toBe(false);
+        expect(res.bound).toBeUndefined();
     });
 
     it('row-cell deep-merges options over the parent edit options', () => {
@@ -113,12 +113,13 @@ describe('resolveWidgetFor', () => {
         expect(res.widget).toBeUndefined();
     });
 
-    it('unbound: a name with no registry match → unbound:true', () => {
+    it('unbound: a name with no registry match → bound:false, with the name', () => {
         const r = makeRegistry();
         const res = resolveWidgetFor(node, 'edit', part({ widget: 'not-registered' }), undefined, r);
         expect(res.participates).toBe(true);
         expect(res.widget).toBeUndefined();
-        expect(res.unbound).toBe(true);
+        expect(res.bound).toBe(false);
+        expect(res.name).toBe('not-registered');
     });
 
     // --- The collection grain: overview ← summary (realm-dashboards ticket 01) ---
@@ -139,7 +140,7 @@ describe('resolveWidgetFor', () => {
         const res = resolveWidgetFor(node, 'overview', part({}), summary, r);
         expect(res.participates).toBe(true);
         expect(res.widget).toBe(StatRow);
-        expect(res.unbound).toBe(false);
+        expect(res.bound).toBe(true);
     });
 
     it('overview deep-folds its own options over the summary options', () => {
@@ -180,7 +181,7 @@ describe('resolveWidgetFor', () => {
         const res = resolveWidgetFor(node, 'overview', part({ inheritsBinding: false, options: { period: 'month' } }), summary, r);
         expect(res.participates).toBe(true);
         expect(res.widget).toBeUndefined();
-        expect(res.unbound).toBe(false);
+        expect(res.bound).toBeUndefined();
         expect(seen?.['x-widget']).toBeUndefined();
         expect(seen?.['x-widget-options']).toEqual({ period: 'month' });
     });
@@ -197,7 +198,7 @@ describe('resolveWidgetFor', () => {
         const res = resolveWidgetFor(node, 'overview', part({ options: { b: 2 } }), summary, r);
         expect(res.participates).toBe(true);
         expect(res.widget).toBeUndefined();
-        expect(res.unbound).toBe(false);
+        expect(res.bound).toBeUndefined();
         expect(seen?.['x-widget']).toBeUndefined();
         expect(seen?.['x-widget-options']).toStrictEqual({ b: 2 });
     });
@@ -228,7 +229,7 @@ describe('resolveWidgetFor', () => {
         r.registerWidget((s) => s[FRAME_CONTEXT_KEYWORD] === 'summary' && s['x-widget'] === undefined, StatRow);
         const res = resolveWidgetFor(node, 'summary', part({}), undefined, r);
         expect(res.widget).toBe(StatRow);
-        expect(res.unbound).toBe(false);
+        expect(res.bound).toBeUndefined();
         // A declared name still wins over the context default.
         const named = resolveWidgetFor(node, 'summary', part({ widget: 'figure-card' }), undefined, r);
         expect(named.widget).toBe(FigureCard);
@@ -239,7 +240,6 @@ describe('resolveWidgetFor', () => {
         expect(resolveWidgetFor(node, 'summary', part({}), undefined, r)).toStrictEqual({
             widget: undefined,
             participates: true,
-            unbound: false,
         });
     });
 });

@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader } from '@schemastud/ui';
 import { useId, type ComponentType } from 'react';
-import { useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
+import { UnboundWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from '../context';
 import { listItemRendersCards } from '../listItemRendersCards';
-import { isWidgetComponent } from '../resolveWidgetFor';
-import { SchemaView, UnboundWidget } from '../SchemaView';
+import { isWidgetComponent, resolveWidgetFor } from '../resolveWidgetFor';
+import { SchemaView } from '../SchemaView';
 import { CardHeading, EmptyState, ROOT_NODE, ViewAllLink } from './chrome';
 import { RecordLine } from './RecordLine';
 import type { CardWidgetProps, SummaryPayload } from './types';
@@ -45,9 +45,10 @@ export function RecentList({ value, options, row }: CardWidgetProps<SummaryPaylo
     const Icon = options?.iconFor?.(value?.icon ?? row?.icon);
     const target = resource ? manifestFor?.(resource) : undefined;
     const entry = target?.byNode['']?.['list-item'];
-    const bound = target ? listItemRendersCards(target, ROOT_NODE, registry) : false;
-    // A participating entry that NAMED a widget and still did not bind: case 2.
-    const misdeclared = !bound && entry?.participates ? entry.widget : undefined;
+    // A participating entry that NAMED a widget nothing binds: case 2, with the resolver's name.
+    const resolved = target && entry?.participates ? resolveWidgetFor(ROOT_NODE, 'list-item', entry, undefined, registry) : undefined;
+    const unboundName = resolved?.bound === false ? resolved.name : undefined;
+    const bound = target && unboundName === undefined ? listItemRendersCards(target, ROOT_NODE, registry) : false;
     const line = recordLineFor(registry);
 
     return (
@@ -58,8 +59,8 @@ export function RecentList({ value, options, row }: CardWidgetProps<SummaryPaylo
             <CardContent className="space-y-3 p-4 pt-0">
                 {items.length === 0 ? (
                     <EmptyState>Nothing recent.</EmptyState>
-                ) : misdeclared ? (
-                    <UnboundWidget label={label} widget={misdeclared} kind="unbound-list-item" />
+                ) : unboundName !== undefined ? (
+                    <UnboundWidget context="list-item" name={unboundName} label={label} resource={resource} />
                 ) : (
                     <ol data-frame-recent-items className="divide-y rounded-md border">
                         {items.map((item, i) => (

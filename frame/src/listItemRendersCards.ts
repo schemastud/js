@@ -5,7 +5,8 @@ import { isWidgetComponent, resolveWidgetFor } from './resolveWidgetFor';
 /**
  * Does this resource's list render as CARDS (realm-dashboards ticket 03)? True when the root
  * `list-item` entry participates AND resolves a COMPONENT through the registry — a declared
- * widget name the registry knows, or a host-registered `list-item` context default.
+ * widget name the registry knows, or a host-registered `list-item` context default — or the ENTRY names a
+ * widget nothing binds, which draws seam's unbound marker on each card (ruling 01 §3).
  *
  * ⚠️ Participation alone is deliberately NOT the gate, and the reason is measured, not
  * cautious: `splicewire/tower`'s `ThreadData` and `CompositionData` both declare a class-level
@@ -28,5 +29,9 @@ export function listItemRendersCards(
 ): boolean {
     const cm = manifest.byNode['']?.['list-item'];
     if (!cm?.participates) return false;
-    return isWidgetComponent(resolveWidgetFor(schema, 'list-item', cm, undefined, registry).widget);
+    const resolved = resolveWidgetFor(schema, 'list-item', cm, undefined, registry);
+    // A name the ENTRY declares that nothing binds draws too: each card is the unbound marker (ruling 01 §3), never the
+    // table that would hide the typo. A root's own `x-widget` is the form's, not the card's, and a participating entry
+    // that names nothing keeps the table.
+    return (cm.widget !== undefined && resolved.bound === false) || isWidgetComponent(resolved.widget);
 }

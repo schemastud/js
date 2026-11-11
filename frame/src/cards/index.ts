@@ -77,7 +77,7 @@ const installed = new WeakSet<WidgetRegistry>();
  *     `summary`, `figure-card` for `overview`. They match only an UNBOUND node
  *     (`!s['x-widget']`), so a declared name always wins: one registered by the host before
  *     this call is not shadowed, and one the registry does not know stays honestly unbound
- *     (`ResolvedForContext.unbound`) rather than silently taking the default.
+ *     (`ResolvedForContext.bound === false`, drawn as seam's `UnboundWidget`) rather than silently taking the default.
  *  2. NAMED widgets — the seven names a declaration (`#[WidgetIn('summary', 'stat-row')]`)
  *     binds. Registered AFTER the defaults so they sit ahead of them in the registry (later
  *     registrations are consulted first).

@@ -87,16 +87,19 @@ describe('buildUiSchema: the edit scope and the kept root', () => {
     const rootMount = (ui: Record<string, unknown>) => ui['ui:field'] ?? ui['ui:widget'];
     const child = (ui: Record<string, unknown>, key: string) => (ui[key] as Record<string, unknown> | undefined)?.['ui:widget'];
 
-    it('enriched: the child resolves its edit-scoped name, and a name scoped to another context gets nothing', () => {
+    it('enriched: the child resolves its edit-scoped name, and a name scoped to another context draws the unbound marker', () => {
         const ui = buildUiSchema(schema, registry, { context: 'edit' });
         expect(rootMount(ui)).toBe(RootProof);
         expect(child(ui, 'rating')).toBe(ScopedProof);
-        expect(child(ui, 'badge')).toBeUndefined();
+        // Not bound in `edit`: the marker replaces the control (ticket 42), never the inferred text box.
+        expect((child(ui, 'badge') as { displayName?: string } | undefined)?.displayName).toBe('UnboundControl(list-proof)');
     });
 
     it('plainData: the root still resolves; the child does not', () => {
         const ui = buildUiSchema(schema, registry, { context: 'edit', plainData: true });
         expect(rootMount(ui)).toBe(RootProof);
         expect(child(ui, 'rating')).toBeUndefined();
+        // `bare` drops the name below the root before resolution, so no marker either.
+        expect(child(ui, 'badge')).toBeUndefined();
     });
 });

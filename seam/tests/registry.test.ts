@@ -41,8 +41,9 @@ describe('widget resolution contract', () => {
 
     it('later registrations take precedence', () => {
         const scoped = createWidgetRegistry();
-        scoped.registerWidget((s) => s['x-widget'] === 'citation', 'citation-v1');
-        scoped.registerWidget((s) => s['x-widget'] === 'citation', 'citation-v2');
+        // By name: a predicate never binds a name (ruling 01 §3), so a name keyed in a predicate is unbound.
+        scoped.registerWidget('citation', 'citation-v1');
+        scoped.registerWidget('citation', 'citation-v2');
         expect(scoped.resolveWidget({ type: 'string', 'x-widget': 'citation' })).toBe(
             'citation-v2',
         );

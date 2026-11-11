@@ -38,5 +38,6 @@ export type {
     WidgetScope,
 } from './types';
 export { buildUiSchema, isCompositeNode, mergeUiSchema, type UiSchemaOptions } from './ui-schema';
+export { UnboundWidget, type UnboundWidgetProps } from './UnboundWidget';
 export { displayLabel, humanizeKey } from './display-label';
 export { createFormValidator, defaultValidator } from './validator';

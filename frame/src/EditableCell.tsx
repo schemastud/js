@@ -1,6 +1,7 @@
 import { useContext, useId, useState, type ReactNode } from 'react';
 import { asNumber, getSchemaType, type RJSFSchema } from '@rjsf/utils';
 import {
+    UnboundWidget,
     WidgetRegistryContext,
     asWidget,
     isCompositeNode,
@@ -27,9 +28,8 @@ import type { NodeParticipation } from './contexts';
 // read-only projection (the scalar/summary) and NEVER inlines the heavyweight
 // editor into the cell.
 //
-// Unbound: reuse FC-03's `unbound` flag. An unbound heavyweight is a dev error
-// (throw in dev), consistent with SchemaView. An unbound non-heavyweight falls to
-// the read projection.
+// Unbound: a declared name nothing binds in `row-cell` draws seam's `UnboundWidget`
+// (ruling 01 §3), in development and production alike; nothing throws.
 // =============================================================================
 
 export interface EditableCellProps {
@@ -51,8 +51,6 @@ export interface EditableCellProps {
     /** Falls back to the seam WidgetRegistryContext when omitted. */
     registry?: WidgetRegistry;
 }
-
-const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
 function scalar(value: unknown): string {
     if (value === null || value === undefined) return '';
@@ -110,21 +108,6 @@ export function EditableCell({
     // can never be inlined into the cell.
     const resolved: ResolvedForContext = resolveWidgetFor(node, 'row-cell', rowCell, edit, registry);
 
-    // Unbound heavyweight is a hard dev error — a heavyweight binding that named a
-    // widget the registry could not resolve. Consistent with SchemaView.
-    if (resolved.participates && resolved.unbound && edit?.heavyweight) {
-        if (isDev()) {
-            throw new Error(
-                `[frame] EditableCell: heavyweight widget "${edit.widget}" is unbound (no registry match) for context "row-cell".`,
-            );
-        }
-        return (
-            <div data-frame-cell="unbound-heavyweight">
-                <span data-frame-cell-error>[unbound widget: {String(edit?.widget)}]</span>
-            </div>
-        );
-    }
-
     // A resolved COMPONENT is editable; an RJSF stock name, a miss, a suppressed
     // heavyweight, or a non-participating field falls to the read projection — no
     // in-place editing, just the value. A composite node whose name is the FORM's (it
@@ -132,6 +115,9 @@ export function EditableCell({
     // the form's field: the cell shows its read value and is not editable (ruling 04 §5).
     const component = resolved.participates ? asWidget(resolved.widget) : undefined;
     const formsField = !rowCell?.widget && isCompositeNode(node, rootSchema);
+    if (resolved.participates && resolved.bound === false && resolved.name !== undefined && !formsField) {
+        return <UnboundWidget context="row-cell" name={resolved.name} />;
+    }
     const Widget = formsField ? undefined : component;
 
     if (!Widget) {

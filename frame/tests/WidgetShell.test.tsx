@@ -1,5 +1,5 @@
 import { render, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createWidgetRegistry } from '@schemastud/seam';
 import { WidgetSurface } from '../src/WidgetShell';
 import { resolveWidgetFor } from '../src/resolveWidgetFor';
@@ -42,13 +42,18 @@ describe('WidgetSurface — mounts:"widget" materialization (ED-04)', () => {
         expect(container.querySelector('form')).toBeNull();
     });
 
-    it('surfaces an unbound notice when the widget name has no registry match', () => {
+    it('draws the unbound marker when the widget name has no registry match (ticket 42)', () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
         const { container } = render(
             <WidgetSurface schema={{ type: 'object' }} widget="not-registered" registry={makeRegistry()} />,
         );
 
-        expect(container.querySelector('[data-frame-shell="widget-unbound"]')).not.toBeNull();
+        expect(container.querySelector('[data-frame-unbound="widget-route"]')?.getAttribute('data-frame-unbound-widget')).toBe(
+            'not-registered',
+        );
+        expect(container.textContent).not.toContain('not-registered');
         expect(container.querySelector('[data-frame-shell="widget"]')).toBeNull();
+        error.mockRestore();
     });
 
     it('resolves the heavyweight widget in edit but still suppresses it inside a row-cell (unchanged)', () => {

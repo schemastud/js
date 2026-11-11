@@ -167,6 +167,10 @@ export function createWidgetRegistry(): WidgetRegistry {
             };
         };
 
+        // A declared name nothing binds here is unbound, and inference does not run for it (ruling 01 §3): a
+        // misspelled name never dresses itself as the control its node's type or enum would infer.
+        if (declared !== undefined && bound === undefined) return result(undefined);
+
         // One pass in registration order, as before: the first entry that applies wins. A name
         // entry applies when it names the declared widget and its scope admits the context, and
         // then the name's binding (scoped beats unscoped) answers, whichever registration of the

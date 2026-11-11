@@ -1,9 +1,8 @@
 import { useId, type ReactNode } from 'react';
-import { asWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
+import { UnboundWidget, asWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from '../context';
 import { INHERITS, type ContextManifest, type FrameContext, type NodeParticipation } from '../contexts';
 import { isWidgetComponent, resolveWidgetFor, type ResolvedForContext } from '../resolveWidgetFor';
-import { UnboundWidget } from '../SchemaView';
 import { OverviewFrame, ROOT_NODE } from './chrome';
 import { NavTile } from './NavTile';
 import { WelcomePanel } from './WelcomePanel';
@@ -31,8 +30,6 @@ export interface DashboardCardResolution extends ResolvedForContext {
      * is the widget that will draw), `'default'` for the row context's registry default.
      */
     tier: 'overview' | 'summary' | 'default';
-    /** The widget name the declaration asked for, when it asked for one. */
-    declared?: string;
 }
 
 /**
@@ -45,7 +42,7 @@ export interface DashboardCardResolution extends ResolvedForContext {
  * `SchemaView` passes `undefined` for every context, so an `overview` resolved through it
  * never cascades; a card is the one surface where `overview ← summary` has to.
  *
- * ⚠️ A tier whose declared name resolves to NO component STOPS the chain (`unbound`), it does
+ * ⚠️ A tier whose declared name resolves to NO component STOPS the chain (`bound === false`), it does
  * not fall through. The declaration named something; taking the next tier or the default would
  * dress a typo as a working card and there would be nothing on the screen to say so. That is
  * the same answer `registerCardWidgets` and `listItemRendersCards` give for an unknown name,
@@ -65,14 +62,12 @@ export function resolveDashboardCard(
         if (!cm) continue;
         const lender = bindingOf(root, INHERITS[ctx]);
         const resolved = resolveWidgetFor(ROOT_NODE, ctx, cm, lender, registry);
-        // The name actually in play: the tier's own, else the one it inherited across the
-        // cascade edge. It is what the unbound marker has to be able to say.
+        // The resolver's `name` is the name in play: the tier's own, else the one it inherited across the cascade edge.
         const inherited = cm.widget === undefined && cm.inheritsBinding !== false ? lender?.widget : undefined;
-        const declared = cm.widget ?? inherited;
-        if (resolved.unbound || isWidgetComponent(resolved.widget)) {
+        if (resolved.bound === false || isWidgetComponent(resolved.widget)) {
             // A widget the tier only INHERITED is the lender's widget, and it draws the lender's
             // rendering — so the overview chrome is still this row's to supply.
-            return { ...resolved, tier: inherited !== undefined ? (INHERITS[ctx] as 'summary') : ctx, declared };
+            return { ...resolved, tier: inherited !== undefined ? (INHERITS[ctx] as 'summary') : ctx };
         }
     }
 
@@ -105,7 +100,7 @@ export function dashboardRowRenders(
     if (!manifest) return false;
 
     const resolved = resolveDashboardCard(row as DashboardRow, manifest, registry);
-    return resolved.unbound === true || isWidgetComponent(resolved.widget);
+    return resolved.bound === false || isWidgetComponent(resolved.widget);
 }
 
 /** A stable `formContext` for the card registry: a module constant, so the memoized registry keeps its identity. */
@@ -160,8 +155,9 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
         </div>
     );
 
-    if (resolved.unbound) {
-        return cell(<UnboundWidget kind="unbound" label={row.label} widget={resolved.declared} />);
+    if (resolved.bound === false && resolved.name !== undefined) {
+        const context = row.context === 'overview' ? 'overview' : 'summary';
+        return cell(<UnboundWidget context={context} name={resolved.name} label={row.label} resource={resource} />);
     }
     // The one narrowing to RJSF's widget contract: a stock name or a miss mounts nothing here.
     const Widget = asWidget(resolved.widget);

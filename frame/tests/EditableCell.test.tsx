@@ -139,7 +139,8 @@ describe('EditableCell (row-cell runtime)', () => {
         expect(screen.queryByTestId('circuit-graph')).toBeNull();
     });
 
-    it('an unbound non-heavyweight field falls to the read projection (no throw)', () => {
+    it('an unbound non-heavyweight field draws the unbound marker, not the read projection (ticket 42; no throw)', () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
         const registry = makeRegistry();
         render(
             <EditableCell
@@ -152,7 +153,9 @@ describe('EditableCell (row-cell runtime)', () => {
                 registry={registry}
             />,
         );
-        expect(screen.getByText('plain')).toBeTruthy();
-        expect(document.querySelector('[data-frame-cell="readonly"]')).toBeTruthy();
+        const marker = document.querySelector('[data-frame-unbound="row-cell"]');
+        expect(marker?.getAttribute('data-frame-unbound-widget')).toBe('not-registered');
+        expect(screen.queryByText('plain')).toBeNull();
+        vi.restoreAllMocks();
     });
 });

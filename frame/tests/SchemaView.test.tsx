@@ -1,10 +1,13 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
-import { createWidgetRegistry, type SchemaNode } from '@schemastud/seam';
-import { SchemaView, UnboundWidget } from '../src/SchemaView';
+import { UnboundWidget, createWidgetRegistry, type SchemaNode } from '@schemastud/seam';
+import { SchemaView } from '../src/SchemaView';
 import type { ContextManifest } from '../src/contexts';
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+});
 
 /**
  * SchemaView smoke — a participating registered widget mounts read-only; a
@@ -57,8 +60,8 @@ describe('SchemaView (detail)', () => {
 // The read fallback must present a machine-field OBJECT with humanized labels and
 // unchanged values (not a single opaque JSON blob), keep the authored source JSON
 // recoverable so it round-trips unchanged, and — when a binding names a widget the
-// registry cannot resolve — show a plain unavailable-field state in production
-// rather than the raw `[unbound widget: …]` marker, while the dev failure stays loud.
+// registry cannot resolve — show seam's plain unavailable-field marker, in development and
+// production alike, never the raw name (ticket 42).
 // -----------------------------------------------------------------------------
 describe('SchemaView fallback presentation (C03)', () => {
     const structuredSchema: SchemaNode = {
@@ -108,9 +111,9 @@ describe('SchemaView fallback presentation (C03)', () => {
         expect(JSON.parse(json)).toEqual(structuredRecord.profile);
     });
 
-    it('renders a visible unavailable-field state in production, with diagnostic identity only in a data attribute (no user-visible leak)', () => {
-        // UnboundWidget is the production render path (the dev path throws before reaching it).
-        const { container } = render(<UnboundWidget label="Risk score" widget="risk-gauge" />);
+    it('renders a visible unavailable-field state, with diagnostic identity only in a data attribute (no user-visible leak)', () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        const { container } = render(<UnboundWidget context="detail" label="Risk score" name="risk-gauge" />);
 
         // The end user sees a plain unavailable state, never the raw marker.
         expect(screen.getByText('Unable to display this field')).toBeTruthy();
@@ -118,7 +121,7 @@ describe('SchemaView fallback presentation (C03)', () => {
 
         // The failed widget identity is retained for devtools on a data attribute …
         expect(
-            container.querySelector('[data-frame-view-widget]')?.getAttribute('data-frame-view-widget'),
+            container.querySelector('[data-frame-unbound="detail"]')?.getAttribute('data-frame-unbound-widget'),
         ).toBe('risk-gauge');
         // … and NOT leaked into any user-visible tooltip or a11y copy.
         expect(container.querySelector('[title]')).toBeNull();
@@ -163,8 +166,8 @@ describe('SchemaView fallback presentation (C03)', () => {
         expect(JSON.parse(json)).toEqual(rec);
     });
 
-    it('keeps an unbound heavyweight widget a hard, loud error in dev', () => {
-        // import.meta.env.DEV is true under vitest, so the heavyweight-unbound wiring error must throw.
+    it('draws an unbound heavyweight widget as the marker, and never throws (ticket 42)', () => {
+        const error = vi.spyOn(console, 'error').mockImplementation(() => {});
         const heavySchema: SchemaNode = { type: 'object', properties: { gauge: { type: 'number' } } };
         const heavyManifest: ContextManifest = {
             byNode: { gauge: { detail: { participates: true, widget: 'risk-gauge', heavyweight: true } } },
@@ -172,16 +175,17 @@ describe('SchemaView fallback presentation (C03)', () => {
             known: ['detail'],
         };
 
-        expect(() =>
-            render(
-                <SchemaView
-                    schema={heavySchema}
-                    record={{ gauge: 42 }}
-                    manifest={heavyManifest}
-                    context="detail"
-                    registry={createWidgetRegistry()}
-                />,
-            ),
-        ).toThrow(/heavyweight widget .* is unbound/);
+        const { container } = render(
+            <SchemaView
+                schema={heavySchema}
+                record={{ gauge: 42 }}
+                manifest={heavyManifest}
+                context="detail"
+                registry={createWidgetRegistry()}
+            />,
+        );
+        expect(container.querySelector('[data-frame-unbound="detail"]')?.getAttribute('data-frame-unbound-widget')).toBe('risk-gauge');
+        expect(error.mock.calls.some((call) => String(call[0]).includes('"risk-gauge"'))).toBe(true);
+        error.mockRestore();
     });
 });

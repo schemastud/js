@@ -4,8 +4,7 @@ import type { ContextManifest, NodeParticipation } from './contexts';
 import { ColumnWidgetCell } from './columnKinds';
 import { getPath } from './getPath';
 import { isWidgetComponent, resolveWidgetFor } from './resolveWidgetFor';
-import { UnboundWidget } from './SchemaView';
-import { displayLabel, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
+import { UnboundWidget, displayLabel, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 
 const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
 
@@ -132,8 +131,9 @@ function declaredCell(
             />
         );
     }
-    if (resolved.unbound) {
-        return () => <UnboundWidget label={header} widget={entry.widget} kind="unbound-column" />;
+    if (resolved.bound === false && resolved.name !== undefined) {
+        const name = resolved.name;
+        return () => <UnboundWidget context="list-column" name={name} label={header} pointer={`/${field}`} />;
     }
     return undefined;
 }

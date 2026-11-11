@@ -39,12 +39,13 @@ export const isWidgetComponent = (
 ): widget is Exclude<ResolvedWidget['widget'], string | undefined> =>
     widget !== undefined && typeof widget !== 'string';
 
-/** `name` (from `ResolvedWidget`) is the per-context name: the entry's, else the lender's, else the node's own. */
+/**
+ * `name` (from `ResolvedWidget`) is the per-context name: the entry's, else the lender's, else the node's own; and
+ * `bound === false` says nothing binds it here, which every surface draws as seam's `UnboundWidget` (ruling 01 §3).
+ */
 export interface ResolvedForContext extends ResolvedWidget {
     /** Whether the node participates in this context at all. */
     participates: boolean;
-    /** A widget NAME was bound but the registry resolved no component. */
-    unbound?: boolean;
     /**
      * The options the widget gets in this context: the registry entry's config, the node's
      * declared `x-widget-options` merged over it, then the context entry's options (its
@@ -77,7 +78,6 @@ export function resolveWidgetFor(
         [FRAME_CONTEXT_KEYWORD]: ctx,
     };
     const resolved = registry.resolveEntry(schema, ctx);
-    const unbound = Boolean(name) && resolved.widget === undefined;
     const declared = node['x-widget-options'];
     const options = mergeOptions(
         mergeOptions(
@@ -89,5 +89,5 @@ export function resolveWidgetFor(
         folded,
     );
     const { options: _, ...rest } = resolved;
-    return { ...rest, ...(options !== undefined ? { options } : {}), participates: true, unbound };
+    return { ...rest, ...(options !== undefined ? { options } : {}), participates: true };
 }
