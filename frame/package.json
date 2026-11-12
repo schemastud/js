@@ -82,9 +82,9 @@
     "zustand": ">=4"
   },
   "dependencies": {
-    "@schemastud/facets": "^0.2.2",
-    "@schemastud/seam": "^0.2.2",
-    "@schemastud/ui": "^0.1.2"
+    "@schemastud/facets": "github:schemastud/js#72e8e8086d55e285ce387cba0032e264c09939fc&path:/facets",
+    "@schemastud/seam": "github:schemastud/js#aae63180fd740d3a9497fa2a12e7fbc7c206bc92&path:/seam",
+    "@schemastud/ui": "github:schemastud/js#abef468b39df9b1e81fd9a2081e69f8094c60e4e&path:/ui"
   },
   "devDependencies": {
     "@rjsf/core": "^6.0.0",
