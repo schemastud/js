@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "package": "@schemastud/messages",
+  "sourceLocale": "en",
+  "namespace": "schemastud-messages",
+  "sharesWith": null,
+  "messages": {}
+}

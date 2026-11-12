@@ -2,6 +2,7 @@
 import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
+import { MessageProvider } from '../../messages/src/react';
 import { formatMoney } from '../src/money';
 import { MoneyFormatProvider, useMoneyFormat } from '../src/money-context';
 
@@ -67,4 +68,18 @@ it('binds the served format once and updates consumers when the provider changes
     expect(screen.getByText('$0.0049')).toBeTruthy();
     rerender(<MoneyFormatProvider value={{ currency: 'EUR', locale: 'de-DE' }}><Amount /></MoneyFormatProvider>);
     expect(container.textContent).toBe('0,0049 €');
+});
+
+it('uses explicit money locale, then the message locale, then en-US without inferring currency', () => {
+    function Amount() { return <span>{useMoneyFormat()(1234.5)}</span>; }
+    const catalog = { version: 1 as const, locale: 'de-DE', realm: null, direction: 'ltr' as const, messages: {} };
+    const { container, rerender } = render(<MessageProvider value={catalog}><Amount /></MessageProvider>);
+    expect(container.textContent).toBe('1.234,50 $');
+    rerender(<MessageProvider value={catalog}><MoneyFormatProvider value={{ currency: 'EUR' }}><Amount /></MoneyFormatProvider></MessageProvider>);
+    expect(container.textContent).toBe('1.234,50 €');
+    rerender(<MessageProvider value={catalog}><MoneyFormatProvider value={{ currency: 'EUR', locale: 'en-US' }}><Amount /></MoneyFormatProvider></MessageProvider>);
+    expect(container.textContent).toBe('€1,234.50');
+    rerender(<Amount />);
+    expect(container.textContent).toBe('$1,234.50');
+    expect(formatMoney(1234.5, {}, { currency: 'EUR' })).toBe('€1,234.50');
 });

@@ -1,0 +1,64 @@
+{
+  "name": "@schemastud/messages",
+  "version": "0.1.0",
+  "description": "Typed Laravel-compatible messages, a React peer adapter and explicit JSON catalog collection.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./messages": "./messages.default.json"
+  },
+  "bin": {
+    "schemastud-messages": "./bin/schemastud-messages.mjs"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "messages.default.json",
+    "README.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "schemastud": {
+    "messages": {
+      "version": 1,
+      "catalog": "./messages",
+      "runtimeAbi": 1
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemastud/js.git",
+    "directory": "messages"
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.10"
+  }
+}

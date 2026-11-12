@@ -10,7 +10,10 @@
         "noEmit": true,
         "verbatimModuleSyntax": true,
         "noUnusedLocals": true,
-        "noUnusedParameters": true
+        "noUnusedParameters": true,
+        "paths": {
+            "@schemastud/messages/react": ["../messages/src/react.tsx"]
+        }
     },
     "include": ["src"]
 }

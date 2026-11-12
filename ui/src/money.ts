@@ -1,7 +1,7 @@
 /** Host-declared presentation only. Amounts remain in currency units, never integer cents. */
 export interface MoneyFormat {
     currency: string;
-    locale: string;
+    locale?: string;
     minorDigits?: number;
     costMaxDigits?: number;
 }
@@ -24,7 +24,7 @@ export const defaultMoneyFormat: Readonly<MoneyFormat> = {
 /** Charge rounding is presentation, not accounting. Cost/rate never hide a nonzero under the cap. */
 export function formatMoney(amount: number, options: MoneyOptions = {}, format: MoneyFormat = defaultMoneyFormat): string {
     if (!Number.isFinite(amount)) throw new RangeError('Money amount must be finite');
-    const currency = new Intl.NumberFormat(format.locale, { style: 'currency', currency: format.currency });
+    const currency = new Intl.NumberFormat(format.locale ?? 'en-US', { style: 'currency', currency: format.currency });
     // Intl types allow absent fraction digits; currency defaults normally supply them.
     const minor = format.minorDigits ?? currency.resolvedOptions().maximumFractionDigits ?? 2;
     const cap = format.costMaxDigits ?? 6;
@@ -37,7 +37,7 @@ export function formatMoney(amount: number, options: MoneyOptions = {}, format: 
 
     const precise = options.mode === 'cost' || options.mode === 'rate';
     const max = precise ? cap : minor;
-    const number = new Intl.NumberFormat(format.locale, {
+    const number = new Intl.NumberFormat(format.locale ?? 'en-US', {
         style: 'currency', currency: format.currency,
         minimumFractionDigits: Math.min(minor, max), maximumFractionDigits: max,
     });

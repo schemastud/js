@@ -1,7 +1,8 @@
 import { createContext, useCallback, useContext, type ReactNode } from 'react';
+import { useMessageLocale } from '@schemastud/messages/react';
 import { defaultMoneyFormat, formatMoney, type MoneyFormat, type MoneyOptions } from './money';
 
-const MoneyContext = createContext<MoneyFormat>(defaultMoneyFormat);
+const MoneyContext = createContext<MoneyFormat | null>(null);
 
 /** Mount once in the host shell with the served money format. */
 export function MoneyFormatProvider({ value, children }: { value: MoneyFormat; children: ReactNode }) {
@@ -9,6 +10,9 @@ export function MoneyFormatProvider({ value, children }: { value: MoneyFormat; c
 }
 
 export function useMoneyFormat(): (amount: number, options?: MoneyOptions) => string {
-    const format = useContext(MoneyContext);
-    return useCallback((amount: number, options: MoneyOptions = {}) => formatMoney(amount, options, format), [format]);
+    const supplied = useContext(MoneyContext);
+    const messageLocale = useMessageLocale();
+    const locale = supplied?.locale ?? messageLocale;
+    const format = supplied ?? defaultMoneyFormat;
+    return useCallback((amount: number, options: MoneyOptions = {}) => formatMoney(amount, options, { ...format, locale }), [format, locale]);
 }
