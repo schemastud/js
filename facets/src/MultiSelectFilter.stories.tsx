@@ -8,8 +8,8 @@ import { MockFacetsProvider } from './story-harness';
 
 /**
  * Facets/MultiSelectFilter (component-seams ticket 16). The type-ahead,
- * Options-Source-backed relational picker the facet popover mounts — an Input + a
- * results list + removable chips, no native `<select>`. Relational options resolve
+ * Options-Source-backed relational picker the facet popover mounts — the kit's
+ * `ComboboxList` inline + removable chips, no native `<select>`. Relational options resolve
  * through the injected transport; finite enum/bool declarations supply inline options. Rendered here over the workbench injection with the
  * fixture `statuses`/`circuits` option sources.
  *
@@ -51,15 +51,17 @@ function FilterHost({
     descriptor,
     initialValue = '',
     loading = false,
+    width = 280,
 }: {
     descriptor: FilterDescriptor;
     initialValue?: string;
     loading?: boolean;
+    width?: number;
 }) {
     const [value, setValue] = useState<string>(initialValue);
     return (
         <MockFacetsProvider fixtures={loading ? { loading: true } : undefined}>
-            <div style={{ width: 280 }}>
+            <div style={{ width }}>
                 <FacetsResourceProvider resource="fragments">
                     <MultiSelectFilter
                         descriptor={descriptor}
@@ -113,24 +115,53 @@ export const InlineOptions: Story = {
     play: async ({ canvasElement }) => {
         const canvas = within(canvasElement);
         await expect(canvas.getByRole('button', { name: 'Remove Draft' })).toBeVisible();
-        const search = canvas.getByPlaceholderText('Search…');
+        const search = canvas.getByRole('combobox');
         await userEvent.click(search);
-        await expect(canvas.getByRole('button', { name: 'Archived' })).toBeVisible();
+        await expect(await canvas.findByRole('option', { name: 'Archived' })).toBeVisible();
         await userEvent.type(search, 'unmatched');
-        await expect(canvas.queryByRole('list')).not.toBeInTheDocument();
-        await expect(canvas.queryByRole('button', { name: 'Published' })).not.toBeInTheDocument();
-        await expect(canvas.queryByRole('button', { name: 'Archived' })).not.toBeInTheDocument();
+        await expect(await canvas.findByText('No matches')).toBeVisible();
+        await expect(canvas.queryByRole('option')).not.toBeInTheDocument();
         await userEvent.clear(search);
         await userEvent.type(search, 'pub');
-        await expect(canvas.queryByRole('button', { name: 'Archived' })).not.toBeInTheDocument();
-        await userEvent.click(canvas.getByRole('button', { name: 'Published' }));
+        await userEvent.click(await canvas.findByRole('option', { name: 'Published' }));
+        await expect(canvas.queryByRole('option', { name: 'Archived' })).not.toBeInTheDocument();
         await expect(canvas.getByRole('button', { name: 'Remove Published' })).toBeVisible();
         await userEvent.click(canvas.getByRole('button', { name: 'Remove Draft' }));
         await expect(canvas.queryByRole('button', { name: 'Remove Draft' })).not.toBeInTheDocument();
-        // Pressing Remove blurred the search, and the input closes its option list 150 ms after a blur. End on the
-        // closed list, or the VR shots race that timer: the light shot usually beat it and the later dark shot,
-        // under load, did not (launch follow-ups s05).
-        await waitFor(() => expect(canvas.queryByRole('list')).not.toBeInTheDocument());
+        // The list no longer closes on a blur timer (owner-review-20261112 06): Escape closes it. End closed, so the
+        // VR shot is the resting control.
+        await userEvent.type(search, '{Escape}');
+        await waitFor(() => expect(canvas.queryByRole('listbox')).not.toBeInTheDocument());
+    },
+};
+
+/**
+ * keyboard — the relational picker as the Threads agent filter uses it: open on focus,
+ * type to search the Options Source (once per pause), ArrowDown and Enter to pick. The
+ * list stays open for the next pick (multiselect), with the chosen option checked.
+ */
+export const Keyboard: Story = {
+    render: () => <FilterHost descriptor={multiDescriptor} />,
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const search = canvas.getByRole('combobox');
+        await userEvent.click(search);
+        await canvas.findAllByRole('option');
+        await userEvent.keyboard('{ArrowDown}{Enter}');
+        await waitFor(() => expect(canvas.getAllByRole('option', { selected: true })).toHaveLength(1));
+    },
+};
+
+/** the same picker in a 390-wide column (a phone's width), populated and open. */
+export const Narrow: Story = {
+    render: () => (
+        <FilterHost descriptor={multiDescriptor} initialValue="draft,published" width={358} />
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await canvas.findByText('Draft');
+        await userEvent.click(canvas.getByRole('combobox'));
+        await canvas.findAllByRole('option');
     },
 };
 

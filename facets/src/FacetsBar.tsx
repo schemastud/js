@@ -62,11 +62,13 @@ function chipSummary(value: string, labels: Record<string, string>): string {
  */
 function FacetControl({
     descriptor,
+    label,
     value,
     onChange,
     onLabelsResolved,
 }: {
     descriptor: FilterDescriptor;
+    label?: string;
     value: string;
     onChange: (value: string | null) => void;
     onLabelsResolved?: (labels: Record<string, string>) => void;
@@ -76,6 +78,7 @@ function FacetControl({
         return (
             <MultiSelectFilter
                 descriptor={descriptor}
+                label={label}
                 value={value}
                 onChange={onChange}
                 onLabelsResolved={onLabelsResolved}
@@ -255,6 +258,7 @@ export function FacetsBar({
                             <Label className="mb-1.5 block">{facet.label}</Label>
                             <FacetControl
                                 descriptor={facet.descriptor}
+                                label={facet.label}
                                 value={value}
                                 onChange={(v) => onFilterChange(facet.descriptor.name, v)}
                                 onLabelsResolved={mergeLabels}
@@ -313,6 +317,7 @@ export function FacetsBar({
                                 <Label className="mb-1.5 block">{facet.label}</Label>
                                 <FacetControl
                                     descriptor={facet.descriptor}
+                                    label={facet.label}
                                     value=""
                                     onChange={(v) => {
                                         onFilterChange(facet.descriptor.name, v);

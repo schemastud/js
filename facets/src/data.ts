@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback } from 'react';
 import { transportScope } from './transportScope';
 import { useFacetsCollection, useFacetsInjection, useFacetsResource } from './context';
 import type {
@@ -57,19 +58,45 @@ export function useFilterVariants(resource: string, collection?: string) {
  * rows, with type-ahead via `search`. Cached per (ref, search) for the session.
  */
 export function useFilterOptions(ref: string | undefined, search: string, resource?: string) {
+    const options = useFilterOptionsQuery(ref, resource);
+    return useQuery({ ...options(search), enabled: options.enabled });
+}
+
+/**
+ * The same Options Source as an imperative `search(term)` for a combobox, read through the query cache on the
+ * `useFilterOptions` key: a term already asked for in the last minute (by the picker, or the facets bar warming its
+ * chip labels) is not asked again.
+ */
+export function useFilterOptionsSearch(ref: string | undefined, resource?: string) {
+    const queryClient = useQueryClient();
+    const options = useFilterOptionsQuery(ref, resource);
+    return useCallback(
+        (search: string) => (options.enabled ? queryClient.fetchQuery(options(search)) : Promise.resolve([] as FilterOption[])),
+        // `options` is rebuilt each render, so the callback keys on what it is built from: the search stays stable
+        // across renders, which the combobox's debounce effect depends on.
+        [queryClient, options.enabled, ...options.keyParts],
+    );
+}
+
+function useFilterOptionsQuery(ref: string | undefined, resource?: string) {
     const { transport } = useFacetsInjection();
     const contextResource = useFacetsResource();
     const contextCollection = useFacetsCollection();
     const target = resource ?? contextResource;
-    return useQuery({
-        queryKey: ['filter-options', target, ref, search, contextCollection ?? null, transportScope(transport)],
+    const scope = transportScope(transport);
+    const build = (search: string) => ({
+        queryKey: ['filter-options', target, ref, search, contextCollection ?? null, scope],
         placeholderData: undefined,
-        enabled: Boolean(ref) && Boolean(target),
         staleTime: 60_000,
         queryFn: () =>
             (contextCollection
                 ? transport.getFilterOptions(target as string, ref as string, search, contextCollection)
                 : transport.getFilterOptions(target as string, ref as string, search)) as Promise<FilterOption[]>,
+    });
+
+    return Object.assign(build, {
+        enabled: Boolean(ref) && Boolean(target),
+        keyParts: [target, ref, contextCollection ?? null, scope, transport] as const,
     });
 }
 

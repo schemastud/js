@@ -54,14 +54,14 @@ describe('declared inline filter options', () => {
         const { input, labels, getFilterOptions } = mount(descriptor, 'draft');
         expect(screen.getByRole('button', { name: 'Remove Draft' })).toBeTruthy();
         fireEvent.focus(input);
-        expect(screen.getByRole('button', { name: 'Archived' })).toBeTruthy();
+        expect(await screen.findByRole('option', { name: 'Archived' })).toBeTruthy();
+        expect(screen.getByRole('option', { name: 'Draft', selected: true })).toBeTruthy();
         fireEvent.change(input, { target: { value: 'unmatched' } });
-        expect(screen.queryByRole('list')).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Published' })).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Archived' })).toBeNull();
+        expect(await screen.findByText('No matches')).toBeTruthy();
+        expect(screen.queryByRole('option')).toBeNull();
         fireEvent.change(input, { target: { value: 'PUBL' } });
-        expect(screen.queryByRole('button', { name: 'Archived' })).toBeNull();
-        fireEvent.mouseDown(screen.getByRole('button', { name: 'Published' }));
+        fireEvent.click(await screen.findByRole('option', { name: 'Published' }));
+        expect(screen.queryByRole('option', { name: 'Archived' })).toBeNull();
         expect(screen.getByTestId('value').textContent).toBe('draft,published');
         expect(screen.getByRole('button', { name: 'Remove Draft' })).toBeTruthy();
         fireEvent.click(screen.getByRole('button', { name: 'Remove Draft' }));
@@ -70,24 +70,24 @@ describe('declared inline filter options', () => {
         expect(getFilterOptions).not.toHaveBeenCalled();
     });
 
-    it('serializes numeric and boolean values including zero and false without losing their labels', () => {
+    it('serializes numeric and boolean values including zero and false without losing their labels', async () => {
         const { input, getFilterOptions } = mount({ ...descriptor, options: [
             { value: 0, label: 'Zero' }, { value: false, label: 'No' }, { value: true, label: 'Yes' },
         ] }, 'false');
         expect(screen.getByRole('button', { name: 'Remove No' })).toBeTruthy();
         fireEvent.focus(input);
-        fireEvent.mouseDown(screen.getByRole('button', { name: 'Zero' }));
-        fireEvent.mouseDown(screen.getByRole('button', { name: 'Yes' }));
+        fireEvent.click(await screen.findByRole('option', { name: 'Zero' }));
+        fireEvent.click(await screen.findByRole('option', { name: 'Yes' }));
         expect(screen.getByTestId('value').textContent).toBe('false,0,true');
         expect(getFilterOptions).not.toHaveBeenCalled();
     });
 
-    it('replaces a single value and closes the inline picker', () => {
+    it('replaces a single value and closes the inline picker', async () => {
         const { input } = mount({ ...descriptor, control: 'select' }, 'draft');
         fireEvent.focus(input);
-        fireEvent.mouseDown(screen.getByRole('button', { name: 'Published' }));
+        fireEvent.click(await screen.findByRole('option', { name: 'Published' }));
         expect(screen.getByTestId('value').textContent).toBe('published');
-        expect(screen.queryByRole('list')).toBeNull();
+        expect(screen.queryByRole('listbox')).toBeNull();
     });
 
     it('uses each facet declaration for collapsed deep-linked chips before opening a picker', () => {
@@ -100,7 +100,7 @@ describe('declared inline filter options', () => {
     it('keeps relational option loading and server search working', async () => {
         const { input, getFilterOptions } = mount({ name: 'record', operator: 'set', control: 'multiselect', optionsRef: 'records' });
         fireEvent.focus(input);
-        fireEvent.mouseDown(await screen.findByRole('button', { name: 'Remote record' }));
+        fireEvent.click(await screen.findByRole('option', { name: 'Remote record' }, { timeout: 2000 }));
         expect(screen.getByTestId('value').textContent).toBe('remote');
         fireEvent.change(input, { target: { value: 'other' } });
         await waitFor(() => expect(getFilterOptions).toHaveBeenCalledWith('pages', 'records', 'other'));

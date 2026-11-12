@@ -2,7 +2,8 @@ import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState, type ReactNode } from 'react';
 import { userEvent, within, waitFor } from 'storybook/test';
 import { Button, Input, Popover, PopoverContent, PopoverTrigger } from '@schemastud/ui';
-import { Combobox, type ComboboxOption, type ComboboxPrimitives } from './Combobox';
+import { Combobox, type ComboboxPrimitives } from './Combobox';
+import { ComboboxList, type ComboboxOption } from './ComboboxList';
 
 /**
  * Foundation/Combobox (component-seams ticket 19). The host-agnostic async combobox: a
@@ -22,9 +23,10 @@ import { Combobox, type ComboboxOption, type ComboboxPrimitives } from './Combob
  * Rule of sanction — axes this primitive does NOT expose, recorded so "storied" is honest:
  * **variant / size / tone / density** (no such props — a single injected surface, styling is
  * fully caller-supplied via `*ClassName`); **viewport** (a small anchored panel, not a
- * responsive/collapse surface); **multi-select** (the component is single-select by contract
- * — `onSelect` yields one option and closes; multi would be a component change, not a story).
- * Absent = absent-not-a-gap.
+ * responsive/collapse surface). **Cardinality** is an axis since owner-review-20261112 06:
+ * `multiple` keeps the panel open after a pick so the caller toggles a set (`Multiple`), and
+ * the list part, `ComboboxList`, renders without a popover (`ListInline`, `ListInlineNarrow`
+ * at a 390-wide column). Absent = absent-not-a-gap.
  */
 const meta = {
     title: 'Foundation/Combobox',
@@ -166,7 +168,7 @@ export const Filtering: Story = {
         const canvas = within(ctx.canvasElement);
         await userEvent.click(canvas.getByRole('button'));
         await canvas.findByText('Ada Lovelace');
-        await userEvent.type(canvas.getByRole('textbox'), 'gra');
+        await userEvent.type(canvas.getByRole('combobox'), 'gra');
         await canvas.findByText('Grace Hopper');
         await waitFor(() => {
             if (canvas.queryByText('Ada Lovelace')) throw new Error('still filtering');
@@ -222,6 +224,97 @@ export const Selected: Story = {
         </Canvas>
     ),
     play: openAndSettle('Grace Hopper'),
+};
+
+// ── CARDINALITY axis ──────────────────────────────────────────────────────────
+
+function MultipleDemo() {
+    const [values, setValues] = useState<string[]>(['ada']);
+    return (
+        <Combobox
+            primitives={primitives}
+            debounceMs={0}
+            multiple
+            search={makeSearch()}
+            currentValue={values}
+            onSelect={(o) => setValues((prev) => (prev.includes(o.value) ? prev.filter((v) => v !== o.value) : [...prev, o.value]))}
+            trigger={
+                <Button variant="outline" className="min-w-56 justify-between">
+                    {values.length === 0 ? 'Pick people…' : `${values.length} selected`}
+                </Button>
+            }
+        />
+    );
+}
+
+/** cardinality = multiple — the panel stays open after a pick; Ada and Grace are both checked. */
+export const Multiple: Story = {
+    render: () => (
+        <Canvas variant="flat">
+            <MultipleDemo />
+        </Canvas>
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        await userEvent.click(canvas.getByRole('button'));
+        await userEvent.click(await canvas.findByRole('option', { name: /Grace Hopper/ }));
+        await canvas.findByText('2 selected');
+        await waitFor(() => {
+            if (!canvas.getByRole('option', { name: /Grace Hopper/ }).getAttribute('aria-selected')?.includes('true')) {
+                throw new Error('not checked yet');
+            }
+        });
+    },
+};
+
+function ListDemo({ width }: { width: number }) {
+    const [values, setValues] = useState<string[]>([]);
+    return (
+        <div style={{ width }} className="space-y-1.5 rounded-md border bg-card p-2">
+            <ComboboxList
+                Input={Input}
+                debounceMs={0}
+                multiple
+                label="People"
+                search={makeSearch()}
+                selectedValues={values}
+                onSelect={(o) => setValues((prev) => (prev.includes(o.value) ? prev.filter((v) => v !== o.value) : [...prev, o.value]))}
+                listClassName="max-h-56 overflow-y-auto rounded-md border p-1"
+            />
+        </div>
+    );
+}
+
+/** the list part without a popover — inline, as the facets value editor mounts it, keyboard-driven. */
+export const ListInline: Story = {
+    render: () => (
+        <Canvas variant="flat">
+            <ListDemo width={320} />
+        </Canvas>
+    ),
+    play: async ({ canvasElement }) => {
+        const canvas = within(canvasElement);
+        const input = canvas.getByRole('combobox', { name: 'People' });
+        await canvas.findByText('Ada Lovelace');
+        await userEvent.type(input, 'al');
+        await canvas.findByText('Alan Turing');
+        await userEvent.keyboard('{ArrowDown}{Enter}');
+        await waitFor(() => {
+            if (canvas.queryAllByRole('option', { selected: true }).length !== 1) throw new Error('not picked yet');
+        });
+    },
+};
+
+/** the same inline list in a 390-wide column (a phone's width). */
+export const ListInlineNarrow: Story = {
+    render: () => (
+        <Canvas variant="flat">
+            <ListDemo width={358} />
+        </Canvas>
+    ),
+    play: async ({ canvasElement }) => {
+        await within(canvasElement).findByText('Katherine Johnson');
+    },
 };
 
 // ── CANVAS axis ───────────────────────────────────────────────────────────────
