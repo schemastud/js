@@ -1,5 +1,5 @@
 import { ArrowDownAZ, ArrowUpAZ, ListFilter, Plus, Search, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FacetsResourceProvider, useFacetsInjection } from './context';
 import { useFilterOptions } from './data';
 import { MultiSelectFilter } from './MultiSelectFilter';
@@ -64,13 +64,14 @@ type ChipSummary = { kind: 'text'; text: string } | { kind: 'neutral' } | { kind
  * Options Source does not promise complete (a capped list may omit a valid applied value, which must stay visible and
  * clearable). The x-filter descriptor names no default option, so there is no default chip to fall back to.
  */
-function chipSummary(value: string, descriptor: FilterDescriptor, labels: Record<string, string>): ChipSummary {
+function chipSummary(value: string, descriptor: FilterDescriptor, labels: ReadonlyMap<string, string>): ChipSummary {
     const parts = value.split(',').filter(Boolean);
     if (parts.length === 0) return { kind: 'text', text: '…' };
     const optionBacked = descriptor.options !== undefined || descriptor.optionsRef !== undefined;
     if (!optionBacked) return { kind: 'text', text: parts.length === 1 ? parts[0] : `${parts.length} selected` };
-    const matched = parts.filter((part) => labels[part] !== undefined);
-    if (matched.length === 1) return { kind: 'text', text: labels[matched[0]] };
+    // Membership by the facet's own options only: a Map, so an inherited Object key (`toString`) is never an option.
+    const matched = parts.filter((part) => labels.has(part));
+    if (matched.length === 1) return { kind: 'text', text: labels.get(matched[0])! };
     if (matched.length > 1) return { kind: 'text', text: `${matched.length} selected` };
     return descriptor.options !== undefined ? { kind: 'none' } : { kind: 'neutral' };
 }
@@ -150,18 +151,33 @@ export function FacetsBar({
         useFacetsInjection().primitives;
     const [openChip, setOpenChip] = useState<string | null>(null);
     const [addOpen, setAddOpen] = useState(false);
-    // value→label cache so option-backed chips read as names, not ids. Populated as the
-    // per-facet controls resolve their Options Source rows.
-    const [labelCache, setLabelCache] = useState<Record<string, string>>({});
-    const mergeLabels = useCallback((labels: Record<string, string>) => {
+    // value→label cache so option-backed chips read as names, not ids, kept PER Options Source (keyed by `optionsRef`):
+    // a value matches only its own source's options, never a label another facet's source happened to resolve
+    // (frame-foundation 60, build-qa). Populated as the per-facet controls resolve their Options Source rows.
+    const [labelCache, setLabelCache] = useState<ReadonlyMap<string, ReadonlyMap<string, string>>>(() => new Map());
+    const mergeLabels = useCallback((source: string, labels: Record<string, string>) => {
         setLabelCache((prev) => {
-            let changed = false;
-            for (const [k, v] of Object.entries(labels)) {
-                if (prev[k] !== v) changed = true;
-            }
-            return changed ? { ...prev, ...labels } : prev;
+            const current = prev.get(source);
+            const entries = Object.entries(labels);
+            if (entries.every(([k, v]) => current?.get(k) === v)) return prev;
+            const next = new Map(prev);
+            next.set(source, new Map([...(current ?? []), ...entries]));
+            return next;
         });
     }, []);
+    // One stable callback per source, so a control's effects keyed on it do not re-run every render.
+    const sourceMergers = useRef(new Map<string, (labels: Record<string, string>) => void>());
+    const mergeLabelsFor = useCallback(
+        (source: string) => {
+            let merge = sourceMergers.current.get(source);
+            if (!merge) {
+                merge = (labels: Record<string, string>) => mergeLabels(source, labels);
+                sourceMergers.current.set(source, merge);
+            }
+            return merge;
+        },
+        [mergeLabels],
+    );
 
     const properties = Object.entries(schema.properties ?? {});
 
@@ -188,9 +204,9 @@ export function FacetsBar({
         chipSummary(
             values[facet.descriptor.name] ?? '',
             facet.descriptor,
-            facet.descriptor.options === undefined
-                ? labelCache
-                : Object.fromEntries(facet.descriptor.options.map((option) => [String(option.value), option.label])),
+            facet.descriptor.options !== undefined
+                ? new Map(facet.descriptor.options.map((option) => [String(option.value), option.label]))
+                : (facet.descriptor.optionsRef !== undefined ? labelCache.get(facet.descriptor.optionsRef) : undefined) ?? new Map(),
         );
     // An active inline-options facet whose value matches no option draws no chip; it is offered from `+ Filter` again.
     const isShown = (facet: Facet) => isActive(facet) && summaryOf(facet).kind !== 'none';
@@ -233,7 +249,7 @@ export function FacetsBar({
                     <LabelWarmer
                         key={`warm-${f.key}`}
                         optionsRef={f.descriptor.optionsRef!}
-                        onLabelsResolved={mergeLabels}
+                        onLabelsResolved={mergeLabelsFor(f.descriptor.optionsRef!)}
                     />
                 ))}
 
@@ -314,7 +330,7 @@ export function FacetsBar({
                                         // facet stay open for the next pick or keystroke.
                                         if (!active && v && facet.descriptor.control === 'select') setOpenChip(null);
                                     }}
-                                    onLabelsResolved={mergeLabels}
+                                    onLabelsResolved={facet.descriptor.optionsRef ? mergeLabelsFor(facet.descriptor.optionsRef) : undefined}
                                 />
                             </PopoverContent>
                         </Popover>
