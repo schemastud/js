@@ -48,12 +48,31 @@ function LabelWarmer({
     return null;
 }
 
-/** A short, human summary of a facet's current value for the chip label. */
-function chipSummary(value: string, labels: Record<string, string>): string {
+/**
+ * What a facet's chip says about its current value:
+ * - `text`: the summary after the facet label (`Label: summary`);
+ * - `neutral`: the facet label alone, with no value text;
+ * - `none`: no chip at all.
+ */
+type ChipSummary = { kind: 'text'; text: string } | { kind: 'neutral' } | { kind: 'none' };
+
+/**
+ * A short, human summary of a facet's current value for the chip label. A free-text facet shows what was typed. An
+ * option-backed facet never shows a raw URL value (frame-foundation 60): only values that match an option count; one
+ * match shows its label, several show "N selected". A value that matches no option draws no chip for INLINE options (a
+ * complete, finite domain, so the value is unknown), and a NEUTRAL chip for an `optionsRef` facet, whose domain the
+ * Options Source does not promise complete (a capped list may omit a valid applied value, which must stay visible and
+ * clearable). The x-filter descriptor names no default option, so there is no default chip to fall back to.
+ */
+function chipSummary(value: string, descriptor: FilterDescriptor, labels: Record<string, string>): ChipSummary {
     const parts = value.split(',').filter(Boolean);
-    if (parts.length === 0) return '';
-    if (parts.length === 1) return labels[parts[0]] ?? parts[0];
-    return `${parts.length} selected`;
+    if (parts.length === 0) return { kind: 'text', text: '…' };
+    const optionBacked = descriptor.options !== undefined || descriptor.optionsRef !== undefined;
+    if (!optionBacked) return { kind: 'text', text: parts.length === 1 ? parts[0] : `${parts.length} selected` };
+    const matched = parts.filter((part) => labels[part] !== undefined);
+    if (matched.length === 1) return { kind: 'text', text: labels[matched[0]] };
+    if (matched.length > 1) return { kind: 'text', text: `${matched.length} selected` };
+    return descriptor.options !== undefined ? { kind: 'none' } : { kind: 'neutral' };
 }
 
 /**
@@ -165,8 +184,18 @@ export function FacetsBar({
     const chipFacets = allFacets.filter((f) => f !== searchFacet);
 
     const isActive = (facet: Facet) => Boolean(values[facet.descriptor.name]);
+    const summaryOf = (facet: Facet): ChipSummary =>
+        chipSummary(
+            values[facet.descriptor.name] ?? '',
+            facet.descriptor,
+            facet.descriptor.options === undefined
+                ? labelCache
+                : Object.fromEntries(facet.descriptor.options.map((option) => [String(option.value), option.label])),
+        );
+    // An active inline-options facet whose value matches no option draws no chip; it is offered from `+ Filter` again.
+    const isShown = (facet: Facet) => isActive(facet) && summaryOf(facet).kind !== 'none';
     const activeFacets = chipFacets.filter(isActive);
-    const inactiveFacets = chipFacets.filter((f) => !isActive(f));
+    const inactiveFacets = chipFacets.filter((f) => !isShown(f));
 
     const sorts = properties.filter(([, prop]) => prop['x-sort']);
     // The Sort control edits the *primary* key of the shared comma-joined `sort`
@@ -228,10 +257,11 @@ export function FacetsBar({
                 so a just-added facet's first value keeps the same popover and editor mounted: a multiselect stays open
                 with its list and focus for the next pick (owner-review-20261112 06, D-07-b; build-qa REVISE). */}
             {chipFacets
-                .filter((facet) => isActive(facet) || facet.key === openChip)
+                .filter((facet) => isShown(facet) || facet.key === openChip)
                 .map((facet) => {
                     const value = values[facet.descriptor.name] ?? '';
                     const active = isActive(facet);
+                    const summary = summaryOf(facet);
                     return (
                         <Popover
                             key={facet.key}
@@ -250,10 +280,15 @@ export function FacetsBar({
                                         type="button"
                                         className="flex items-center gap-1 py-1 pr-1.5 pl-2.5 font-medium hover:bg-accent"
                                     >
-                                        <span className="text-muted-foreground">{facet.label}:</span>{' '}
-                                        <span>{chipSummary(value, facet.descriptor.options === undefined
-                                            ? labelCache
-                                            : Object.fromEntries(facet.descriptor.options.map((option) => [String(option.value), option.label]))) || '…'}</span>
+                                        {summary.kind === 'text' ? (
+                                            <>
+                                                <span className="text-muted-foreground">{facet.label}:</span>{' '}
+                                                <span>{summary.text}</span>
+                                            </>
+                                        ) : (
+                                            // Neutral: the facet label alone, never a value that matches no option.
+                                            <span className="text-muted-foreground">{facet.label}</span>
+                                        )}
                                     </button>
                                 </PopoverTrigger>
                                 {active && (
