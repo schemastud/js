@@ -224,49 +224,67 @@ export function FacetsBar({
                 </div>
             )}
 
-            {/* Active-filter chips */}
-            {activeFacets.map((facet) => {
-                const value = values[facet.descriptor.name] ?? '';
-                return (
-                    <Popover
-                        key={facet.key}
-                        open={openChip === facet.key}
-                        onOpenChange={(open: boolean) => setOpenChip(open ? facet.key : null)}
-                    >
-                        <div className="inline-flex items-center overflow-hidden rounded-full border bg-secondary text-xs">
-                            <PopoverTrigger asChild>
-                                <button
-                                    type="button"
-                                    className="flex items-center gap-1 py-1 pr-1.5 pl-2.5 font-medium hover:bg-accent"
-                                >
-                                    <span className="text-muted-foreground">{facet.label}:</span>{' '}
-                                    <span>{chipSummary(value, facet.descriptor.options === undefined
-                                        ? labelCache
-                                        : Object.fromEntries(facet.descriptor.options.map((option) => [String(option.value), option.label]))) || '…'}</span>
-                                </button>
-                            </PopoverTrigger>
-                            <button
-                                type="button"
-                                aria-label={`Clear ${facet.label}`}
-                                className="flex h-full items-center px-1.5 text-muted-foreground hover:bg-accent hover:text-destructive"
-                                onClick={() => onFilterChange(facet.descriptor.name, null)}
+            {/* Filter chips: every active facet, and the one just added from `+ Filter` (no value yet). One keyed list,
+                so a just-added facet's first value keeps the same popover and editor mounted: a multiselect stays open
+                with its list and focus for the next pick (owner-review-20261112 06, D-07-b; build-qa REVISE). */}
+            {chipFacets
+                .filter((facet) => isActive(facet) || facet.key === openChip)
+                .map((facet) => {
+                    const value = values[facet.descriptor.name] ?? '';
+                    const active = isActive(facet);
+                    return (
+                        <Popover
+                            key={facet.key}
+                            open={openChip === facet.key}
+                            onOpenChange={(open: boolean) => setOpenChip(open ? facet.key : null)}
+                        >
+                            <div
+                                className={
+                                    active
+                                        ? 'inline-flex items-center overflow-hidden rounded-full border bg-secondary text-xs'
+                                        : 'inline-flex items-center overflow-hidden rounded-full border border-dashed bg-secondary/60 text-xs'
+                                }
                             >
-                                <X className="size-3" />
-                            </button>
-                        </div>
-                        <PopoverContent>
-                            <Label className="mb-1.5 block">{facet.label}</Label>
-                            <FacetControl
-                                descriptor={facet.descriptor}
-                                label={facet.label}
-                                value={value}
-                                onChange={(v) => onFilterChange(facet.descriptor.name, v)}
-                                onLabelsResolved={mergeLabels}
-                            />
-                        </PopoverContent>
-                    </Popover>
-                );
-            })}
+                                <PopoverTrigger asChild>
+                                    <button
+                                        type="button"
+                                        className="flex items-center gap-1 py-1 pr-1.5 pl-2.5 font-medium hover:bg-accent"
+                                    >
+                                        <span className="text-muted-foreground">{facet.label}:</span>{' '}
+                                        <span>{chipSummary(value, facet.descriptor.options === undefined
+                                            ? labelCache
+                                            : Object.fromEntries(facet.descriptor.options.map((option) => [String(option.value), option.label]))) || '…'}</span>
+                                    </button>
+                                </PopoverTrigger>
+                                {active && (
+                                    <button
+                                        type="button"
+                                        aria-label={`Clear ${facet.label}`}
+                                        className="flex h-full items-center px-1.5 text-muted-foreground hover:bg-accent hover:text-destructive"
+                                        onClick={() => onFilterChange(facet.descriptor.name, null)}
+                                    >
+                                        <X className="size-3" />
+                                    </button>
+                                )}
+                            </div>
+                            <PopoverContent>
+                                <Label className="mb-1.5 block">{facet.label}</Label>
+                                <FacetControl
+                                    descriptor={facet.descriptor}
+                                    label={facet.label}
+                                    value={value}
+                                    onChange={(v) => {
+                                        onFilterChange(facet.descriptor.name, v);
+                                        // A single-value relational pick replaces and closes; a multiselect and a text
+                                        // facet stay open for the next pick or keystroke.
+                                        if (!active && v && facet.descriptor.control === 'select') setOpenChip(null);
+                                    }}
+                                    onLabelsResolved={mergeLabels}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                    );
+                })}
 
             {/* + Filter ▾ affordance — the resource's available (inactive) facets */}
             {inactiveFacets.length > 0 && (
@@ -293,42 +311,6 @@ export function FacetsBar({
                     </PopoverContent>
                 </Popover>
             )}
-
-            {/* Newly-added facet that has no value yet: render its editing popover inline */}
-            {openChip &&
-                !activeFacets.some((f) => f.key === openChip) &&
-                (() => {
-                    const facet = chipFacets.find((f) => f.key === openChip);
-                    if (!facet) return null;
-                    return (
-                        <Popover
-                            key={`new-${facet.key}`}
-                            open
-                            onOpenChange={(open: boolean) => !open && setOpenChip(null)}
-                        >
-                            <div className="inline-flex items-center rounded-full border border-dashed bg-secondary/60 py-1 pr-2 pl-2.5 text-xs">
-                                <PopoverTrigger asChild>
-                                    <button type="button" className="font-medium">
-                                        {facet.label}: <span className="text-muted-foreground">…</span>
-                                    </button>
-                                </PopoverTrigger>
-                            </div>
-                            <PopoverContent>
-                                <Label className="mb-1.5 block">{facet.label}</Label>
-                                <FacetControl
-                                    descriptor={facet.descriptor}
-                                    label={facet.label}
-                                    value=""
-                                    onChange={(v) => {
-                                        onFilterChange(facet.descriptor.name, v);
-                                        if (v) setOpenChip(null);
-                                    }}
-                                    onLabelsResolved={mergeLabels}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                    );
-                })()}
 
             <div className="ml-auto flex items-center gap-1.5">
                 {/* Sort control */}
