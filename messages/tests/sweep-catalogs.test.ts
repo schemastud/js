@@ -11,7 +11,7 @@ it.each(packages)('%s publishes its default catalog and every private typed tran
     expect(pkg.exports['./messages']).toBe('./messages.default.json');
     expect(pkg.files).toContain('messages.default.json');
     expect(pkg.schemastud.messages).toEqual({ version: 1, catalog: './messages' });
-    expect(pkg.peerDependencies['@schemastud/messages']).toBe('^0.1.0');
+    expect(pkg.peerDependencies['@schemastud/messages']).toBe('>=0.1.0 <1');
     expect(catalog.version).toBe(1);
     expect(catalog.package).toBe(pkg.name);
     expect(catalog.sourceLocale).toBe('en');
