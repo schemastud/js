@@ -84,8 +84,8 @@ const validationKeys = {
     dependentRequired_many: 'schemastud-seam::messages.validation.dependentRequired_many',
 } satisfies Record<string, keyof typeof catalog.messages>;
 
-/** Provider values stay in the host's one message context; a form creates no provider. */
-export function useFormMessages(options?: Parameters<typeof createFormValidator>[0]) {
+/** Read-only registries need translated widget copy, without constructing AJV. */
+export function useFormTranslation() {
     const messages = useMessages(catalog.messages);
     const translateString = useMemo<Registry['translateString']>(() => (string, parameters = []) => {
         const key = keys[string];
@@ -94,6 +94,12 @@ export function useFormMessages(options?: Parameters<typeof createFormValidator>
         parameters.forEach((value, index) => { replacements['p' + (index + 1)] = value; });
         return messages.t(key, replacements);
     }, [messages]);
+    return { messages, translateString };
+}
+
+/** Provider values stay in the host's one message context; a form creates no provider. */
+export function useFormMessages(options?: Parameters<typeof createFormValidator>[0]) {
+    const { messages, translateString } = useFormTranslation();
     const validator = useMemo(() => createFormValidator(options, (errors) => {
         for (const error of errors ?? []) {
             let keyword = error.keyword;

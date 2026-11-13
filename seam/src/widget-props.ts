@@ -20,7 +20,7 @@ import { liftEnumNames } from './ui-schema';
 import { shadcnTheme, useRjsfTheme, withNeutralRules } from './theme';
 import type { SchemaNode, WidgetResolution } from './types';
 import { defaultValidator } from './validator';
-import { FORM_COPY_REVISION, useFormCopyRevision, useFormMessages } from './messages';
+import { FORM_COPY_REVISION, useFormCopyRevision, useFormTranslation } from './messages';
 
 export interface RjsfRegistryOptions {
     /** The resource's root schema — the document a `$ref` points into — never the node alone. */
@@ -54,11 +54,11 @@ export function createRjsfRegistry({ rootSchema, theme = shadcnTheme, validator,
  */
 export function useRjsfRegistry(rootSchema: SchemaNode, formContext?: Record<string, unknown>): Registry {
     const theme = useRjsfTheme();
-    const { messages, translateString, validator } = useFormMessages();
-    const copyRevision = useFormCopyRevision(messages, validator, translateString);
-    return useMemo(() => createRjsfRegistry({ rootSchema, theme, validator, translateString,
+    const { messages, translateString } = useFormTranslation();
+    const copyRevision = useFormCopyRevision(messages, translateString);
+    return useMemo(() => createRjsfRegistry({ rootSchema, theme, translateString,
         formContext: { ...formContext, [FORM_COPY_REVISION]: copyRevision },
-    }), [rootSchema, theme, formContext, validator, translateString, copyRevision]);
+    }), [rootSchema, theme, formContext, translateString, copyRevision]);
 }
 
 /** Ruling 04 §1: what a mount site hands `widgetProps`. */
