@@ -42,19 +42,24 @@ const headers = () => screen.getAllByRole('columnheader').map((th) => th.textCon
  * manifest cache entry per kit.
  */
 describe('createFrameKit', () => {
-    it("a kit on defaults reads the manifest from laravel-frame's api root, /stud/frame", async () => {
+    it("a kit on defaults reads the manifest and lists resources under laravel-frame's api root, /stud/frame", async () => {
         const urls: string[] = [];
         vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
-            urls.push(String(input));
-            return Response.json({});
+            const url = String(input);
+            urls.push(url);
+            return Response.json(url.includes('?page=') ? { data: [], total: 0, page: 1, perPage: 25 } : {});
         });
         try {
-            await createFrameKit({ urlState: 'memory' }).transport.getManifest!();
+            const { transport } = createFrameKit({ urlState: 'memory' });
+            await transport.getManifest!();
+            await transport.list('members', { page: '1' });
         } finally {
             vi.unstubAllGlobals();
         }
 
-        expect(urls).toEqual(['/stud/frame/manifest']);
+        // Both, because the kit passes its own prefix to its transport: a kit whose resource prefix fell back to
+        // /frame while its manifest URL stayed right would pass a manifest-only assertion (build-qa's mutation).
+        expect(urls).toEqual(['/stud/frame/manifest', '/stud/frame/resources/members?page=1']);
     });
 
     it('draws the declared headers and rows of a list with no other wiring', async () => {
