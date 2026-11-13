@@ -1,7 +1,7 @@
 import { englishStringTranslator, TranslatableString, type Registry } from '@rjsf/utils';
 import { createFormValidator } from './validator';
 import { useMessages } from '@schemastud/messages/react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import catalog from '../messages.default.json';
 
 const keys = {
@@ -85,7 +85,7 @@ const validationKeys = {
 } satisfies Record<string, keyof typeof catalog.messages>;
 
 /** Provider values stay in the host's one message context; a form creates no provider. */
-export function useFormMessages() {
+export function useFormMessages(options?: Parameters<typeof createFormValidator>[0]) {
     const messages = useMessages(catalog.messages);
     const translateString = useMemo<Registry['translateString']>(() => (string, parameters = []) => {
         const key = keys[string];
@@ -94,7 +94,7 @@ export function useFormMessages() {
         parameters.forEach((value, index) => { replacements['p' + (index + 1)] = value; });
         return messages.t(key, replacements);
     }, [messages]);
-    const validator = useMemo(() => createFormValidator(undefined, (errors) => {
+    const validator = useMemo(() => createFormValidator(options, (errors) => {
         for (const error of errors ?? []) {
             let keyword = error.keyword;
             if (keyword === 'contains' && error.params.maxContains !== undefined) keyword = 'contains_range';
@@ -106,12 +106,36 @@ export function useFormMessages() {
                 if (value === null || typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))) parameters[name] = value;
                 else if (Array.isArray(value) && value.every(item => typeof item === 'string')) parameters[name] = value.join(',');
             }
+            // RJSF quotes these parameters before invoking a localizer. AJV's
+            // original dependency English does not quote them. Undo only that
+            // wrapper on copied values; RJSF still owns/restores error.params.
+            if (error.keyword === 'dependencies' || error.keyword === 'dependentRequired') {
+                if (typeof parameters.property === 'string') parameters.property = parameters.property.slice(1, -1);
+                if (typeof parameters.deps === 'string') parameters.deps = parameters.deps.split(', ').map(value => value.slice(1, -1)).join(', ');
+            }
             const count = typeof parameters.limit === 'number' ? parameters.limit
                 : typeof parameters.depsCount === 'number' ? parameters.depsCount
                 : typeof parameters.minContains === 'number' ? parameters.minContains : undefined;
             error.message = count === undefined ? messages.t(key, parameters)
                 : messages.choice(key, count, parameters);
         }
-    }), [messages]);
+    }), [messages, options]);
     return { messages, translateString, validator };
+}
+
+
+/** A public localized validator for hosts that supply their own AJV options. */
+export function useFormValidator(options?: Parameters<typeof createFormValidator>[0]) {
+    return useFormMessages(options).validator;
+}
+
+export const FORM_COPY_REVISION = 'schemastud-seam:copy-revision';
+
+/** RJSF deep-compares props but considers functions equal; change visible data too. */
+export function useFormCopyRevision(...values: readonly unknown[]) {
+    const previous = useRef({ values, revision: 0 });
+    if (values.some((value, index) => value !== previous.current.values[index])) {
+        previous.current = { values, revision: previous.current.revision + 1 };
+    }
+    return previous.current.revision;
 }

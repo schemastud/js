@@ -41,3 +41,5 @@ export { buildUiSchema, isCompositeNode, mergeUiSchema, type UiSchemaOptions } f
 export { UnboundWidget, type UnboundWidgetProps } from './UnboundWidget';
 export { displayLabel, humanizeKey } from './display-label';
 export { createFormValidator, defaultValidator } from './validator';
+
+export { useFormValidator } from './messages';

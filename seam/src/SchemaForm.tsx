@@ -7,7 +7,7 @@ import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
 import { buildUiSchema, mergeUiSchema } from './ui-schema';
 import { themedForm, useRjsfTheme } from './theme';
-import { useFormMessages } from './messages';
+import { FORM_COPY_REVISION, useFormCopyRevision, useFormMessages } from './messages';
 
 /**
  * Hosts provide their own extended registry through this context (or the
@@ -61,6 +61,9 @@ export function SchemaForm({
 }: SchemaFormProps) {
     const ThemedForm = themedForm(useRjsfTheme(theme));
     const { messages, translateString: catalogTranslator, validator: catalogValidator } = useFormMessages();
+    const effectiveValidator = validator ?? catalogValidator;
+    const effectiveTranslator = translateString ?? catalogTranslator;
+    const copyRevision = useFormCopyRevision(messages, effectiveValidator, effectiveTranslator);
     const contextRegistry = useContext(WidgetRegistryContext);
     const activeRegistry = registry ?? contextRegistry ?? defaultRegistry;
 
@@ -110,6 +113,12 @@ export function SchemaForm({
         'ui:submitButtonOptions': { submitText: messages.t('schemastud-seam::messages.submit') },
     }, mergeUiSchema(generatedUiSchema, uiSchema)), [generatedUiSchema, uiSchema, messages]);
 
+    const localizedFormContext = useMemo(() => ({
+        ...(formContext as Record<string, unknown> | undefined),
+        ...(schemaFetcher ? { schemaFetcher } : {}),
+        [FORM_COPY_REVISION]: copyRevision,
+    }), [formContext, schemaFetcher, copyRevision]);
+
     if (!formSchema) {
         return null;
     }
@@ -118,8 +127,8 @@ export function SchemaForm({
         <ThemedForm
             schema={formSchema as RJSFSchema}
             uiSchema={localizedUiSchema as UiSchema}
-            validator={validator ?? catalogValidator}
-            translateString={translateString ?? catalogTranslator}
+            validator={effectiveValidator}
+            translateString={effectiveTranslator}
             // The theme (with seam's neutral rules wrapped round it) supplies templates and widgets;
             // `withTheme` merges these caller overrides over it, so they win.
             templates={templates}
@@ -128,11 +137,7 @@ export function SchemaForm({
             // The injected fetcher rides formContext so fields that resolve
             // their own refs (rich-content manifests among them) share the
             // host's transport without extra plumbing.
-            formContext={
-                schemaFetcher
-                    ? { ...(formContext as Record<string, unknown> | undefined), schemaFetcher }
-                    : formContext
-            }
+            formContext={localizedFormContext}
             {...rest}
         />
     );

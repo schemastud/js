@@ -20,6 +20,7 @@ import { liftEnumNames } from './ui-schema';
 import { shadcnTheme, useRjsfTheme, withNeutralRules } from './theme';
 import type { SchemaNode, WidgetResolution } from './types';
 import { defaultValidator } from './validator';
+import { FORM_COPY_REVISION, useFormCopyRevision, useFormMessages } from './messages';
 
 export interface RjsfRegistryOptions {
     /** The resource's root schema — the document a `$ref` points into — never the node alone. */
@@ -29,17 +30,19 @@ export interface RjsfRegistryOptions {
     /** Default: seam's `defaultValidator`. */
     validator?: ValidatorType;
     formContext?: Record<string, unknown>;
+    /** Explicit translator for a pure registry; the hook supplies the active catalog. */
+    translateString?: Registry['translateString'];
 }
 
 /**
  * An RJSF registry built from RJSF's own exports, never by mounting a form (ruling 04 §2): `Form.getRegistry`
  * over the theme's fields, widgets and templates (with seam's neutral rules), and schema utilities over the root.
  */
-export function createRjsfRegistry({ rootSchema, theme = shadcnTheme, validator, formContext }: RjsfRegistryOptions): Registry {
+export function createRjsfRegistry({ rootSchema, theme = shadcnTheme, validator, formContext, translateString }: RjsfRegistryOptions): Registry {
     const themed = withNeutralRules(theme);
     const schemaUtils = createSchemaUtils(validator ?? defaultValidator, rootSchema as RJSFSchema);
     return Form.getRegistry(
-        { schema: rootSchema as RJSFSchema, validator: validator ?? defaultValidator, fields: themed.fields, widgets: themed.widgets, templates: themed.templates, formContext },
+        { schema: rootSchema as RJSFSchema, validator: validator ?? defaultValidator, fields: themed.fields, widgets: themed.widgets, templates: themed.templates, formContext, translateString },
         rootSchema as RJSFSchema,
         schemaUtils,
     );
@@ -51,7 +54,11 @@ export function createRjsfRegistry({ rootSchema, theme = shadcnTheme, validator,
  */
 export function useRjsfRegistry(rootSchema: SchemaNode, formContext?: Record<string, unknown>): Registry {
     const theme = useRjsfTheme();
-    return useMemo(() => createRjsfRegistry({ rootSchema, theme, formContext }), [rootSchema, theme, formContext]);
+    const { messages, translateString, validator } = useFormMessages();
+    const copyRevision = useFormCopyRevision(messages, validator, translateString);
+    return useMemo(() => createRjsfRegistry({ rootSchema, theme, validator, translateString,
+        formContext: { ...formContext, [FORM_COPY_REVISION]: copyRevision },
+    }), [rootSchema, theme, formContext, validator, translateString, copyRevision]);
 }
 
 /** Ruling 04 §1: what a mount site hands `widgetProps`. */

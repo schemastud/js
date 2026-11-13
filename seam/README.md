@@ -128,3 +128,31 @@ localizer?)` also accepts RJSF's localizer callback while preserving AJV2020,
 draft-07 support and caller options. Explicit `validator`, `translateString`,
 templates, widgets and `ui:submitButtonOptions.submitText` still win. With no
 provider the form uses English; field-key humanization remains the last resort.
+
+
+### Updating catalogs and supplying validators
+
+Forms and standalone widgets update copy when the outer catalog changes; they
+keep their mounted form and field identities. Seam supplies a numeric copy
+revision in formContext because RJSF's deep comparison treats functions as equal.
+Caller formContext fields and schemaFetcher remain present. Memoize explicit
+translateString callbacks and validators, and memoize validator options, to avoid
+unnecessary registry rebuilds.
+
+`useFormValidator(options?)` is the public hook for a host that needs custom AJV
+options while retaining the active catalog. Use its result as an explicit
+SchemaForm validator. A caller-supplied validator remains authoritative; a wrapper
+that supplies an unlocalized createFormValidator() opts out. The default path
+needs no explicit validator. `createRjsfRegistry` accepts translateString for pure
+construction; useRjsfRegistry reads the outer provider for widgets outside forms.
+
+Already displayed validation errors retain their text until the next validation
+(change/submit, according to the form's validation settings). Changing the catalog
+does not submit or validate a user's draft automatically. Validators are memoized
+per hook and catalog identity; a new form/catalog constructs a fresh AJV instance,
+so compiled-schema caches are not shared across unrelated provider trees.
+
+Provider-free English is compared byte for byte with the original defaultValidator
+on keyword fixtures. Dependency parameters undo only RJSF's added quote wrappers;
+required-property quotes remain, including RJSF title substitution. The `if` line
+uses AJV's public `failingKeyword` parameter.
