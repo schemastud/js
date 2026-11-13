@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { EmptyState, OverviewFrame } from './chrome';
 import type { CardWidgetProps, SummaryPayload } from './types';
 import { displayLabel } from '@schemastud/seam';
@@ -13,6 +14,7 @@ import { displayLabel } from '@schemastud/seam';
  * {@link OverviewFrame} chrome this card is built from.
  */
 export function FigureCard({ value, options, row }: CardWidgetProps<SummaryPayload>) {
+    const { t } = useFrameMessages();
     const figures = value?.figures ?? [];
     const headline = value?.overview?.headline ?? undefined;
     const lead = headline ?? figures[0];
@@ -27,7 +29,7 @@ export function FigureCard({ value, options, row }: CardWidgetProps<SummaryPaylo
             period={value?.overview?.period ?? row?.description ?? undefined}
             note={value?.overview?.note ?? undefined}
             headline={lead}
-            fallback={<EmptyState>No figures.</EmptyState>}
+            fallback={<EmptyState>{t("schemastud-frame::messages.no_figures")}</EmptyState>}
             options={options}
         >
             {rest.length > 0 ? (

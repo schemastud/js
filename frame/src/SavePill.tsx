@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useEditShellMount } from './EditShellMount';
 
@@ -41,19 +42,21 @@ const FRESH_MS = 1400;
 
 type Face = 'saved' | 'rest' | 'saving' | 'unsaved';
 
-const FACES: Record<Face, { label: string; style: CSSProperties }> = {
-    saved: { label: 'Saved', style: { background: 'var(--stud-success-tint)', color: 'var(--stud-success)' } },
+const FACES: Record<Face, { style: CSSProperties }> = {
+    saved: { style: { background: 'var(--stud-success-tint)', color: 'var(--stud-success)' } },
     rest: {
-        label: 'Saved',
+
         style: { background: 'var(--stud-muted, var(--muted))', color: 'var(--stud-muted-foreground, var(--muted-foreground))' },
     },
-    saving: { label: 'Saving…', style: { background: 'var(--stud-warning-tint)', color: 'var(--stud-warning)' } },
-    unsaved: { label: 'Unsaved', style: { background: 'var(--stud-danger-tint)', color: 'var(--stud-danger)' } },
+    saving: { style: { background: 'var(--stud-warning-tint)', color: 'var(--stud-warning)' } },
+    unsaved: { style: { background: 'var(--stud-danger-tint)', color: 'var(--stud-danger)' } },
 };
 
 const ORDER: readonly Face[] = ['saved', 'rest', 'saving', 'unsaved'];
 
 export function SavePill() {
+    const { t } = useFrameMessages();
+    const labels: Record<Face, string> = { saved: t("schemastud-frame::messages.saved"), rest: t("schemastud-frame::messages.saved"), saving: t("schemastud-frame::messages.saving"), unsaved: t("schemastud-frame::messages.unsaved") };
     const mount = useEditShellMount();
     const state = mount.saving ? 'saving' : mount.dirty ? 'unsaved' : 'saved';
 
@@ -92,11 +95,11 @@ export function SavePill() {
                         ...(f === face ? null : { opacity: 0, pointerEvents: 'none' as const }),
                     }}
                 >
-                    {FACES[f].label}
+                    {labels[f]}
                 </span>
             ))}
             <span role="status" aria-live="polite" style={SR_ONLY}>
-                {FACES[face].label}
+                {labels[face]}
             </span>
         </span>
     );

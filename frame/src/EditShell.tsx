@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import type { ReactNode } from 'react';
 import type { ResourceKey } from './resources';
 import { useFrameInjection } from './context';
@@ -29,6 +30,7 @@ function EditShellRecord({
     onCancel,
     ...options
 }: EditShellPropsOf<string>) {
+    const { t } = useFrameMessages();
     const edit = useEditShellOf(options as EditShellOptionsOf<string>);
     const { editSlots, primitives } = useFrameInjection();
     const { FormBody, Toggle, SaveBar } = edit.slots;
@@ -50,7 +52,7 @@ function EditShellRecord({
             : editSlots?.Container ?? DefaultContainer);
 
     if (edit.status === 'loading') {
-        return <div data-frame-shell="edit-loading">Loading…</div>;
+        return <div data-frame-shell="edit-loading">{t("schemastud-frame::messages.loading")}</div>;
     }
 
     const RetryButton = primitives.Button;
@@ -58,13 +60,11 @@ function EditShellRecord({
     // Any other read failure keeps the retryable generic error. (C17)
     const failure = edit.readFailure;
     const terminal = edit.status === 'not-found' ? (
-        <DefaultNotFound message={`This ${edit.singularLabel.toLowerCase()} was not found.`} />
+        <DefaultNotFound message={t("schemastud-frame::messages.this_value_was_not_found", { value: edit.singularLabel.toLowerCase() })} />
     ) : !failure ? null : (
         <div role="alert" data-frame-shell="edit-error">
             <p>{failure.message}</p>
-            <RetryButton type="button" onClick={failure.retry}>
-                Retry
-            </RetryButton>
+            <RetryButton type="button" onClick={failure.retry}>{t("schemastud-frame::messages.retry")}</RetryButton>
         </div>
     );
     if (edit.status !== 'ready') return <Container>{terminal}</Container>;
@@ -89,7 +89,7 @@ function EditShellRecord({
                 />
                 {edit.save.error && (
                     <div role="alert" data-frame-shell="save-error">
-                        {edit.save.error.message || 'Could not save changes.'}
+                        {edit.save.error.message || t("schemastud-frame::messages.could_not_save_changes")}
                     </div>
                 )}
                 {/* C17: scroll space between the last field and the sticky Save bar, so the bar

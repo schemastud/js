@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { Card, CardContent, CardHeader } from '@schemastud/ui';
 import { useId, type ComponentType } from 'react';
 import { UnboundWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
@@ -36,6 +37,7 @@ import type { CardWidgetProps, SummaryPayload } from './types';
 const LINE_FORM_CONTEXT: Record<string, unknown> = {};
 
 export function RecentList({ value, options, row }: CardWidgetProps<SummaryPayload>) {
+    const { t } = useFrameMessages();
     const { manifestFor, registry } = useFrameInjection();
     const rjsfRegistry = useRjsfRegistry(ROOT_NODE, LINE_FORM_CONTEXT);
     const lineId = useId();
@@ -58,7 +60,7 @@ export function RecentList({ value, options, row }: CardWidgetProps<SummaryPaylo
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0">
                 {items.length === 0 ? (
-                    <EmptyState>Nothing recent.</EmptyState>
+                    <EmptyState>{t("schemastud-frame::messages.nothing_recent")}</EmptyState>
                 ) : unboundName !== undefined ? (
                     <UnboundWidget context="list-item" name={unboundName} label={label} resource={resource} />
                 ) : (

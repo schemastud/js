@@ -42,7 +42,8 @@
     "./vocabulary": {
       "types": "./dist/vocabulary.d.ts",
       "import": "./dist/vocabulary.js"
-    }
+    },
+    "./messages": "./messages.default.json"
   },
   "sideEffects": false,
   "files": [
@@ -51,7 +52,8 @@
     "README.md",
     "docs",
     "bin",
-    "vocabulary.default.json"
+    "vocabulary.default.json",
+    "messages.default.json"
   ],
   "publishConfig": {
     "registry": "https://registry.npmjs.org",
@@ -79,7 +81,8 @@
     "lucide-react": ">=0.4.0",
     "react": ">=18",
     "react-dom": ">=18",
-    "zustand": ">=4"
+    "zustand": ">=4",
+    "@schemastud/messages": "^0.1.0"
   },
   "dependencies": {
     "@schemastud/facets": "^0.2.2",
@@ -104,9 +107,16 @@
     "tsup": "^8.5.1",
     "typescript": "^5.7.0",
     "vitest": "^4.1.10",
-    "zustand": "^5.0.14"
+    "zustand": "^5.0.14",
+    "@schemastud/messages": "^0.1.0"
   },
   "bin": {
     "frame-vocabulary": "bin/frame-vocabulary.mjs"
+  },
+  "schemastud": {
+    "messages": {
+      "version": 1,
+      "catalog": "./messages"
+    }
   }
 }

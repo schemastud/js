@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { useFrameInjection } from '../context';
 import type { EditSlots, FormMode, SaveBarSlotProps } from '../types';
 
@@ -14,11 +15,12 @@ export function ShadcnToggle({
     value: FormMode;
     onChange: (m: FormMode) => void;
 }) {
+    const { t } = useFrameMessages();
     return (
         <div
             data-frame-slot="Toggle"
             role="radiogroup"
-            aria-label="Form mode"
+            aria-label={t("schemastud-frame::messages.form_mode")}
             className="mb-4 inline-flex rounded-md border border-border bg-muted p-0.5 text-sm"
         >
             {(['enriched', 'bare'] as FormMode[]).map((mode) => (
@@ -34,7 +36,7 @@ export function ShadcnToggle({
                             : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
-                    {mode}
+                    {t(mode === "enriched" ? "schemastud-frame::messages.enriched" : "schemastud-frame::messages.bare")}
                 </button>
             ))}
         </div>
@@ -48,6 +50,7 @@ const FACE_OFF = { gridArea: '1 / 1', opacity: 0, pointerEvents: 'none' } as con
 
 
 export function ShadcnSaveBar({ saving, canSubmit, readOnly, onSave, onCancel }: SaveBarSlotProps) {
+    const { t } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     return (
@@ -60,9 +63,7 @@ export function ShadcnSaveBar({ saving, canSubmit, readOnly, onSave, onCancel }:
             className="sticky bottom-0 z-10 -mx-1 mt-6 flex justify-end gap-2 border-t border-border bg-background/95 px-1 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
         >
             {onCancel ? (
-                <Button type="button" variant="ghost" onClick={onCancel} data-frame-action="cancel">
-                    Cancel
-                </Button>
+                <Button type="button" variant="ghost" onClick={onCancel} data-frame-action="cancel">{t("schemastud-frame::messages.cancel")}</Button>
             ) : null}
             {!readOnly ? (
                 <Button
@@ -80,18 +81,14 @@ export function ShadcnSaveBar({ saving, canSubmit, readOnly, onSave, onCancel }:
                             data-face="idle"
                             data-on={!saving}
                             aria-hidden={saving || undefined}
-                        >
-                            Save
-                        </span>
+                        >{t("schemastud-frame::messages.save")}</span>
                         <span
                             className="motion-face"
                             style={saving ? FACE_ON : FACE_OFF}
                             data-face="saving"
                             data-on={saving}
                             aria-hidden={!saving || undefined}
-                        >
-                            Saving…
-                        </span>
+                        >{t("schemastud-frame::messages.saving")}</span>
                     </span>
                 </Button>
             ) : null}

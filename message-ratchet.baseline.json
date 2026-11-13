@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "counts": {
+    "@schemastud/ui": 0,
+    "@schemastud/blockdoc": 9,
+    "@schemastud/messages": 0,
+    "@schemastud/facets": 20,
+    "@schemastud/chat": 18,
+    "@schemastud/frame-remote": 0,
+    "@schemastud/frame": 0,
+    "@schemastud/seam": 3,
+    "@schemastud/combobox": 3,
+    "@schemastud/big-calendar": 3,
+    "@schemastud/nav": 4,
+    "@schemastud/mainframe": 21,
+    "@schemastud/breadcrumb": 1,
+    "@schemastud/_resources": 0
+  }
+}

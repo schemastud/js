@@ -1,3 +1,5 @@
+import { useMessageLocale } from '@schemastud/messages/react';
+import { useFrameMessages } from './messages';
 import { useId, type ComponentType, type CSSProperties } from 'react';
 import type { WidgetProps } from '@rjsf/utils';
 import { useFrameInjection } from './context';
@@ -268,6 +270,7 @@ function BadgeCell({ value, options }: { value: unknown; options: BadgeCellOptio
 // are strings or objects; `labelKey`/`labelFallbackKey` name where the label lives.
 
 function BadgesCell({ value, options }: { value: unknown; options: BadgesCellOptions }) {
+    const { t } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const Badge = primitives.Badge;
 
@@ -312,7 +315,7 @@ function BadgesCell({ value, options }: { value: unknown; options: BadgesCellOpt
                 );
             })}
             {options.overflow !== false && rest > 0 ? (
-                <span style={{ color: MUTED, fontSize: SIZES.xs }}>+{rest} more</span>
+                <span style={{ color: MUTED, fontSize: SIZES.xs }}>{t("schemastud-frame::messages.rest_more", { rest: rest })}</span>
             ) : null}
         </div>
     );
@@ -361,6 +364,7 @@ function NumberCell({ value, options }: { value: unknown; options: NumberCellOpt
 // `new Date(…).toLocaleDateString()`, muted, dash when absent.
 
 function DateCell({ value, options }: { value: unknown; options: DateCellOptions }) {
+    const locale = useMessageLocale();
     const placeholder = options.placeholder ?? '—';
 
     if (isEmpty(value)) return <Placeholder text={placeholder} />;
@@ -379,7 +383,7 @@ function DateCell({ value, options }: { value: unknown; options: DateCellOptions
             data-frame-cell="date"
             style={options.tone === 'muted' ? { color: MUTED } : undefined}
         >
-            {options.time ? parsed.toLocaleString() : parsed.toLocaleDateString()}
+            {options.time ? parsed.toLocaleString(locale) : parsed.toLocaleDateString(locale)}
         </span>
     );
 }

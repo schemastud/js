@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { createFormIntentBus } from '@schemastud/seam';
 import type { SchemaNode } from '@schemastud/seam';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -107,6 +108,7 @@ export function ActionButton({
 } & ActionHandlers) {
     const { primitives, transport, notify } = useFrameInjection();
     const { Button } = primitives;
+    const { t } = useFrameMessages();
     const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
     const trigger = useRef<HTMLElement | null>(null);
@@ -125,7 +127,7 @@ export function ActionButton({
     const invoke = useMutation<ActionResult, Error, Row | undefined>({
         mutationKey: resourceQueryKey(transport, resource, 'action', action.key),
         mutationFn: (data) => {
-            if (!transport.invoke) throw new Error('This host cannot send actions.');
+            if (!transport.invoke) throw new Error(t("schemastud-frame::messages.host_cannot_send_actions"));
             return transport.invoke(action, {
                 id: record?.id == null ? null : String(record.id),
                 data,
@@ -133,7 +135,7 @@ export function ActionButton({
         },
         onSuccess: (result) => {
             close();
-            notice({ tone: 'success', message: result.message || `${action.label} done.` });
+            notice({ tone: 'success', message: result.message || t("schemastud-frame::messages.action_done", { label: action.label }) });
 
             const target = action.result === 'navigate' ? navigateTarget(result, record) : null;
             if (target !== null && onNavigate) {
@@ -151,7 +153,7 @@ export function ActionButton({
         onError: (error) => {
             // A 422 is shown on the form it belongs to; every other refusal is also announced.
             if (!(error instanceof FrameActionError && error.status === 422 && action.input !== null)) {
-                notice({ tone: 'error', message: error.message || `${action.label} failed.` });
+                notice({ tone: 'error', message: error.message || t("schemastud-frame::messages.action_failed", { label: action.label }) });
             }
         },
     });
@@ -212,6 +214,7 @@ function ActionDialog({
     onCancel: () => void;
     onSubmit: (data: Row | undefined) => void;
 }) {
+    const { t } = useFrameMessages();
     const { primitives, editSlots } = useFrameInjection();
     const { Button } = primitives;
     const Dialog = primitives.Dialog;
@@ -252,9 +255,9 @@ function ActionDialog({
             {Dialog ? null : <strong>{action.label}</strong>}
             {hasForm ? (
                 schemaQuery.isError ? (
-                    <div role="alert">Could not load this form.</div>
+                    <div role="alert">{t("schemastud-frame::messages.could_not_load_this_form")}</div>
                 ) : schemaQuery.data === undefined ? (
-                    <div data-frame-shell="action-loading">Loading…</div>
+                    <div data-frame-shell="action-loading">{t("schemastud-frame::messages.loading")}</div>
                 ) : (
                     <FormBody
                         schema={formSchema ?? schemaQuery.data}
@@ -270,7 +273,7 @@ function ActionDialog({
             ) : (
                 <p style={{ margin: 0 }}>
                     {action.destructive
-                        ? `${action.label}? This cannot be undone.`
+                        ? t("schemastud-frame::messages.label_this_cannot_be_undone", { label: action.label })
                         : `${action.label}?`}
                 </p>
             )}
@@ -280,9 +283,7 @@ function ActionDialog({
                 </div>
             ) : null}
             <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                <Button type="button" variant="outline" onClick={onCancel} data-frame-action="cancel">
-                    Cancel
-                </Button>
+                <Button type="button" variant="outline" onClick={onCancel} data-frame-action="cancel">{t("schemastud-frame::messages.cancel")}</Button>
                 <Button
                     type="button"
                     data-frame-action="confirm"
@@ -298,7 +299,7 @@ function ActionDialog({
                         submitHandler.current?.();
                     }}
                 >
-                    {pending ? 'Working…' : action.label}
+                    {pending ? t("schemastud-frame::messages.working") : action.label}
                 </Button>
             </div>
         </div>
@@ -341,6 +342,7 @@ export function useInlineNotice(): {
     onNotice: ((notice: FrameNotice) => void) | undefined;
     element: ReactNode;
 } {
+    const { t } = useFrameMessages();
     const { notify } = useFrameInjection();
     const [notice, setNotice] = useState<FrameNotice | null>(null);
 
@@ -365,7 +367,7 @@ export function useInlineNotice(): {
                     <span>{notice.message}</span>
                     <button
                         type="button"
-                        aria-label="Dismiss"
+                        aria-label={t("schemastud-frame::messages.dismiss")}
                         onClick={() => setNotice(null)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
                     >

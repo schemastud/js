@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { useMemo } from 'react';
 import { widgetFormContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { useOptionalFrameInjection } from './context';
@@ -96,6 +97,7 @@ interface ResourceRefWidgetProps {
  * throwing, because there is nothing to search.
  */
 export function ResourceRefWidget(props: ResourceRefWidgetProps) {
+    const { t } = useFrameMessages();
     // widgetFormContext is read for RJSF-version-insulated form context; frame widgets
     // that ride a formContext sidecar read it through here.
     widgetFormContext(props);
@@ -125,7 +127,7 @@ export function ResourceRefWidget(props: ResourceRefWidgetProps) {
                 readOnly
                 disabled
                 value={shown}
-                title="Resource search needs a FrameProvider"
+                title={t("schemastud-frame::messages.resource_search_needs_a_frameprovider")}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
             />
         );

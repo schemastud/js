@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { SchemaForm, type SchemaNode } from '@schemastud/seam';
 import { useEditShellMount } from './EditShellMount';
 
@@ -19,6 +20,7 @@ interface InspectedNode {
 const EMPTY_STYLE = { padding: 16, color: 'var(--stud-ink-muted)', fontSize: 13 } as const;
 
 export function Inspector() {
+    const { t } = useFrameMessages();
     const mount = useEditShellMount();
     const selectedNodeId = mount.selectedNodeId;
 
@@ -27,9 +29,7 @@ export function Inspector() {
     // Rest empty on no selection, or when the selected node raced a delete.
     if (selectedNodeId === null || node === null) {
         return (
-            <div data-frame-region="inspector" data-frame-inspector-empty="" style={EMPTY_STYLE}>
-                Select a block to edit
-            </div>
+            <div data-frame-region="inspector" data-frame-inspector-empty="" style={EMPTY_STYLE}>{t("schemastud-frame::messages.select_a_block_to_edit")}</div>
         );
     }
 

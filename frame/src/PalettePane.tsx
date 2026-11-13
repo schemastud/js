@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import type { CSSProperties } from 'react';
 import { useEditShellMount } from './EditShellMount';
 
@@ -56,14 +57,13 @@ const AFFORDANCE_STYLE: CSSProperties = { fontSize: 11, color: 'var(--stud-ink-f
 const EMPTY_STYLE: CSSProperties = { padding: 12, fontSize: 12, color: 'var(--stud-ink-faint)' };
 
 export function PalettePane() {
+    const { t } = useFrameMessages();
     const mount = useEditShellMount();
     const candidates = mount.candidates as Candidate[];
 
     if (candidates.length === 0) {
         return (
-            <div data-frame-region-stub="palette" style={EMPTY_STYLE}>
-                Nothing insertable here
-            </div>
+            <div data-frame-region-stub="palette" style={EMPTY_STYLE}>{t("schemastud-frame::messages.nothing_insertable_here")}</div>
         );
     }
 

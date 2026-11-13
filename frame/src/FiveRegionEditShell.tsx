@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { EditShellMountProvider, useEditShellMountController } from './EditShellMount';
@@ -70,6 +71,7 @@ export function FiveRegionEditShell({
     sourceToggle = true,
     collapseLevel,
 }: FiveRegionEditShellProps) {
+    const { t } = useFrameMessages();
     // The one mount both the canvas widget and the inspector share.
     const mount = useEditShellMountController();
     // The editor always opens in Rich; Source is an opt-in view.
@@ -206,9 +208,7 @@ export function FiveRegionEditShell({
                 >
                     <SavePill />
                     {! autosave && (
-                        <button type="button" data-frame-save-action="" onClick={() => onSave?.()}>
-                            Save
-                        </button>
+                        <button type="button" data-frame-save-action="" onClick={() => onSave?.()}>{t("schemastud-frame::messages.save")}</button>
                     )}
                     {sourceToggle && (
                         <span data-frame-mode-toggle="" role="group" style={{ marginLeft: 'auto' }}>
@@ -217,21 +217,17 @@ export function FiveRegionEditShell({
                                 data-mode="rich"
                                 aria-pressed={mode === 'rich'}
                                 onClick={() => setMode('rich')}
-                            >
-                                Rich
-                            </button>
+                            >{t("schemastud-frame::messages.rich")}</button>
                             <button
                                 type="button"
                                 data-mode="source"
                                 aria-pressed={mode === 'source'}
                                 onClick={() => setMode('source')}
-                            >
-                                Source
-                            </button>
+                            >{t("schemastud-frame::messages.source")}</button>
                         </span>
                     )}
                     {narrow && (
-                        <span data-frame-region="drawer-toggles" role="group" aria-label="Editor panels">
+                        <span data-frame-region="drawer-toggles" role="group" aria-label={t("schemastud-frame::messages.editor_panels")}>
                             <button
                                 type="button"
                                 ref={paletteToggleRef}
@@ -239,7 +235,7 @@ export function FiveRegionEditShell({
                                 aria-expanded={paletteOpen}
                                 onClick={togglePalette}
                             >
-                                {paletteOpen ? 'Close block palette' : 'Open block palette'}
+                                {paletteOpen ? t("schemastud-frame::messages.close_block_palette") : t("schemastud-frame::messages.open_block_palette")}
                             </button>
                             <button
                                 type="button"
@@ -248,7 +244,7 @@ export function FiveRegionEditShell({
                                 aria-expanded={inspectorOpen}
                                 onClick={toggleInspector}
                             >
-                                {inspectorOpen ? 'Close inspector' : 'Open inspector'}
+                                {inspectorOpen ? t("schemastud-frame::messages.close_inspector") : t("schemastud-frame::messages.open_inspector")}
                             </button>
                         </span>
                     )}
@@ -266,7 +262,7 @@ export function FiveRegionEditShell({
                             <button
                                 type="button"
                                 ref={paletteToggleRef}
-                                aria-label={paletteOpen ? 'Close block palette' : 'Open block palette'}
+                                aria-label={paletteOpen ? t("schemastud-frame::messages.close_block_palette") : t("schemastud-frame::messages.open_block_palette")}
                                 aria-controls={paletteRegionId}
                                 aria-expanded={paletteOpen}
                                 onClick={togglePalette}

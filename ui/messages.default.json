@@ -1,0 +1,25 @@
+{
+    "version": 1,
+    "package": "@schemastud/ui",
+    "sourceLocale": "en",
+    "namespace": "schemastud-ui",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-ui::messages.nothing_here_yet": "Nothing here yet.",
+        "schemastud-ui::messages.page_page_of_lastpage": "Page :page of :lastPage",
+        "schemastud-ui::messages.sort": "Sort",
+        "schemastud-ui::messages.open": "Open",
+        "schemastud-ui::messages.click_to_sort_shift_click_to_add_a_secondary_sort": "Click to sort; shift-click to add a secondary sort",
+        "schemastud-ui::messages.sorted_value": ", sorted :value",
+        "schemastud-ui::messages.close": "Close",
+        "schemastud-ui::messages.cancel": "Cancel",
+        "schemastud-ui::messages.close_panel": "Close panel",
+        "schemastud-ui::messages.sidebar": "Sidebar",
+        "schemastud-ui::messages.displays_the_mobile_sidebar": "Displays the mobile sidebar.",
+        "schemastud-ui::messages.toggle_sidebar": "Toggle sidebar",
+        "schemastud-ui::messages.save": "Save",
+        "schemastud-ui::messages.saving": "Saving…",
+        "schemastud-ui::messages.descending": "descending",
+        "schemastud-ui::messages.ascending": "ascending"
+    }
+}

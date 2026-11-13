@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { useState, type ReactNode } from 'react';
 import {
     Badge,
@@ -48,12 +49,13 @@ function useOverlayOpen(open: boolean | undefined, onOpenChange: ((open: boolean
 
 /** The side panel: a right-hand `@schemastud/ui` Sheet, with the title as its heading. */
 function DefaultSidePanel({ open, onOpenChange, title, children, ...rest }: OverlayProps) {
+    const { t } = useFrameMessages();
     const [shown, setShown] = useOverlayOpen(open, onOpenChange);
     return (
         <Sheet open={shown} onOpenChange={setShown}>
             <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg" {...rest}>
                 <SheetHeader className={title ? undefined : 'sr-only'}>
-                    <SheetTitle>{title ?? 'Panel'}</SheetTitle>
+                    <SheetTitle>{title ?? t("schemastud-frame::messages.panel")}</SheetTitle>
                 </SheetHeader>
                 {children}
             </SheetContent>
@@ -63,12 +65,13 @@ function DefaultSidePanel({ open, onOpenChange, title, children, ...rest }: Over
 
 /** The dialog an action's form opens in: a `@schemastud/ui` Dialog, with the title as its heading. */
 function DefaultDialog({ open, onOpenChange, title, children }: OverlayProps) {
+    const { t } = useFrameMessages();
     const [shown, setShown] = useOverlayOpen(open, onOpenChange);
     return (
         <Dialog open={shown} onOpenChange={setShown}>
             <DialogContent>
                 <DialogHeader className={title ? undefined : 'sr-only'}>
-                    <DialogTitle>{title ?? 'Dialog'}</DialogTitle>
+                    <DialogTitle>{title ?? t("schemastud-frame::messages.dialog")}</DialogTitle>
                 </DialogHeader>
                 {children}
             </DialogContent>

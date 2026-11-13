@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { useId } from 'react';
 import { displayLabel } from '@schemastud/seam';
 import { CardHeading, EmptyState } from './chrome';
@@ -167,6 +168,7 @@ const STROKE = {
  * so the lead is left to it.
  */
 export function TrendCard({ value, options, row }: CardWidgetProps<SummaryPayload>) {
+    const { t } = useFrameMessages();
     const titleId = useId();
     const figures = value?.figures ?? [];
     const label = displayLabel({ title: value?.label ?? row?.label }, value?.key);
@@ -181,7 +183,7 @@ export function TrendCard({ value, options, row }: CardWidgetProps<SummaryPayloa
         <section data-frame-card="trend-card" className="space-y-2">
             <CardHeading label={label} href={row?.href} Icon={Icon} options={options} />
             {points.length === 0 ? (
-                <EmptyState>No periods.</EmptyState>
+                <EmptyState>{t("schemastud-frame::messages.no_periods")}</EmptyState>
             ) : (
                 <>
                     {lead ? (
@@ -193,7 +195,7 @@ export function TrendCard({ value, options, row }: CardWidgetProps<SummaryPayloa
                     {plotted.length > 0 ? (
                         <TrendChart points={points} titleId={titleId} title={describeTrend(label, points)} />
                     ) : (
-                        <EmptyState>No plottable periods.</EmptyState>
+                        <EmptyState>{t("schemastud-frame::messages.no_plottable_periods")}</EmptyState>
                     )}
                     <div
                         aria-hidden="true"
@@ -209,23 +211,21 @@ export function TrendCard({ value, options, row }: CardWidgetProps<SummaryPayloa
                                 <svg viewBox="0 0 16 4" className={`h-1 w-4 ${STROKE.actual}`}>
                                     <line x1="0" y1="2" x2="16" y2="2" stroke="currentColor" strokeWidth="2" />
                                 </svg>
-                                Actual
-                            </span>
+                                {t("schemastud-frame::messages.actual")}</span>
                             <span className="inline-flex items-center gap-1">
                                 <svg viewBox="0 0 16 4" className={`h-1 w-4 ${STROKE.forecast}`}>
                                     <line x1="0" y1="2" x2="16" y2="2" stroke="currentColor" strokeWidth="2" strokeDasharray="4 3" />
                                 </svg>
-                                Forecast
-                            </span>
+                                {t("schemastud-frame::messages.forecast")}</span>
                         </div>
                     ) : null}
                     <table className="sr-only" data-frame-trend-table>
                         <caption>{label}</caption>
                         <thead>
                             <tr>
-                                <th scope="col">Period</th>
-                                <th scope="col">Value</th>
-                                <th scope="col">Basis</th>
+                                <th scope="col">{t("schemastud-frame::messages.period")}</th>
+                                <th scope="col">{t("schemastud-frame::messages.value")}</th>
+                                <th scope="col">{t("schemastud-frame::messages.basis")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -233,7 +233,7 @@ export function TrendCard({ value, options, row }: CardWidgetProps<SummaryPayloa
                                 <tr key={point.key} data-frame-trend-period={point.key}>
                                     <th scope="row">{point.label}</th>
                                     <td>{point.display}</td>
-                                    <td>{point.forecast ? 'Forecast' : 'Actual'}</td>
+                                    <td>{point.forecast ? t("schemastud-frame::messages.forecast") : t("schemastud-frame::messages.actual")}</td>
                                 </tr>
                             ))}
                         </tbody>

@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import {
     createContext,
     useCallback,
@@ -118,8 +119,6 @@ export interface ResourceRecordPickerProps {
     defaultBrowseOpen?: boolean;
 }
 
-const nf = new Intl.NumberFormat('en-US');
-const fmt = (n: number) => nf.format(n);
 
 function nounFor(props: ResourceRecordPickerProps, manifest: ContextManifest | undefined): [string, string] {
     if (props.noun) return props.noun;
@@ -221,6 +220,7 @@ function PickTable(props: ComponentProps<typeof ShadcnTable>) {
 }
 
 function PickCell({ row, field }: { row: Row; field: string }) {
+    const { t } = useFrameMessages();
     const { select, selection, onToggle, valueField, labelField, disabled } = usePick();
     const id = idOf(row, valueField);
     const on = isPicked(selection, id);
@@ -235,7 +235,7 @@ function PickCell({ row, field }: { row: Row; field: string }) {
                 checked={on}
                 disabled={disabled}
                 onChange={() => onToggle(row)}
-                aria-label={`${on ? 'Deselect' : 'Select'} ${name}`}
+                aria-label={t(on ? "schemastud-frame::messages.deselect_name" : "schemastud-frame::messages.select_name", { name })}
                 className="size-5 shrink-0 accent-[var(--primary)] sm:size-4"
             />
             <span className={cn('min-w-0 truncate', on ? 'font-medium text-foreground' : 'text-foreground')}>
@@ -247,6 +247,7 @@ function PickCell({ row, field }: { row: Row; field: string }) {
 
 /** The tri-state header checkbox: ticks or unticks every row of the page on screen. */
 function PageCheckbox() {
+    const { t } = useFrameMessages();
     const { selection, rows, valueField, onPage, disabled, noun } = usePick();
     const state = pageState(selection, rows.map((r) => idOf(r, valueField)));
     const ref = useRef<HTMLInputElement>(null);
@@ -261,7 +262,7 @@ function PageCheckbox() {
             disabled={disabled || rows.length === 0}
             onChange={() => onPage(rows, state !== 'all')}
             aria-checked={state === 'some' ? 'mixed' : state === 'all'}
-            aria-label={state === 'all' ? `Deselect all ${noun[1]} on this page` : `Select all ${noun[1]} on this page`}
+            aria-label={state === 'all' ? t("schemastud-frame::messages.deselect_all_resources_on_this_page", { resources: noun[1] }) : t("schemastud-frame::messages.select_all_resources_on_this_page", { resources: noun[1] })}
             className="size-4 shrink-0 accent-[var(--primary)]"
         />
     );
@@ -341,18 +342,18 @@ function SelectionBar({
     describeFilter: string;
     disabled?: boolean;
 }) {
+    const messages = useFrameMessages();
+    const { t, number: fmt, choice } = messages;
     const [undo, setUndo] = useState<ResourceSelection | null>(null);
     const isSet = selection.mode === 'set';
     const n = count ?? 0;
-    const plural = (k: number) => (k === 1 ? noun[0] : noun[1]);
+    const plural = (count: number) => choice("schemastud-frame::messages.resource_noun", count, { one: noun[0], many: noun[1] });
 
     if (isError) {
         return (
             <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1">Couldn’t load {noun[1]}. Your selection is kept.</span>
-                <Button type="button" variant="outline" size="sm" onClick={retry}>
-                    Try again
-                </Button>
+                <span className="min-w-0 flex-1">{t("schemastud-frame::messages.couldn_t_load_resources_your_selection_is_kept", { resources: noun[1] })}</span>
+                <Button type="button" variant="outline" size="sm" onClick={retry}>{t("schemastud-frame::messages.try_again")}</Button>
             </div>
         );
     }
@@ -377,33 +378,26 @@ function SelectionBar({
                 {isSet ? (
                     <>
                         <span className="mr-1.5 inline-flex h-5 items-center rounded bg-primary px-1.5 align-[1px] text-xs font-medium text-primary-foreground">
-                            {select === 'set' ? 'Dynamic' : 'All matching'}
+                            {select === 'set' ? t("schemastud-frame::messages.dynamic") : t("schemastud-frame::messages.all_matching")}
                         </span>
-                        <b>
-                            Every {noun[0]}
-                            {describeFilter ? ' matching these filters' : ''}
-                        </b>
-                        {excluded > 0 ? <> except {fmt(excluded)}</> : null}
+                        <b>{t("schemastud-frame::messages.every_resourcevalue", { resource: noun[0], value: describeFilter ? t("schemastud-frame::messages.matching_these_filters") : '' })}</b>
+                        {excluded > 0 ? <> {t("schemastud-frame::messages.except")}{fmt(excluded)}</> : null}
                         {count !== null ? (
-                            <span className="text-muted-foreground tabular-nums">
-                                {' '}
-                                · {exact ? '' : 'up to '}
-                                {fmt(n)} today
+                            <span className="text-muted-foreground tabular-nums">{t("schemastud-frame::messages.value_value2value3_today", { value: ' ', value2: exact ? '' : t("schemastud-frame::messages.up_to"), value3: fmt(n) })}
                             </span>
                         ) : null}
                         <span className="block text-xs text-muted-foreground">
-                            {describeFilter || `All ${noun[1]}`}
-                            {select === 'set' ? ' — new matches join when it runs.' : ' — counted again when the action runs.'}
+                            {describeFilter || t("schemastud-frame::messages.all_resources", { resources: noun[1] })}
+                            {select === 'set' ? t("schemastud-frame::messages.new_matches_join_when_it_runs") : t("schemastud-frame::messages.counted_again_when_the_action_runs")}
                         </span>
                     </>
                 ) : n > 0 ? (
                     <>
-                        <b className="tabular-nums">{fmt(n)}</b> {plural(n)} selected
-                        {total !== null ? <span className="text-muted-foreground tabular-nums"> · {fmt(total)} matching</span> : null}
+                        <b className="tabular-nums">{choice("schemastud-frame::messages.selected_count", n, { shown: fmt(n), one: noun[0], many: noun[1] })}</b>{total !== null ? <span className="text-muted-foreground tabular-nums">{t("schemastud-frame::messages.value_matching", { value: fmt(total) })}</span> : null}
                     </>
                 ) : undo ? (
                     <span>
-                        Selection cleared.{' '}
+                        {t("schemastud-frame::messages.selection_cleared")}{' '}
                         <button
                             type="button"
                             disabled={disabled}
@@ -413,17 +407,13 @@ function SelectionBar({
                                 onChange(undo);
                                 setUndo(null);
                             }}
-                        >
-                            Undo
-                        </button>
+                        >{t("schemastud-frame::messages.undo")}</button>
                     </span>
                 ) : (
                     <span className="text-muted-foreground">
                         {isLoading
-                            ? 'Loading…'
-                            : `${total !== null ? `${fmt(total)} ` : ''}${plural(total ?? 2)} match. ${
-                                  select === 'single' ? 'Choose one.' : 'Tick rows, or take the whole result.'
-                              }`}
+                            ? t("schemastud-frame::messages.loading")
+                            : t("schemastud-frame::messages.valuevalue2_match_value3", { value: total !== null ? `${fmt(total)} ` : '', value2: plural(total ?? 2), value3: select === 'single' ? t("schemastud-frame::messages.choose_one") : t("schemastud-frame::messages.tick_rows_or_take_the_whole_result") })}
                     </span>
                 )}
             </span>
@@ -437,14 +427,10 @@ function SelectionBar({
                         setUndo(null);
                         onSelectAllMatching();
                     }}
-                >
-                    Select all {fmt(total)} matching
-                </Button>
+                >{t("schemastud-frame::messages.select_all_value_matching", { value: fmt(total) })}</Button>
             ) : null}
             {select !== 'set' && (isSet || n > 0) ? (
-                <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={clear}>
-                    Clear
-                </Button>
+                <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={clear}>{t("schemastud-frame::messages.clear")}</Button>
             ) : null}
         </div>
     );
@@ -458,6 +444,7 @@ function Tray({
     noun,
     disabled,
 }: Pick<BodyProps, 'selection' | 'onChange' | 'labels' | 'select' | 'noun'> & { disabled?: boolean }) {
+    const { t } = useFrameMessages();
     const isMobile = useIsMobile();
     const [expanded, setExpanded] = useState(false);
     const ids = selection.mode === 'set' ? selection.exclude : selection.ids;
@@ -465,8 +452,8 @@ function Tray({
     const cap = expanded ? ids.length : isMobile ? 2 : 8;
     const isSet = selection.mode === 'set';
     return (
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs" aria-label={isSet ? `Excluded ${noun[1]}` : `Picked ${noun[1]}`} role="group">
-            <span className="text-muted-foreground">{isSet ? 'Excluded:' : 'Picked:'}</span>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5 text-xs" aria-label={isSet ? t("schemastud-frame::messages.excluded_resources", { resources: noun[1] }) : t("schemastud-frame::messages.picked_resources", { resources: noun[1] })} role="group">
+            <span className="text-muted-foreground">{isSet ? t("schemastud-frame::messages.excluded") : t("schemastud-frame::messages.picked")}</span>
             {ids.slice(0, cap).map((id) => {
                 const name = labels.get(id) ?? id;
                 return (
@@ -481,7 +468,7 @@ function Tray({
                         <button
                             type="button"
                             disabled={disabled}
-                            aria-label={isSet ? `Include ${name} again` : `Remove ${name}`}
+                            aria-label={isSet ? t("schemastud-frame::messages.include_name_again", { name: name }) : t("schemastud-frame::messages.remove_name", { name: name })}
                             onClick={() => {
                                 if (!disabled) onChange(togglePick(selection, id, 'multi'));
                             }}
@@ -493,9 +480,7 @@ function Tray({
                 );
             })}
             {ids.length > cap ? (
-                <button type="button" className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => setExpanded(true)}>
-                    +{ids.length - cap} more
-                </button>
+                <button type="button" className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => setExpanded(true)}>{t("schemastud-frame::messages.value_more", { value: ids.length - cap })}</button>
             ) : null}
         </div>
     );
@@ -597,14 +582,14 @@ function describeFilters(values: Record<string, string>, schema: ReturnType<type
 }
 
 /** ONE verb on every confirm (bar and sheet): "Use N things", "(all matching)" for a set, "Save dynamic set". */
-function confirmText(selection: ResourceSelection, select: ResourceSelectMode, noun: [string, string], count: number | null, label?: string): string {
+function confirmText(selection: ResourceSelection, select: ResourceSelectMode, noun: [string, string], count: number | null, messages: ReturnType<typeof useFrameMessages>, label?: string): string {
     if (label) return label;
     if (selection.mode === 'set') {
-        if (select === 'set') return 'Save dynamic set';
-        return count === null ? `Use all matching ${noun[1]}` : `Use ${fmt(count)} ${count === 1 ? noun[0] : noun[1]} (all matching)`;
+        if (select === 'set') return messages.t("schemastud-frame::messages.save_dynamic_set");
+        return count === null ? messages.t("schemastud-frame::messages.use_all_matching", { resources: noun[1] }) : messages.choice("schemastud-frame::messages.use_count_matching", count, { shown: messages.number(count), one: noun[0], many: noun[1] });
     }
     const n = selection.ids.length;
-    return n === 0 ? 'Use none' : `Use ${fmt(n)} ${n === 1 ? noun[0] : noun[1]}`;
+    return messages.choice("schemastud-frame::messages.use_count", n, { shown: messages.number(n), one: noun[0], many: noun[1] });
 }
 
 /* ─────────────────────────────── typeahead (compact) ─────────────────────────────── */
@@ -661,6 +646,8 @@ function TypeaheadResults({
     onPicked: () => void;
     autoFocus?: boolean;
 }) {
+    const messages = useFrameMessages();
+    const { t, number: fmt } = messages;
     const { props, select, selection, onChange, labels, noun, valueField, labelField } = body;
     const [q, setQ] = useState('');
     const dq = useDebounced(q.trim());
@@ -717,12 +704,12 @@ function TypeaheadResults({
                         }
                     }}
                     role="combobox"
-                    aria-label={`Search ${noun[1]}`}
+                    aria-label={t("schemastud-frame::messages.search_resources_2", { resources: noun[1] })}
                     aria-expanded
                     aria-controls={listId}
                     aria-autocomplete="list"
                     aria-activedescendant={res.rows[active] ? optionId(res.rows[active]) : undefined}
-                    placeholder={`Search ${total !== null && !dq ? `${fmt(total)} ` : ''}${noun[1]}…`}
+                    placeholder={t("schemastud-frame::messages.search_valueresources", { value: total !== null && !dq ? `${fmt(total)} ` : '', resources: noun[1] })}
                     className="h-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 />
             </div>
@@ -736,14 +723,11 @@ function TypeaheadResults({
             >
                 {res.error ? (
                     <li role="presentation" className="flex items-center justify-between gap-2 px-2 py-4 text-sm">
-                        Search failed.
-                        <Button type="button" variant="outline" size="sm" onClick={res.retry}>
-                            Try again
-                        </Button>
+                        {t("schemastud-frame::messages.search_failed")}<Button type="button" variant="outline" size="sm" onClick={res.retry}>{t("schemastud-frame::messages.try_again")}</Button>
                     </li>
                 ) : res.rows.length === 0 && !res.loading ? (
                     <li role="presentation" className="px-2 py-6 text-center text-sm text-muted-foreground">
-                        {dq ? `No ${noun[1]} match “${dq}”. Try fewer words, or browse with filters.` : `No ${noun[1]} yet.`}
+                        {dq ? t("schemastud-frame::messages.no_resources_match_dq_try_fewer_words_or_browse_with_filters", { resources: noun[1], dq: dq }) : t("schemastud-frame::messages.no_resources_yet", { resources: noun[1] })}
                     </li>
                 ) : (
                     res.rows.map((row, i) => {
@@ -777,16 +761,15 @@ function TypeaheadResults({
             <div className="flex flex-wrap items-center gap-2 border-t border-border px-3 py-2 text-xs text-muted-foreground">
                 <span className="tabular-nums" aria-live="polite">
                     {total === null
-                        ? `${res.rows.length} shown`
+                        ? t("schemastud-frame::messages.count_shown", { count: res.rows.length })
                         : total > res.rows.length
-                          ? `${res.rows.length} of ${fmt(total)}`
+                          ? t("schemastud-frame::messages.count_of_value", { count: res.rows.length, value: fmt(total) })
                           : `${fmt(total)}`}{' '}
-                    {dq ? 'matching' : 'shown'}
+                    {dq ? t("schemastud-frame::messages.matching") : t("schemastud-frame::messages.shown")}
                 </span>
                 <Button type="button" variant="ghost" size="sm" className="ml-auto gap-1.5" onClick={onBrowse}>
                     <ListFilter aria-hidden className="size-3.5" />
-                    Browse all{total !== null ? ` ${fmt(total)}` : ''} with filters
-                </Button>
+                    {t("schemastud-frame::messages.browse_all")}{total !== null ? ` ${fmt(total)}` : ''} {t("schemastud-frame::messages.with_filters")}</Button>
             </div>
         </div>
     );
@@ -794,6 +777,8 @@ function TypeaheadResults({
 
 /** The compact escape hatch: the browse body in a Sheet, editing a DRAFT the confirm commits. */
 function BrowseSheet({ body, open, onOpenChange }: { body: BodyProps; open: boolean; onOpenChange: (open: boolean) => void }) {
+    const messages = useFrameMessages();
+    const { t } = messages;
     const [draft, setDraft] = useState(body.selection);
     useEffect(() => {
         if (open) setDraft(body.selection);
@@ -816,8 +801,8 @@ function BrowseSheet({ body, open, onOpenChange }: { body: BodyProps; open: bool
                 }}
             >
                 <SheetHeader className="border-b border-border px-4 py-3 sm:px-6">
-                    <SheetTitle>{select === 'single' ? `Choose a ${noun[0]}` : `Choose ${noun[1]}`}</SheetTitle>
-                    <SheetDescription>Filter and sort with the {noun[1]} list’s own columns and facets.</SheetDescription>
+                    <SheetTitle>{select === 'single' ? t("schemastud-frame::messages.choose_a_resource_2", { resource: noun[0] }) : t("schemastud-frame::messages.choose_resources", { resources: noun[1] })}</SheetTitle>
+                    <SheetDescription>{t("schemastud-frame::messages.filter_and_sort_with_the_resources_list_s_own_columns_and_facets", { resources: noun[1] })}</SheetDescription>
                 </SheetHeader>
                 <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
                     <PickerScope initialSearch={selectionToSearch(draft)} fixed={body.props.scope}>
@@ -825,9 +810,7 @@ function BrowseSheet({ body, open, onOpenChange }: { body: BodyProps; open: bool
                     </PickerScope>
                 </div>
                 <SheetFooter className="flex-row justify-end gap-2 border-t border-border px-4 py-3 sm:px-6">
-                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-                        Cancel
-                    </Button>
+                    <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>{t("schemastud-frame::messages.cancel")}</Button>
                     <Button
                         type="button"
                         onClick={() => {
@@ -835,7 +818,7 @@ function BrowseSheet({ body, open, onOpenChange }: { body: BodyProps; open: bool
                             onOpenChange(false);
                         }}
                     >
-                        {confirmText(draft, select, noun, count)}
+                        {confirmText(draft, select, noun, count, messages)}
                     </Button>
                 </SheetFooter>
             </SheetContent>
@@ -875,6 +858,8 @@ function useWarmLabels(resource: string, ids: string[], valueField: string, labe
 }
 
 function CompactPicker(body: BodyProps) {
+    const messages = useFrameMessages();
+    const { t, number: fmt } = messages;
     const { props, select, selection, onChange, labels, noun } = body;
     const isMobile = useIsMobile();
     const [open, setOpen] = useState(Boolean(props.defaultOpen));
@@ -884,14 +869,14 @@ function CompactPicker(body: BodyProps) {
     const n = selection.mode === 'ids' ? selection.ids.length : null;
     const summary =
         selection.mode === 'set'
-            ? `Every ${noun[0]} by filter${selection.exclude.length ? `, except ${fmt(selection.exclude.length)}` : ''}`
+            ? t("schemastud-frame::messages.every_resource_by_filtervalue", { resource: noun[0], value: selection.exclude.length ? t("schemastud-frame::messages.except_value", { value: fmt(selection.exclude.length) }) : '' })
             : n === 0
               ? null
               : n === 1
                 ? (labels.get(selection.ids[0]) ?? selection.ids[0])
                 : `${fmt(n!)} ${noun[1]}`;
     const placeholder =
-        select === 'set' ? `Define a set of ${noun[1]}…` : select === 'single' ? `Choose a ${noun[0]}…` : `Add ${noun[1]}…`;
+        select === 'set' ? t("schemastud-frame::messages.define_a_set_of_resources", { resources: noun[1] }) : select === 'single' ? t("schemastud-frame::messages.choose_a_resource_3", { resource: noun[0] }) : t("schemastud-frame::messages.add_resources", { resources: noun[1] });
     const openBrowse = () => {
         setOpen(false);
         setBrowse(true);
@@ -928,8 +913,8 @@ function CompactPicker(body: BodyProps) {
                     <Sheet open={open} onOpenChange={setOpen}>
                         <SheetContent side="bottom" className="flex h-[85dvh] flex-col gap-0 rounded-t-xl p-0">
                             <SheetHeader className="border-b border-border px-4 py-3">
-                                <SheetTitle>{select === 'single' ? `Choose a ${noun[0]}` : `Add ${noun[1]}`}</SheetTitle>
-                                <SheetDescription className="sr-only">Search {noun[1]}, or browse all with filters.</SheetDescription>
+                                <SheetTitle>{select === 'single' ? t("schemastud-frame::messages.choose_a_resource_2", { resource: noun[0] }) : t("schemastud-frame::messages.add_resources_2", { resources: noun[1] })}</SheetTitle>
+                                <SheetDescription className="sr-only">{t("schemastud-frame::messages.search_resources_or_browse_all_with_filters", { resources: noun[1] })}</SheetDescription>
                             </SheetHeader>
                             <TypeaheadResults body={body} onPicked={() => setOpen(false)} onBrowse={openBrowse} />
                         </SheetContent>
@@ -952,6 +937,8 @@ function CompactPicker(body: BodyProps) {
 }
 
 function ExpandedPicker(body: BodyProps) {
+    const messages = useFrameMessages();
+    const { t } = messages;
     const { props, select, selection, noun } = body;
     const initial = useMemo(
         () => selectionToSearch(selection),
@@ -968,11 +955,9 @@ function ExpandedPicker(body: BodyProps) {
             </PickerScope>
             {props.onConfirm ? (
                 <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-                    <span className="mr-auto hidden text-xs text-muted-foreground sm:inline">
-                        Picks are kept across pages, filters and sorts.
-                    </span>
+                    <span className="mr-auto hidden text-xs text-muted-foreground sm:inline">{t("schemastud-frame::messages.picks_are_kept_across_pages_filters_and_sorts")}</span>
                     <Button type="button" disabled={empty || props.disabled} onClick={() => props.onConfirm?.(selection)}>
-                        {confirmText(selection, select, noun, count, props.confirmLabel)}
+                        {confirmText(selection, select, noun, count, messages, props.confirmLabel)}
                     </Button>
                 </div>
             ) : null}

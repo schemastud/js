@@ -1,3 +1,4 @@
+import { useUiMessages } from './messages';
 import * as React from 'react';
 import { Button } from './button';
 import { MotionFaces } from './motion';
@@ -17,8 +18,8 @@ import { MotionFaces } from './motion';
  */
 export function SaveButton({
     saving,
-    label = 'Save',
-    savingLabel = 'Saving…',
+    label: labelProp,
+    savingLabel: savingLabelProp,
     disabled,
     onClick,
     ...props
@@ -27,6 +28,9 @@ export function SaveButton({
     label?: React.ReactNode;
     savingLabel?: React.ReactNode;
 }) {
+    const { t } = useUiMessages();
+    const savingLabel = savingLabelProp === undefined ? t("schemastud-ui::messages.saving") : savingLabelProp;
+    const label = labelProp === undefined ? t("schemastud-ui::messages.save") : labelProp;
     const unavailable = Boolean(disabled || saving);
     return (
         <Button

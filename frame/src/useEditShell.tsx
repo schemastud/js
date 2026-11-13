@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { createFormIntentBus, type FormIntentBus, type SchemaNode } from '@schemastud/seam';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
@@ -103,6 +104,7 @@ export function useEditShell<K extends ResourceKey = ResourceKey>(options: EditS
 
 /** @internal `useEditShell` over any string key, which the shell calls (ruling 03: typed at the boundary). Not a root export. */
 export function useEditShellOf<K extends string>(options: EditShellOptionsOf<K>): EditShellStateOf<K> {
+    const { t } = useFrameMessages();
     // Typed by the key at the boundary (ruling 03); the behaviour itself reads records as `Row`.
     const {
         resource,
@@ -203,7 +205,7 @@ export function useEditShellOf<K extends string>(options: EditShellOptionsOf<K>)
     // heading reads from the resource's singularLabel ("New <noun>" when creating).
     const recordNotFound = id !== null && recordQuery.isError && isNotFound(recordQuery.error);
     const singularLabel = manifest?.singularLabel ?? resource;
-    const heading = id === null ? `New ${singularLabel}` : singularLabel;
+    const heading = id === null ? t("schemastud-frame::messages.new_resource", { resource: singularLabel }) : singularLabel;
     // A placeholder stands in while the real read is in flight: that is still loading.
     const loading =
         schemaQuery.isLoading ||
@@ -252,7 +254,7 @@ export function useEditShellOf<K extends string>(options: EditShellOptionsOf<K>)
     const readFailure =
         readFailed && !recordNotFound
             ? {
-                  message: schemaQuery.isError ? 'Could not load this form.' : 'Could not load this record.',
+                  message: schemaQuery.isError ? t("schemastud-frame::messages.could_not_load_this_form") : t("schemastud-frame::messages.could_not_load_this_record"),
                   retry: () => {
                       if (schemaQuery.isError) void schemaQuery.refetch();
                       if (id !== null && recordQuery.isError) void recordQuery.refetch();

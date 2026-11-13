@@ -1,3 +1,4 @@
+import { useUiMessages } from './messages';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { XIcon } from 'lucide-react';
 import * as React from 'react';
@@ -71,13 +72,16 @@ export function SidePanel({
     headerActions,
     onSave,
     onCancel,
-    saveLabel = 'Save',
-    cancelLabel = 'Cancel',
+    saveLabel: saveLabelProp,
+    cancelLabel: cancelLabelProp,
     saveDisabled = false,
     saving = false,
     hideFooter = false,
     className,
 }: SidePanelProps) {
+    const { t } = useUiMessages();
+    const saveLabel = saveLabelProp === undefined ? t("schemastud-ui::messages.save") : saveLabelProp;
+    const cancelLabel = cancelLabelProp === undefined ? t("schemastud-ui::messages.cancel") : cancelLabelProp;
     const handleCancel = () => {
         if (onCancel) onCancel();
         else onOpenChange(false);
@@ -122,7 +126,7 @@ export function SidePanel({
                         )}
                         <DialogPrimitive.Close
                             className="rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:outline-hidden"
-                            aria-label="Close panel"
+                            aria-label={t("schemastud-ui::messages.close_panel")}
                         >
                             <XIcon className="size-4" />
                         </DialogPrimitive.Close>

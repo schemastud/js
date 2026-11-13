@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { useId, type ComponentType, type MouseEvent } from 'react';
 import { parseSort, serializeSort, sortStateFor, toggleSortKey } from '@schemastud/facets';
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react';
@@ -53,6 +54,7 @@ export function ShadcnTable(props: {
      */
     rowSelected?: (record: Row) => boolean;
 }) {
+    const { t } = useFrameMessages();
     const { columns, rows, onOpen, Cell, RowActions, sort, rowSelected } = props;
     // X shot-review follow-up (b): below 768px a wide list never clips. Each record is a stacked card carrying the same
     // cells (the first column is its heading, the others labelled fields, RowActions its footer); at desktop width the
@@ -108,9 +110,7 @@ export function ShadcnTable(props: {
                                             e.stopPropagation();
                                             onOpen?.(row);
                                         }}
-                                    >
-                                        Open
-                                    </button>
+                                    >{t("schemastud-frame::messages.open")}</button>
                                 ) : null}
                                 {RowActions ? (
                                     <div className="flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
@@ -201,6 +201,7 @@ function selectedAttrs(selected: boolean | undefined, element: 'row' | 'card' = 
  * cleared, shift-click appends a secondary key. Otherwise a plain, static header.
  */
 function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
+    const { t } = useFrameMessages();
     const { column, sort } = props;
     const label = column.header ?? column.field;
     const sortable =
@@ -238,7 +239,7 @@ function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
                 type="button"
                 onClick={onClick}
                 aria-sort={state.active ? (state.desc ? 'descending' : 'ascending') : 'none'}
-                title="Click to sort; shift-click to add a secondary sort"
+                title={t("schemastud-frame::messages.click_to_sort_shift_click_to_add_a_secondary_sort")}
                 className={`group -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 uppercase hover:bg-muted ${
                     state.active ? 'text-foreground' : ''
                 }`}
@@ -265,6 +266,7 @@ function ShadcnHeaderCell(props: { column: FrameColumn; sort?: TableSort }) {
 
 /** Adds empty-value + boolean rendering over the plain default; otherwise delegates. */
 export function ShadcnCell(props: CellSlotProps) {
+    const { t } = useFrameMessages();
     if (props.column.cell) return <>{props.column.cell(props.record)}</>;
     // Dotted-pointer aware — see DefaultCell.
     const value = getPath(props.record, props.column.field);
@@ -274,7 +276,7 @@ export function ShadcnCell(props: CellSlotProps) {
     if (typeof value === 'boolean') {
         return (
             <span className={value ? 'text-primary' : 'text-muted-foreground'}>
-                {value ? 'Yes' : 'No'}
+                {value ? t("schemastud-frame::messages.yes") : t("schemastud-frame::messages.no")}
             </span>
         );
     }
@@ -282,13 +284,12 @@ export function ShadcnCell(props: CellSlotProps) {
 }
 
 export function ShadcnEmpty() {
+    const { t } = useFrameMessages();
     return (
         <div
             data-frame-slot="Empty"
             className="rounded-lg border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground"
-        >
-            No records.
-        </div>
+        >{t("schemastud-frame::messages.no_records")}</div>
     );
 }
 
@@ -298,6 +299,7 @@ export function ShadcnEmpty() {
  * for one another, which is the entire defect this slot closes.
  */
 export function ShadcnErrorState({ error, retry }: ErrorSlotProps) {
+    const { t } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     const message =
@@ -309,11 +311,9 @@ export function ShadcnErrorState({ error, retry }: ErrorSlotProps) {
             role="alert"
             className="rounded-lg border border-destructive/40 bg-destructive/5 px-6 py-12 text-center text-sm"
         >
-            <div className="font-medium text-destructive">Could not load this list.</div>
+            <div className="font-medium text-destructive">{t("schemastud-frame::messages.could_not_load_this_list")}</div>
             {message ? <div className="mt-2 text-muted-foreground">{message}</div> : null}
-            <Button type="button" size="sm" variant="outline" className="mt-4" onClick={retry}>
-                Retry
-            </Button>
+            <Button type="button" size="sm" variant="outline" className="mt-4" onClick={retry}>{t("schemastud-frame::messages.retry")}</Button>
         </div>
     );
 }
@@ -325,6 +325,7 @@ export function ShadcnToolbar({
     framesCreate,
     singularLabel,
 }: ToolbarSlotProps) {
+    const { t } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     // See DefaultToolbar — a resource whose create affordance is the host's (or which does not
@@ -332,14 +333,13 @@ export function ShadcnToolbar({
     if (!canCreate || !framesCreate) return null;
     return (
         <div data-frame-slot="Toolbar" className="flex justify-end">
-            <Button type="button" size="sm" onClick={onNew} data-frame-action="new">
-                New {createNoun(resource, singularLabel)}
-            </Button>
+            <Button type="button" size="sm" onClick={onNew} data-frame-action="new">{t("schemastud-frame::messages.new_resource", { resource: createNoun(resource, singularLabel) })}</Button>
         </div>
     );
 }
 
 export function ShadcnPagination(props: PaginationSlotProps) {
+    const { t } = useFrameMessages();
     const {
         primitives: { Button, SimpleSelect },
     } = useFrameInjection();
@@ -353,14 +353,12 @@ export function ShadcnPagination(props: PaginationSlotProps) {
         >
             <div className="flex items-center gap-2 text-muted-foreground">
                 {props.mode === 'offset' && (
-                    <span>
-                        Page {props.page} of {lastPage} · {props.total} total
-                    </span>
+                    <span>{t("schemastud-frame::messages.page_page_of_lastpage_total_total", { page: props.page, lastPage: lastPage, total: props.total })}</span>
                 )}
                 {props.onPerPageChange && SimpleSelect && (
                     <span className="flex items-center gap-1.5">
                         {props.mode === 'offset' && <span aria-hidden>·</span>}
-                        <span>Rows</span>
+                        <span>{t("schemastud-frame::messages.rows")}</span>
                         <SimpleSelect
                             value={String(props.perPage)}
                             disabled={props.disabled}
@@ -371,7 +369,7 @@ export function ShadcnPagination(props: PaginationSlotProps) {
                                 value: String(n),
                                 label: String(n),
                             }))}
-                            aria-label="Rows per page"
+                            aria-label={t("schemastud-frame::messages.rows_per_page")}
                             className="h-7 w-[4.75rem]"
                         />
                     </span>
@@ -385,9 +383,7 @@ export function ShadcnPagination(props: PaginationSlotProps) {
                         variant="outline"
                         disabled={props.disabled || props.isFirst}
                         onClick={props.onFirst}
-                    >
-                        First
-                    </Button>
+                    >{t("schemastud-frame::messages.first")}</Button>
                 )}
                 <Button
                     type="button"
@@ -402,9 +398,7 @@ export function ShadcnPagination(props: PaginationSlotProps) {
                             ? props.onPageChange(props.page - 1)
                             : props.onPrevious()
                     }
-                >
-                    ‹ Prev
-                </Button>
+                >{t("schemastud-frame::messages.prev")}</Button>
                 <Button
                     type="button"
                     size="sm"
@@ -418,9 +412,7 @@ export function ShadcnPagination(props: PaginationSlotProps) {
                             ? props.onPageChange(props.page + 1)
                             : props.onNext()
                     }
-                >
-                    Next ›
-                </Button>
+                >{t("schemastud-frame::messages.next")}</Button>
             </div>
         </div>
     );

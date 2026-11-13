@@ -1,3 +1,4 @@
+import { useUiMessages } from './messages';
 import {
     flexRender,
     getCoreRowModel,
@@ -128,7 +129,7 @@ export function DataTable<TData>({
     pagination,
     onRowClick,
     rowClassName,
-    emptyMessage = 'Nothing here yet.',
+    emptyMessage: emptyMessageProp,
     loading = false,
     skeletonRows = 5,
     className,
@@ -175,6 +176,8 @@ export function DataTable<TData>({
      */
     flipOnSort?: boolean;
 }) {
+    const { t } = useUiMessages();
+    const emptyMessage = emptyMessageProp === undefined ? t("schemastud-ui::messages.nothing_here_yet") : emptyMessageProp;
     const isMobile = useIsMobile();
     const uid = useId();
     const stacked = stackOnMobile && isMobile;
@@ -260,9 +263,7 @@ export function DataTable<TData>({
         <>
             {effectivePagination && effectivePagination.lastPage > 1 && (
                 <div className="flex items-center justify-end gap-2 text-sm text-muted-foreground">
-                    <span>
-                        Page {effectivePagination.page} of {effectivePagination.lastPage}
-                    </span>
+                    <span>{t("schemastud-ui::messages.page_page_of_lastpage", { page: effectivePagination.page, lastPage: effectivePagination.lastPage })}</span>
                     <Button
                         variant="outline"
                         size="icon"
@@ -303,7 +304,7 @@ export function DataTable<TData>({
                         aria-labelledby={`${uid}-sort`}
                         className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
                     >
-                        <span id={`${uid}-sort`}>Sort</span>
+                        <span id={`${uid}-sort`}>{t("schemastud-ui::messages.sort")}</span>
                         {sortHeaders.map((header) => (
                             <SortButton
                                 key={header.id}
@@ -383,9 +384,7 @@ export function DataTable<TData>({
                                                         event.stopPropagation();
                                                         onRowClick(row.original);
                                                     }}
-                                                >
-                                                    Open
-                                                </Button>
+                                                >{t("schemastud-ui::messages.open")}</Button>
                                             )}
                                             {actions && (
                                                 // The row's actions act on their own: a click here never also opens the row.
@@ -520,9 +519,7 @@ export function DataTable<TData>({
                                                             onRowClick(row.original);
                                                         }}
                                                         className="sr-only rounded-md bg-card px-2 py-1 text-xs font-medium text-primary underline focus:not-sr-only focus:absolute focus:left-1 focus:top-1 focus:z-10 focus:no-underline focus:shadow focus:outline-none focus:ring-2 focus:ring-ring"
-                                                    >
-                                                        Open
-                                                    </button>
+                                                    >{t("schemastud-ui::messages.open")}</button>
                                                 )}
                                                 {index === 0 ? (
                                                     <span
@@ -622,6 +619,7 @@ function SortButton({
      * whose accessible name says the direction. */
     stacked?: boolean;
 }) {
+    const { t } = useUiMessages();
     const keys = parseSort(sorting.sort);
     const state = sortStateFor(keys, sortField);
     const multi = keys.length > 1;
@@ -640,11 +638,11 @@ function SortButton({
                 'group -mx-1 inline-flex items-center gap-1 rounded px-1 py-0.5 hover:bg-accent',
                 state.active && 'text-foreground',
             )}
-            title="Click to sort; shift-click to add a secondary sort"
+            title={t("schemastud-ui::messages.click_to_sort_shift_click_to_add_a_secondary_sort")}
         >
             <span>
                 {label}
-                {stacked && state.active && <span className="sr-only">, sorted {state.desc ? 'descending' : 'ascending'}</span>}
+                {stacked && state.active && <span className="sr-only">{t("schemastud-ui::messages.sorted_value", { value: state.desc ? t("schemastud-ui::messages.descending") : t("schemastud-ui::messages.ascending") })}</span>}
             </span>
             {state.active ? (
                 state.desc ? (

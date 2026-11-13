@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { SchemaForm } from '@schemastud/seam';
 import { useEffect, useId, useRef, type ComponentType, type ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
@@ -31,6 +32,7 @@ export function DefaultToolbar({
     framesCreate,
     singularLabel,
 }: ToolbarSlotProps) {
+    const { t } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     // `framesCreate === false` is the resource saying the create affordance is not frame's to
@@ -39,9 +41,7 @@ export function DefaultToolbar({
     if (!canCreate || !framesCreate) return null;
     return (
         <div data-frame-slot="Toolbar" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <Button type="button" onClick={onNew} data-frame-action="new">
-                New {createNoun(resource, singularLabel)}
-            </Button>
+            <Button type="button" onClick={onNew} data-frame-action="new">{t("schemastud-frame::messages.new_resource", { resource: createNoun(resource, singularLabel) })}</Button>
         </div>
     );
 }
@@ -82,6 +82,7 @@ export function DefaultRowActions({
     actions,
     singularLabel,
 }: RowActionsSlotProps) {
+    const { t } = useFrameMessages();
     const { primitives, can } = useFrameInjection();
     const { Button } = primitives;
     const remove = useRowRemove(resource);
@@ -99,8 +100,8 @@ export function DefaultRowActions({
             <Button
                 type="button"
                 data-frame-action="delete"
-                aria-label={`Delete ${noun}`}
-                title={`Delete ${noun}`}
+                aria-label={t("schemastud-frame::messages.delete_noun", { noun: noun })}
+                title={t("schemastud-frame::messages.delete_noun", { noun: noun })}
                 disabled={remove.isPending || id === ''}
                 style={{
                     display: 'inline-flex',
@@ -120,7 +121,7 @@ export function DefaultRowActions({
                     // The row itself is the open affordance; without this the confirm fires
                     // AND the record opens behind it.
                     event.stopPropagation();
-                    if (window.confirm(`Delete ${noun} "${recordName(record)}"?`)) {
+                    if (window.confirm(t("schemastud-frame::messages.delete_noun_value", { noun: noun, value: recordName(record) }))) {
                         remove.mutate(id);
                     }
                 }}
@@ -153,10 +154,9 @@ export function DefaultCell({ column, record }: CellSlotProps) {
 }
 
 export function DefaultEmpty() {
+    const { t } = useFrameMessages();
     return (
-        <div data-frame-slot="Empty" style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>
-            No records.
-        </div>
+        <div data-frame-slot="Empty" style={{ padding: '2rem', textAlign: 'center', opacity: 0.6 }}>{t("schemastud-frame::messages.no_records")}</div>
     );
 }
 
@@ -168,6 +168,7 @@ export function DefaultEmpty() {
  * behind "No records." for a day.
  */
 export function DefaultErrorState({ error, retry }: ErrorSlotProps) {
+    const { t } = useFrameMessages();
     const message =
         error instanceof Error ? error.message : typeof error === 'string' ? error : null;
 
@@ -177,15 +178,13 @@ export function DefaultErrorState({ error, retry }: ErrorSlotProps) {
             role="alert"
             style={{ padding: '2rem', textAlign: 'center' }}
         >
-            <div>Could not load this list.</div>
+            <div>{t("schemastud-frame::messages.could_not_load_this_list")}</div>
             {message ? (
                 <div style={{ marginTop: '0.5rem', opacity: 0.7, fontSize: '0.875em' }}>
                     {message}
                 </div>
             ) : null}
-            <button type="button" onClick={retry} style={{ marginTop: '0.75rem' }}>
-                Retry
-            </button>
+            <button type="button" onClick={retry} style={{ marginTop: '0.75rem' }}>{t("schemastud-frame::messages.retry")}</button>
         </div>
     );
 }
@@ -196,13 +195,14 @@ export function DefaultErrorState({ error, retry }: ErrorSlotProps) {
  * no retry. The host detail sheet imports this so a 404 there renders the SAME not-found state.
  */
 export function DefaultNotFound({ message }: { message?: string }) {
+    const { t } = useFrameMessages();
     return (
         <div
             data-frame-slot="NotFound"
             role="alert"
             style={{ padding: '2rem', textAlign: 'center', opacity: 0.7 }}
         >
-            {message ?? 'This record was not found.'}
+            {message ?? t("schemastud-frame::messages.this_record_was_not_found")}
         </div>
     );
 }
@@ -220,6 +220,7 @@ export function DefaultLoading() {
 }
 
 export function DefaultPagination(props: PaginationSlotProps) {
+    const { t } = useFrameMessages();
     const {
         primitives: { Button },
     } = useFrameInjection();
@@ -235,9 +236,7 @@ export function DefaultPagination(props: PaginationSlotProps) {
                     type="button"
                     disabled={props.disabled || props.isFirst}
                     onClick={props.onFirst}
-                >
-                    First
-                </Button>
+                >{t("schemastud-frame::messages.first")}</Button>
             )}
             <Button
                 type="button"
@@ -250,9 +249,7 @@ export function DefaultPagination(props: PaginationSlotProps) {
                         ? props.onPageChange(props.page - 1)
                         : props.onPrevious()
                 }
-            >
-                Prev
-            </Button>
+            >{t("schemastud-frame::messages.prev_2")}</Button>
             {props.mode === 'offset' && (
                 <span data-frame-page>
                     {props.page} / {lastPage}
@@ -267,9 +264,7 @@ export function DefaultPagination(props: PaginationSlotProps) {
                 onClick={() =>
                     props.mode === 'offset' ? props.onPageChange(props.page + 1) : props.onNext()
                 }
-            >
-                Next
-            </Button>
+            >{t("schemastud-frame::messages.next_2")}</Button>
         </div>
     );
 }
@@ -461,8 +456,9 @@ export function DefaultToggle({
     value: FormMode;
     onChange: (m: FormMode) => void;
 }) {
+    const { t } = useFrameMessages();
     return (
-        <div data-frame-slot="Toggle" role="radiogroup" aria-label="Form mode">
+        <div data-frame-slot="Toggle" role="radiogroup" aria-label={t("schemastud-frame::messages.form_mode")}>
             {(['enriched', 'bare'] as FormMode[]).map((mode) => (
                 <label key={mode} style={{ marginRight: '0.5rem' }}>
                     <input
@@ -471,7 +467,7 @@ export function DefaultToggle({
                         checked={value === mode}
                         onChange={() => onChange(mode)}
                     />
-                    {mode}
+                    {t(mode === "enriched" ? "schemastud-frame::messages.enriched" : "schemastud-frame::messages.bare")}
                 </label>
             ))}
         </div>
@@ -491,6 +487,7 @@ export function DefaultSaveBar({
     onSave,
     onCancel,
 }: SaveBarSlotProps) {
+    const { t } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     return (
@@ -512,9 +509,7 @@ export function DefaultSaveBar({
             }}
         >
             {onCancel ? (
-                <Button type="button" onClick={onCancel} data-frame-action="cancel">
-                    Cancel
-                </Button>
+                <Button type="button" onClick={onCancel} data-frame-action="cancel">{t("schemastud-frame::messages.cancel")}</Button>
             ) : null}
             {!readOnly ? (
                 <Button
@@ -532,18 +527,14 @@ export function DefaultSaveBar({
                             data-face="idle"
                             data-on={!saving}
                             aria-hidden={saving || undefined}
-                        >
-                            Save
-                        </span>
+                        >{t("schemastud-frame::messages.save")}</span>
                         <span
                             className="motion-face"
                             style={saving ? FACE_ON : FACE_OFF}
                             data-face="saving"
                             data-on={saving}
                             aria-hidden={!saving || undefined}
-                        >
-                            Saving…
-                        </span>
+                        >{t("schemastud-frame::messages.saving")}</span>
                     </span>
                 </Button>
             ) : null}

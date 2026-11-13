@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { useFrameInjection } from '../context';
 
 /**
@@ -20,6 +21,7 @@ export function ShadcnEnrichTextarea(props: {
     onEnrich: () => void;
     label?: string;
 }) {
+    const { t } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const { Button } = primitives;
     return (
@@ -41,7 +43,7 @@ export function ShadcnEnrichTextarea(props: {
                     disabled={props.disabled || props.busy}
                     onClick={props.onEnrich}
                 >
-                    {props.busy ? 'Enriching…' : (props.label ?? '✨ Enrich with Splicewire')}
+                    {props.busy ? t("schemastud-frame::messages.enriching") : (props.label ?? t("schemastud-frame::messages.enrich_with_splicewire"))}
                 </Button>
             ) : null}
         </div>

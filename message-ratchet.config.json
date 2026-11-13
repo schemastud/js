@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "baseline": "./message-ratchet.baseline.json",
+  "packages": {
+    "@schemastud/ui": [
+      "ui/src"
+    ],
+    "@schemastud/blockdoc": [
+      "blockdoc/src"
+    ],
+    "@schemastud/messages": [
+      "messages/src"
+    ],
+    "@schemastud/facets": [
+      "facets/src"
+    ],
+    "@schemastud/chat": [
+      "chat/src"
+    ],
+    "@schemastud/frame-remote": [
+      "frame-remote/src"
+    ],
+    "@schemastud/frame": [
+      "frame/src"
+    ],
+    "@schemastud/seam": [
+      "seam/src"
+    ],
+    "@schemastud/combobox": [
+      "combobox/src"
+    ],
+    "@schemastud/big-calendar": [
+      "big-calendar/src"
+    ],
+    "@schemastud/nav": [
+      "nav/src"
+    ],
+    "@schemastud/mainframe": [
+      "mainframe/src"
+    ],
+    "@schemastud/breadcrumb": [
+      "breadcrumb/src"
+    ],
+    "@schemastud/_resources": [
+      "_resources/types"
+    ]
+  }
+}

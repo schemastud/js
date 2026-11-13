@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { useMemo, useState, type ComponentType } from 'react';
 import {
     Activity,
@@ -122,7 +123,7 @@ interface Group {
 
 const OTHER = '__other';
 
-function groupKinds(kinds: ResourceKindOption[], sections: ResourceKindSection[]): Group[] {
+function groupKinds(kinds: ResourceKindOption[], sections: ResourceKindSection[], otherLabel: string): Group[] {
     const known = new Set(sections.map((s) => s.key));
     const groups: Group[] = sections
         .map((s) => ({
@@ -139,7 +140,7 @@ function groupKinds(kinds: ResourceKindOption[], sections: ResourceKindSection[]
             const g = k.group ?? '';
             byGroup.set(g, [...(byGroup.get(g) ?? []), k]);
         }
-        groups.push({ key: OTHER, label: 'Other', Icon: Box, items: rest, sub: [...byGroup.entries()] });
+        groups.push({ key: OTHER, label: otherLabel, Icon: Box, items: rest, sub: [...byGroup.entries()] });
     }
     return groups;
 }
@@ -190,6 +191,7 @@ interface BodyProps {
 
 /** Stage 1: pick resource kinds. */
 export function ResourceKindPicker(props: ResourceKindPickerProps) {
+    const { t } = useFrameMessages();
     const resolved = resolveKindPlacement(props.placement, {
         ...(typeof props.scope === 'string' ? { scope: props.scope } : {}),
         ...(props.density ? { density: props.density } : {}),
@@ -200,7 +202,7 @@ export function ResourceKindPicker(props: ResourceKindPickerProps) {
     const scope = typeof props.scope === 'function' ? props.scope : resolved.scope;
     const inScope = useMemo(() => kindsInScope(props.kinds, scope), [props.kinds, scope]);
     const sections = props.sections ?? [];
-    const groups = useMemo(() => groupKinds(inScope, sections), [inScope, sections]);
+    const groups = useMemo(() => groupKinds(inScope, sections, t("schemastud-frame::messages.other")), [inScope, sections, t]);
     const picked = new Set(props.value);
     const onPick = (key: string) => {
         if (props.disabled) return;
@@ -213,7 +215,7 @@ export function ResourceKindPicker(props: ResourceKindPickerProps) {
         resolved,
         picked,
         onPick,
-        label: props.label ?? 'Resource',
+        label: props.label ?? t("schemastud-frame::messages.resource"),
         id: props.id,
         disabled: props.disabled,
         total: inScope.length,
@@ -241,6 +243,7 @@ function pickedNames(kinds: ResourceKindOption[], picked: Set<string>): string {
 }
 
 function Picked({ picked, kinds, select, sections }: { picked: Set<string>; kinds: ResourceKindOption[]; select: string; sections: Group[] }) {
+    const { t } = useFrameMessages();
     const chosen = kinds.filter((k) => picked.has(k.key));
     if (chosen.length === 0) return null;
     if (select === 'single' || chosen.length === 1) {
@@ -253,12 +256,13 @@ function Picked({ picked, kinds, select, sections }: { picked: Set<string>; kind
             </span>
         );
     }
-    return <span>{chosen.length} resources</span>;
+    return <span>{t("schemastud-frame::messages.count_resources", { count: chosen.length })}</span>;
 }
 
 /* ─────────────────────────────── palette ─────────────────────────────── */
 
 function PaletteList({ groups, picked, onPick, resolved, query, disabled }: BodyProps & { query: string }) {
+    const { t } = useFrameMessages();
     const expanded = resolved.density === 'expanded';
     const visible = groups
         .map((g) => ({ ...g, items: g.items.filter((k) => matches(k, query)) }))
@@ -266,7 +270,7 @@ function PaletteList({ groups, picked, onPick, resolved, query, disabled }: Body
     if (visible.length === 0) {
         return (
             <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                {query ? `No resources match “${query}”.` : 'No resources are available here.'}
+                {query ? t("schemastud-frame::messages.no_resources_match_query", { query: query }) : t("schemastud-frame::messages.no_resources_are_available_here")}
             </p>
         );
     }
@@ -343,15 +347,16 @@ function SearchBox({ value, onChange, label, autoFocus }: { value: string; onCha
 }
 
 function PaletteBody(props: BodyProps) {
+    const { t } = useFrameMessages();
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
     if (props.resolved.density === 'expanded') {
         return (
             <div id={props.id} role="region" aria-label={props.label} className="w-full max-w-xl rounded-md border border-border bg-card text-card-foreground">
-                <SearchBox value={query} onChange={setQuery} label="Search resources" />
+                <SearchBox value={query} onChange={setQuery} label={t("schemastud-frame::messages.search_resources")} />
                 <PaletteList {...props} query={query} />
                 <div className="border-t border-border px-2.5 py-1.5 text-xs text-muted-foreground tabular-nums">
-                    {props.picked.size > 0 && props.resolved.select === 'multi' ? `${props.picked.size} of ${props.total} picked` : `${props.total} resources`}
+                    {props.picked.size > 0 && props.resolved.select === 'multi' ? t("schemastud-frame::messages.size_of_total_picked", { size: props.picked.size, total: props.total }) : t("schemastud-frame::messages.total_resources", { total: props.total })}
                 </div>
             </div>
         );
@@ -364,16 +369,16 @@ function PaletteBody(props: BodyProps) {
                     type="button"
                     variant="outline"
                     disabled={props.disabled}
-                    aria-label={`${props.label}: ${pickedNames(props.kinds, props.picked) || 'none chosen'}`}
+                    aria-label={`${props.label}: ${pickedNames(props.kinds, props.picked) || t("schemastud-frame::messages.none_chosen")}`}
                     className="w-full min-w-0 justify-between font-normal sm:w-72"
                 >
                     <Picked picked={props.picked} kinds={props.kinds} select={props.resolved.select} sections={props.groups} />
-                    {props.picked.size === 0 ? <span className="text-muted-foreground">Choose a resource…</span> : null}
+                    {props.picked.size === 0 ? <span className="text-muted-foreground">{t("schemastud-frame::messages.choose_a_resource")}</span> : null}
                     <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-0">
-                <SearchBox value={query} onChange={setQuery} label="Search resources" autoFocus />
+                <SearchBox value={query} onChange={setQuery} label={t("schemastud-frame::messages.search_resources")} autoFocus />
                 <PaletteList
                     {...props}
                     query={query}
@@ -428,6 +433,7 @@ function RailFlyout({ g, picked, onPick, close, select, disabled }: { g: Group; 
 }
 
 function RailBody(props: BodyProps) {
+    const { t } = useFrameMessages();
     const { groups, picked, onPick, resolved } = props;
     const [query, setQuery] = useState('');
     const [openKey, setOpenKey] = useState<string | null>(null);
@@ -437,7 +443,7 @@ function RailBody(props: BodyProps) {
     if (resolved.density === 'compact') {
         const horizontal = resolved.orientation === 'horizontal';
         if (groups.length === 0) {
-            return <p className="text-sm text-muted-foreground">No resources are available here.</p>;
+            return <p className="text-sm text-muted-foreground">{t("schemastud-frame::messages.no_resources_are_available_here")}</p>;
         }
         const sheetGroup = isMobile ? groups.find((g) => g.key === openKey) : undefined;
         return (
@@ -446,7 +452,7 @@ function RailBody(props: BodyProps) {
                     <div
                         id={props.id}
                         role="toolbar"
-                        aria-label={`${props.label} sections`}
+                        aria-label={t("schemastud-frame::messages.label_sections", { label: props.label })}
                         aria-orientation={resolved.orientation}
                         className={cn(
                             'flex max-w-full gap-0.5 rounded-md border border-border bg-card p-1',
@@ -467,7 +473,7 @@ function RailBody(props: BodyProps) {
                                         <button
                                             type="button"
                                             disabled={props.disabled}
-                                            aria-label={`${g.label}, ${g.items.length} resources${has ? ', has a pick' : ''}`}
+                                            aria-label={t("schemastud-frame::messages.label_count_resourcesvalue", { label: g.label, count: g.items.length, value: has ? t("schemastud-frame::messages.has_a_pick") : '' })}
                                             className={cn(
                                                 'relative flex size-10 items-center justify-center sm:size-8 rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                                 (open || has) && 'bg-accent text-foreground',
@@ -504,7 +510,7 @@ function RailBody(props: BodyProps) {
                         <SheetContent side="bottom" className="max-h-[80dvh] gap-0 rounded-t-xl p-0">
                             <SheetHeader className="border-b border-border px-4 py-3">
                                 <SheetTitle>{sheetGroup?.label ?? props.label}</SheetTitle>
-                                <SheetDescription className="sr-only">Choose a resource from this section.</SheetDescription>
+                                <SheetDescription className="sr-only">{t("schemastud-frame::messages.choose_a_resource_from_this_section")}</SheetDescription>
                             </SheetHeader>
                             {sheetGroup ? (
                                 <RailFlyout
@@ -520,7 +526,7 @@ function RailBody(props: BodyProps) {
                     </Sheet>
                     <div className={cn('min-w-0 truncate text-sm', !horizontal && 'pt-1.5')} aria-live="polite">
                         {picked.size === 0 ? (
-                            <span className="text-muted-foreground">Choose a section, then a resource</span>
+                            <span className="text-muted-foreground">{t("schemastud-frame::messages.choose_a_section_then_a_resource")}</span>
                         ) : (
                             <span className="font-medium">
                                 <Picked picked={picked} kinds={props.kinds} select={resolved.select} sections={groups} />
@@ -537,7 +543,7 @@ function RailBody(props: BodyProps) {
         .filter((g) => g.items.length > 0);
     return (
         <div id={props.id} role="region" aria-label={props.label} className="w-full max-w-xs rounded-md border border-border bg-card text-card-foreground">
-            <SearchBox value={query} onChange={setQuery} label="Filter resources" />
+            <SearchBox value={query} onChange={setQuery} label={t("schemastud-frame::messages.filter_resources")} />
             <div className="max-h-[32rem] overflow-y-auto overscroll-contain p-1">
                 {visible.map((g) => {
                     const isCollapsed = collapsed.has(g.key) && !query;

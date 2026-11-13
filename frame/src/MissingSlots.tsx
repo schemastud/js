@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import type { CSSProperties } from 'react';
 import { useEditShellMount } from './EditShellMount';
 
@@ -23,6 +24,7 @@ const CARD: CSSProperties = {
 };
 
 export function MissingSlots() {
+    const { t } = useFrameMessages();
     const mount = useEditShellMount();
     const slots = mount.conformance?.requiredSlots ?? [];
 
@@ -43,18 +45,14 @@ export function MissingSlots() {
                         data-category={slot.category}
                         style={CARD}
                     >
-                        <span>
-                            Missing: {missing} {slot.category}
-                        </span>
+                        <span>{t("schemastud-frame::messages.missing_missing_category", { missing: missing, category: slot.category })}</span>
                         <button
                             type="button"
                             data-missing-add=""
                             onClick={() =>
                                 mount.insert({ category: slot.category, parentId: slot.parentId, scoped: true })
                             }
-                        >
-                            + Add
-                        </button>
+                        >{t("schemastud-frame::messages.add")}</button>
                     </div>
                 );
             })}

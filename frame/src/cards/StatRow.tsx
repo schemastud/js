@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import { StatTile } from '@schemastud/ui';
 import { CardHeading, EmptyState } from './chrome';
 import type { CardWidgetProps, SummaryPayload } from './types';
@@ -10,6 +11,7 @@ import { displayLabel } from '@schemastud/seam';
  * honest zeroes, and a provider that answered nothing reads as exactly that.
  */
 export function StatRow({ value, options, row }: CardWidgetProps<SummaryPayload>) {
+    const { t } = useFrameMessages();
     const figures = value?.figures ?? [];
     const label = displayLabel({ title: value?.label ?? row?.label }, value?.key);
     const Icon = options?.iconFor?.(value?.icon ?? row?.icon);
@@ -18,7 +20,7 @@ export function StatRow({ value, options, row }: CardWidgetProps<SummaryPayload>
         <section data-frame-card="stat-row" className="space-y-2">
             <CardHeading label={label} href={row?.href} Icon={Icon} options={options} />
             {figures.length === 0 ? (
-                <EmptyState>No figures.</EmptyState>
+                <EmptyState>{t("schemastud-frame::messages.no_figures")}</EmptyState>
             ) : (
                 <div
                     className="grid gap-3"

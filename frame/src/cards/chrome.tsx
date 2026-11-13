@@ -1,3 +1,4 @@
+import { useFrameMessages } from '../messages';
 import type { ComponentType, ReactNode } from 'react';
 import type { SchemaNode } from '@schemastud/seam';
 import { Card, CardContent, CardDescription, CardHeader } from '@schemastud/ui';
@@ -93,6 +94,7 @@ export function CardHeading({
 
 /** The one "View all →" affordance; nothing at all without an href. */
 export function ViewAllLink({ href, options }: { href?: string; options?: CardWidgetOptions }): ReactNode {
+    const { t } = useFrameMessages();
     if (!href) return null;
 
     return (
@@ -101,9 +103,7 @@ export function ViewAllLink({ href, options }: { href?: string; options?: CardWi
             className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
             marker={{ 'data-frame-card-link': '' }}
             options={options}
-        >
-            View all →
-        </CardLink>
+        >{t("schemastud-frame::messages.view_all")}</CardLink>
     );
 }
 

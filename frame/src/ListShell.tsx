@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { ResourceKey } from './resources';
 import { ListFilters } from '@schemastud/facets';
@@ -16,6 +17,7 @@ import type { ListShellProps, ListShellPropsOf, Row } from './types';
  * the hook and draws its own markup.
  */
 export function ListShell<K extends ResourceKey = ResourceKey>(props: ListShellProps<K>) {
+    const { t } = useFrameMessages();
     const { paginationPlacement = 'both', ...options } = props as unknown as ListShellPropsOf<string>;
     const list = useListShellOf(options as ListShellOptionsOf<string>);
     const { manifest, filters, collection, rows, pagination, slots, create, notice, ResourceActions } = list;
@@ -62,7 +64,7 @@ export function ListShell<K extends ResourceKey = ResourceKey>(props: ListShellP
             >
                 {collection.choices.length > 1 && SimpleSelect && (
                     <SimpleSelect
-                        aria-label="Collection"
+                        aria-label={t("schemastud-frame::messages.collection")}
                         value={collection.selected}
                         options={collection.choices.map(({ stem, label }) => ({ value: stem, label }))}
                         onValueChange={collection.select}

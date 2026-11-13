@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { useContext, useEffect, useState, type ComponentType } from 'react';
 import type { ResourceKey } from './resources';
 import { UnboundWidget, WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
@@ -59,6 +60,7 @@ export function WidgetSurface({
     /** The EditShellMount handshake; a standalone surface makes its own. */
     mount?: EditShellMountValue;
 }) {
+    const { t } = useFrameMessages();
     const contextRegistry = useContext(WidgetRegistryContext);
     const registry = registryProp ?? contextRegistry;
     // Always create a controller (rules-of-hooks); prefer a parent-supplied one
@@ -67,7 +69,7 @@ export function WidgetSurface({
     const mount = mountProp ?? ownMount;
 
     if (!registry) {
-        return <div data-frame-shell="widget-unbound">No widget registry.</div>;
+        return <div data-frame-shell="widget-unbound">{t("schemastud-frame::messages.no_widget_registry")}</div>;
     }
 
     const resolved = resolveWidgetFor(
@@ -85,9 +87,7 @@ export function WidgetSurface({
     // full-surface — surface that rather than crash.
     if (typeof resolved.widget !== 'function') {
         return (
-            <div data-frame-shell="widget-unbound" data-widget={widget}>
-                Widget “{widget}” is not mounted (no registry match).
-            </div>
+            <div data-frame-shell="widget-unbound" data-widget={widget}>{t("schemastud-frame::messages.widget_widget_is_not_mounted_no_registry_match", { widget: widget })}</div>
         );
     }
 
@@ -122,6 +122,7 @@ export function WidgetSurface({
  * `resolveWidgetFor` unchanged.
  */
 export function WidgetShell<K extends ResourceKey = ResourceKey>(typed: WidgetShellProps<K>) {
+    const { t } = useFrameMessages();
     // Typed by the key at the boundary (ruling 03); the shell itself reads records as `Row`.
     const { resource, id, widget, readOnly = false, onSaved } = typed as unknown as WidgetShellPropsOf<string>;
     const { can } = useFrameInjection();
@@ -139,7 +140,7 @@ export function WidgetShell<K extends ResourceKey = ResourceKey>(typed: WidgetSh
     const effectiveReadOnly = readOnly || !can(id === null ? 'create' : 'update', resource);
 
     if (schemaQuery.isLoading || (id !== null && recordQuery.isLoading)) {
-        return <div data-frame-shell="widget-loading">Loading…</div>;
+        return <div data-frame-shell="widget-loading">{t("schemastud-frame::messages.loading")}</div>;
     }
 
     const schema = schemaQuery.data ?? { type: 'object', properties: {} };

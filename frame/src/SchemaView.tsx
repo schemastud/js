@@ -1,3 +1,4 @@
+import { useFrameMessages } from './messages';
 import { useContext, useId, type ReactNode } from 'react';
 import type { Registry } from '@rjsf/utils';
 import {
@@ -61,6 +62,7 @@ const READ_FORM_CONTEXT: Record<string, unknown> = {};
  * as their exact JSON — every authored value is preserved, nothing is silently dropped. (C03)
  */
 function FallbackValue({ value, node }: { value: unknown; node?: SchemaNode }): ReactNode {
+    const { t } = useFrameMessages();
     if (value === null || typeof value !== 'object' || Array.isArray(value)) {
         return <span data-frame-view-value>{scalar(value)}</span>;
     }
@@ -84,7 +86,7 @@ function FallbackValue({ value, node }: { value: unknown; node?: SchemaNode }): 
                 ))}
             </dl>
             <details>
-                <summary>Source JSON</summary>
+                <summary>{t("schemastud-frame::messages.source_json")}</summary>
                 <pre data-frame-view-json>{JSON.stringify(value, null, 2)}</pre>
             </details>
         </div>

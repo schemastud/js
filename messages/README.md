@@ -59,3 +59,33 @@ Within this monorepo, UI resolves the adapter's types from source so its existin
 Explicit/interval plural conditions in the shared contract use numeric endpoints, or one numeric endpoint and one `*`. PHP 8 nonnumeric comparison quirks for empty endpoints (such as `[,5]`) or `[*,*]` are outside this contract. Condition results use PHP’s ASCII trim set; non-ASCII whitespace is preserved.
 
 Publish messages before or with UI. Hosts must install and dedupe the compatible messages peer before upgrading UI or linking its build into beam/tower-ux. React is an optional peer for core/collector-only installations; the React adapter requires it when used.
+
+
+## Static display-copy ratchet
+
+The Node-only `schemastud-message-ratchet --config <file>` compares current
+counts to a committed baseline and never writes it. `--write` initializes a
+missing baseline or lowers existing counts; an increase or package-set mismatch
+refuses. UI/frame budgets are zero. The optional TypeScript >=5 peer is needed
+only by this source scanner; the browser/core exports do not load it.
+
+Config v1: `{ "version": 1, "baseline": "./message-ratchet.baseline.json",
+"packages": { "package-name": ["src"] } }`. Roots resolve relative to the
+config file. Every named root must exist. Counts are per package, including zero.
+The baseline is `{ "version": 1, "counts": { "package-name": 0 } }`.
+
+The AST scan covers literal JSX text and display attributes (including accessible
+names), display parameter defaults, templates/conditional fallbacks, local
+constant references in these positions and window confirmation copy. Literal
+substitutions in message calls are also checked. Technical attributes, type
+syntax, tests/stories/fixtures, generated declarations, dependencies and compiled
+output are excluded. Authored/server data and runtime-computed strings are not
+interpreted as catalog keys. This is a static display-position budget, not a proof
+that arbitrary data-flow or third-party widgets contain no English. The rendered
+catalog journeys provide that separate check.
+
+Within this workspace: `npm run lint:messages` compares and
+`npm run lint:messages:write` lowers. During the localization train, other
+repositories carry config/baseline data only: run this candidate's Node CLI
+against their config, with no install. Installing the released tool and wiring
+host commands remains a post-release follow-up.
