@@ -315,7 +315,7 @@ function BadgesCell({ value, options }: { value: unknown; options: BadgesCellOpt
                 );
             })}
             {options.overflow !== false && rest > 0 ? (
-                <span style={{ color: MUTED, fontSize: SIZES.xs }}>{choice("schemastud-frame::messages.column.more", rest, { count: fmt(rest) })}</span>
+                <span style={{ color: MUTED, fontSize: SIZES.xs }}>{choice("schemastud-frame::messages.column.more", rest, { shownCount: fmt(rest) })}</span>
             ) : null}
         </div>
     );

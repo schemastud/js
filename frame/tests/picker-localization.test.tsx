@@ -14,10 +14,10 @@ import type { FrameInjection } from '../src/types';
 
 afterEach(cleanup);
 
-function PickerProviders({ children, withManifest = true }: { children: ReactNode; withManifest?: boolean }) {
+function PickerProviders({ children, withManifest = true, threads = 30 }: { children: ReactNode; withManifest?: boolean; threads?: number }) {
     const [client] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }));
     const [injection] = useState<FrameInjection>(() => ({
-        transport: createPickerTransport({ threads: 30 }), primitives: mockPrimitives,
+        transport: createPickerTransport({ threads }), primitives: mockPrimitives,
         useUrlState: () => [new URLSearchParams(), () => undefined] as const,
         registry: createWidgetRegistry(), schemaFetcher: async (ref) => ({ $id: ref }),
         can: () => true, manifestFor: (resource) => withManifest ? PICKER_MANIFESTS[resource] : undefined,
@@ -33,8 +33,8 @@ function Picker({ placement, initial }: { placement: 'bulk' | 'attach'; initial:
 const alternate: ClientCatalog = { version: 1, locale: 'es', realm: null, direction: 'ltr', messages: {
     'schemastud-frame::messages.picker.name_header': { text: 'Nombre', sourceLocale: 'es' },
     'schemastud-frame::messages.picker.selected_matching': { text: '{1} Seleccionado :shownCount :one entre :total|[0,*] Entre :total: :shownCount :many elegidos', sourceLocale: 'es' },
-    'schemastud-frame::messages.picker.browse_count': { text: '{1} Filtrar :count resultado|[0,*] Filtrar :count resultados', sourceLocale: 'es' },
-    'schemastud-frame::messages.picker.results_partial_shown': { text: '{1} De :total, se ve :count|[0,*] De :total, se ven :count', sourceLocale: 'es' },
+    'schemastud-frame::messages.picker.browse_count': { text: '{1} Filtrar :shownCount resultado|[0,*] Filtrar :shownCount resultados', sourceLocale: 'es' },
+    'schemastud-frame::messages.picker.results_partial_shown': { text: '{1} De :total, se ve :shownCount|[0,*] De :total, se ven :shownCount', sourceLocale: 'es' },
 } };
 
 it('selection sentence can reorder its count and keeps only the number bold', async () => {
@@ -76,4 +76,19 @@ it('provider-free typeahead footer preserves byte-exact English spacing', async 
 it('record list default Name header reads the outer catalog when no manifest declares a label', async () => {
     render(<MessageProvider value={alternate}><PickerProviders withManifest={false}><Picker placement="bulk" initial={{ mode: 'ids', ids: [] }} /></PickerProviders></MessageProvider>);
     expect(await screen.findByRole('columnheader', { name: /Nombre/ })).toBeTruthy();
+});
+
+
+it('provider-free 1000+ picker counts retain English grouping and exact spacing', async () => {
+    render(<PickerProviders threads={1234}><Picker placement="attach" initial={{ mode: 'ids', ids: [] }} /></PickerProviders>);
+    const browse = await screen.findByRole('button', { name: 'Browse all 1,234 with filters' });
+    expect(browse.textContent).toBe('Browse all 1,234 with filters');
+    expect(screen.getByPlaceholderText('Search 1,234 threads…')).toBeTruthy();
+});
+
+it('1000+ picker counts follow the message provider locale', async () => {
+    render(<MessageProvider value={{ ...alternate, locale: 'de-DE', messages: {} }}><PickerProviders threads={1234}><Picker placement="attach" initial={{ mode: 'ids', ids: [] }} /></PickerProviders></MessageProvider>);
+    const browse = await screen.findByRole('button', { name: 'Browse all 1.234 with filters' });
+    expect(browse.textContent).toBe('Browse all 1.234 with filters');
+    expect(screen.getByPlaceholderText('Search 1.234 threads…')).toBeTruthy();
 });

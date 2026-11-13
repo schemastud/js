@@ -128,10 +128,10 @@ function describeTrendWithMessages(label: string, points: readonly TrendPoint[],
     if (points.length === 0) return t("schemastud-frame::messages.trend.empty", { label });
     const first = points[0];
     const last = points[points.length - 1];
-    if (points.length === 1) return choice(first.forecast ? "schemastud-frame::messages.trend.one_forecast" : "schemastud-frame::messages.trend.one", 1, { label, count: fmt(1), period: first.label, value: first.display });
+    if (points.length === 1) return choice(first.forecast ? "schemastud-frame::messages.trend.one_forecast" : "schemastud-frame::messages.trend.one", 1, { label, shownCount: fmt(1), period: first.label, value: first.display });
     const forecast = points.filter((point) => point.forecast);
     return choice(forecast.length ? "schemastud-frame::messages.trend.span_forecast" : "schemastud-frame::messages.trend.span", points.length, {
-        label, count: fmt(points.length), first: first.label, last: last.label,
+        label, shownCount: fmt(points.length), first: first.label, last: last.label,
         forecast: fmt(forecast.length), forecastFrom: forecast[0]?.label ?? '',
     });
 }

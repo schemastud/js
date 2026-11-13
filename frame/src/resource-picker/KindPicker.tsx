@@ -256,7 +256,7 @@ function Picked({ picked, kinds, select, sections }: { picked: Set<string>; kind
             </span>
         );
     }
-    return <span>{choice("schemastud-frame::messages.kind.count", chosen.length, { count: fmt(chosen.length) })}</span>;
+    return <span>{choice("schemastud-frame::messages.kind.count", chosen.length, { shownCount: fmt(chosen.length) })}</span>;
 }
 
 /* ─────────────────────────────── palette ─────────────────────────────── */
@@ -356,7 +356,7 @@ function PaletteBody(props: BodyProps) {
                 <SearchBox value={query} onChange={setQuery} label={t("schemastud-frame::messages.search_resources")} />
                 <PaletteList {...props} query={query} />
                 <div className="border-t border-border px-2.5 py-1.5 text-xs text-muted-foreground tabular-nums">
-                    {props.picked.size > 0 && props.resolved.select === 'multi' ? choice("schemastud-frame::messages.kind.picked_total", props.picked.size, { count: fmt(props.picked.size), total: fmt(props.total) }) : choice("schemastud-frame::messages.kind.total", props.total, { total: fmt(props.total) })}
+                    {props.picked.size > 0 && props.resolved.select === 'multi' ? choice("schemastud-frame::messages.kind.picked_total", props.picked.size, { shownCount: fmt(props.picked.size), total: fmt(props.total) }) : choice("schemastud-frame::messages.kind.total", props.total, { total: fmt(props.total) })}
                 </div>
             </div>
         );
@@ -473,7 +473,7 @@ function RailBody(props: BodyProps) {
                                         <button
                                             type="button"
                                             disabled={props.disabled}
-                                            aria-label={choice(has ? "schemastud-frame::messages.kind.section_picked" : "schemastud-frame::messages.kind.section", g.items.length, { label: g.label, count: fmt(g.items.length) })}
+                                            aria-label={choice(has ? "schemastud-frame::messages.kind.section_picked" : "schemastud-frame::messages.kind.section", g.items.length, { label: g.label, shownCount: fmt(g.items.length) })}
                                             className={cn(
                                                 'relative flex size-10 items-center justify-center sm:size-8 rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                                 (open || has) && 'bg-accent text-foreground',

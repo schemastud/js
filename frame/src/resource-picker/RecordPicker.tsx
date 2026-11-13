@@ -391,7 +391,7 @@ function SelectionBar({
                             ? choice(describeFilter ? "schemastud-frame::messages.picker.every_filtered_except" : "schemastud-frame::messages.picker.every_except", excluded, { resource: noun[0], excluded: fmt(excluded) })
                             : t(describeFilter ? "schemastud-frame::messages.picker.every_filtered" : "schemastud-frame::messages.picker.every", { resource: noun[0] })}</b>
                         {count !== null ? (
-                            <span className="text-muted-foreground tabular-nums">{' '}{choice(exact ? "schemastud-frame::messages.picker.today" : "schemastud-frame::messages.picker.today_limit", n, { count: fmt(n) })}
+                            <span className="text-muted-foreground tabular-nums">{' '}{choice(exact ? "schemastud-frame::messages.picker.today" : "schemastud-frame::messages.picker.today_limit", n, { shownCount: fmt(n) })}
                             </span>
                         ) : null}
                         <span className="block text-xs text-muted-foreground">
@@ -422,7 +422,7 @@ function SelectionBar({
                             ? t("schemastud-frame::messages.loading")
                             : total === null
                               ? t(select === 'single' ? "schemastud-frame::messages.picker.matches_unknown_single" : "schemastud-frame::messages.picker.matches_unknown_multi", { many: noun[1] })
-                              : choice(select === 'single' ? "schemastud-frame::messages.picker.matches_single" : "schemastud-frame::messages.picker.matches_multi", total, { count: fmt(total), one: noun[0], many: noun[1] })}
+                              : choice(select === 'single' ? "schemastud-frame::messages.picker.matches_single" : "schemastud-frame::messages.picker.matches_multi", total, { shownCount: fmt(total), one: noun[0], many: noun[1] })}
                     </span>
                 )}
             </span>
@@ -489,7 +489,7 @@ function Tray({
                 );
             })}
             {ids.length > cap ? (
-                <button type="button" className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => setExpanded(true)}>{choice("schemastud-frame::messages.picker.more", ids.length - cap, { count: fmt(ids.length - cap) })}</button>
+                <button type="button" className="text-muted-foreground underline-offset-2 hover:underline" onClick={() => setExpanded(true)}>{choice("schemastud-frame::messages.picker.more", ids.length - cap, { shownCount: fmt(ids.length - cap) })}</button>
             ) : null}
         </div>
     );
@@ -720,7 +720,7 @@ function TypeaheadResults({
                     aria-controls={listId}
                     aria-autocomplete="list"
                     aria-activedescendant={res.rows[active] ? optionId(res.rows[active]) : undefined}
-                    placeholder={total !== null && !dq ? choice("schemastud-frame::messages.picker.search_count", total, { count: fmt(total), resources: noun[1] }) : t("schemastud-frame::messages.picker.search", { resources: noun[1] })}
+                    placeholder={total !== null && !dq ? choice("schemastud-frame::messages.picker.search_count", total, { shownCount: fmt(total), resources: noun[1] }) : t("schemastud-frame::messages.picker.search", { resources: noun[1] })}
                     className="h-10 w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
                 />
             </div>
@@ -777,11 +777,11 @@ function TypeaheadResults({
                           ? (dq ? "schemastud-frame::messages.picker.results_partial_matching" : "schemastud-frame::messages.picker.results_partial_shown")
                           : (dq ? "schemastud-frame::messages.picker.results_matching" : "schemastud-frame::messages.picker.results_shown"),
                         total === null || total > res.rows.length ? res.rows.length : total,
-                        { count: fmt(total === null || total > res.rows.length ? res.rows.length : total), total: total === null ? '' : fmt(total) })}
+                        { shownCount: fmt(total === null || total > res.rows.length ? res.rows.length : total), total: total === null ? '' : fmt(total) })}
                 </span>
                 <Button type="button" variant="ghost" size="sm" className="ml-auto gap-1.5" onClick={onBrowse}>
                     <ListFilter aria-hidden className="size-3.5" />
-                    {total === null ? t("schemastud-frame::messages.picker.browse") : choice("schemastud-frame::messages.picker.browse_count", total, { count: fmt(total) })}</Button>
+                    {total === null ? t("schemastud-frame::messages.picker.browse") : choice("schemastud-frame::messages.picker.browse_count", total, { shownCount: fmt(total) })}</Button>
             </div>
         </div>
     );
@@ -886,7 +886,7 @@ function CompactPicker(body: BodyProps) {
               ? null
               : n === 1
                 ? (labels.get(selection.ids[0]) ?? selection.ids[0])
-                : choice("schemastud-frame::messages.picker.summary_count", n!, { count: fmt(n!), one: noun[0], many: noun[1] });
+                : choice("schemastud-frame::messages.picker.summary_count", n!, { shownCount: fmt(n!), one: noun[0], many: noun[1] });
     const placeholder =
         select === 'set' ? t("schemastud-frame::messages.define_a_set_of_resources", { resources: noun[1] }) : select === 'single' ? t("schemastud-frame::messages.picker.choose_placeholder", { resource: noun[0] }) : t("schemastud-frame::messages.add_resources", { resources: noun[1] });
     const openBrowse = () => {

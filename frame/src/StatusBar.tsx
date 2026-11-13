@@ -41,7 +41,7 @@ export function StatusBar() {
 
     return (
         <div data-frame-status-bar="" style={BAR}>
-            <span data-status-seg="nodes" style={SEG}>{choice("schemastud-frame::messages.status.nodes", nodes, { count: fmt(nodes) })}</span>
+            <span data-status-seg="nodes" style={SEG}>{choice("schemastud-frame::messages.status.nodes", nodes, { shownCount: fmt(nodes) })}</span>
             <span data-status-seg="required" style={SEG}>{choice("schemastud-frame::messages.status.required_progress", requiredTotal, { total: fmt(requiredTotal), filled: fmt(requiredFilled) })}</span>
             {complete ? (
                 <span data-status-seg="complete" style={SEG}>{t("schemastud-frame::messages.complete")}</span>

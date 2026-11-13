@@ -11,7 +11,7 @@ const figures = [
 
 it('trend image title translates the whole forecast sentence with semantic parameters', () => {
     render(<MessageProvider value={{ version: 1, locale: 'es', realm: null, direction: 'ltr', messages: {
-        'schemastud-frame::messages.trend.span_forecast': { text: '{1} :label: :count período, :first a :last; previsión :forecast desde :forecastFrom.|[0,*] :label: :count períodos, :first a :last; previsión :forecast desde :forecastFrom.', sourceLocale: 'es' },
+        'schemastud-frame::messages.trend.span_forecast': { text: '{1} :label: :shownCount período, :first a :last; previsión :forecast desde :forecastFrom.|[0,*] :label: :shownCount períodos, :first a :last; previsión :forecast desde :forecastFrom.', sourceLocale: 'es' },
     } }}><TrendCard value={{ key: 'revenue', label: 'Revenue', figures }} /></MessageProvider>);
     expect(screen.getByRole('img').textContent).toBe('Revenue: 2 períodos, January a February; previsión 1 desde February.');
 });
