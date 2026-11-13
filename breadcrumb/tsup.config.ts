@@ -7,5 +7,5 @@ export default defineConfig({
     sourcemap: true,
     clean: true,
     // React + the sibling combobox stay external; the consumer provides single copies.
-    external: ['react', 'react-dom', '@schemastud/combobox'],
+    external: ['@schemastud/messages', '@schemastud/messages/react', 'react', 'react-dom', '@schemastud/combobox'],
 });

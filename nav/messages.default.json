@@ -1,0 +1,12 @@
+{
+    "version": 1,
+    "package": "@schemastud/nav",
+    "sourceLocale": "en",
+    "namespace": "schemastud-nav",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-nav::messages.navigation": "Navigation",
+        "schemastud-nav::messages.on_this_page": "On this page",
+        "schemastud-nav::messages.loading": "Loading\u2026"
+    }
+}

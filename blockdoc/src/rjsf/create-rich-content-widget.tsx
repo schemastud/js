@@ -1,6 +1,7 @@
+import { usePackageMessages } from '../messages';
 import { getUiOptions } from '@rjsf/utils';
 import type { FieldProps, WidgetProps } from '@rjsf/utils';
-import { defaultValidator } from '@schemastud/seam';
+import { useFormValidator } from '@schemastud/seam';
 import type { FunctionComponent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { BlockdocManifest } from '../core';
@@ -106,6 +107,8 @@ export function createRichContentWidget(
     defaults: RichContentWidgetDefaults = {},
 ): FunctionComponent<RichContentProps> {
     function RichContentWidget(props: RichContentProps) {
+        const messages = usePackageMessages();
+        const validator = useFormValidator();
         // Props normalizer: field props win, widget props are the fallback.
         const value = (props.formData !== undefined ? props.formData : props.value) as DocJson | null | undefined;
         const options: Record<string, unknown> = {
@@ -209,7 +212,7 @@ export function createRichContentWidget(
             }
         }, [intentBus, intentFieldPath, selectedNodeId, instruction]);
 
-        const [advisoryErrors, setAdvisoryErrors] = useState<string[]>([]);
+        const [advisoryDoc, setAdvisoryDoc] = useState<DocJson | null>(null);
         const fieldSchema = props.schema;
         // The latest props, read at commit time: the mount's onChange arity is chosen then.
         const propsRef = useRef(props);
@@ -219,24 +222,24 @@ export function createRichContentWidget(
         // never blocks the commit — the server's validation is authoritative.
         const handleChange = useCallback(
             (doc: DocJson) => {
-                if (isRealDocSchema(fieldSchema)) {
-                    const result = defaultValidator.rawValidation<{ instancePath?: string; message?: string }>(
-                        fieldSchema,
-                        doc,
-                    );
-                    setAdvisoryErrors(
-                        (result.errors ?? []).map((error) =>
-                            `${error.instancePath ?? ''} ${error.message ?? ''}`.trim(),
-                        ),
-                    );
-                }
+                setAdvisoryDoc(doc);
 
                 // Field mode MUST scope the update by path (RJSF v6 routes a
                 // path-less onChange to the form root, wiping sibling fields).
                 emitRichContentChange(propsRef.current, doc);
             },
-            [fieldSchema],
+            [],
         );
+
+        // Keep the validated data, so already-visible errors retranslate at read
+        // time when the provider changes, without requiring another edit.
+        const advisoryErrors = useMemo(() => {
+            if (advisoryDoc === null || !isRealDocSchema(fieldSchema)) return [];
+            const result = validator.rawValidation<{ instancePath?: string; message?: string }>(fieldSchema, advisoryDoc);
+            return (result.errors ?? []).map(error => messages.t('schemastud-blockdoc::messages.advisory_error', {
+                path: error.instancePath ?? '', message: error.message ?? '',
+            }).trim());
+        }, [advisoryDoc, fieldSchema, validator, messages]);
 
         if (manifests === null) {
             // Manifest still resolving (or unresolvable): render nothing.
@@ -280,14 +283,14 @@ export function createRichContentWidget(
                         }}
                     >
                         <span data-blockdoc-selected-node="" style={{ color: 'var(--stud-ink-muted)', fontFamily: 'monospace' }}>
-                            {selectedNodeId ?? 'no block selected'}
+                            {selectedNodeId ?? messages.t('schemastud-blockdoc::messages.no_block_selected')}
                         </span>
                         <input
                             type="text"
                             data-blockdoc-revise-instruction=""
                             value={instruction}
                             onChange={(event) => setInstruction(event.target.value)}
-                            placeholder="Revise instruction…"
+                            placeholder={messages.t('schemastud-blockdoc::messages.revise_instruction')}
                             style={{
                                 flex: 1,
                                 font: 'inherit',
@@ -313,7 +316,7 @@ export function createRichContentWidget(
                                 opacity: dispatching ? 0.5 : 1,
                             }}
                         >
-                            Revise
+                            {messages.t('schemastud-blockdoc::messages.revise')}
                         </button>
                     </div>
                 )}

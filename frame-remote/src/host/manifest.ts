@@ -42,6 +42,8 @@
  *     sets `allowShim: false` and gets a structured REFUSE instead. Either way the guest
  *     never renders — the mismatch is surfaced, not swallowed.
  */
+import { createMessages } from '@schemastud/messages';
+import catalog from '../../messages.default.json';
 import { VOCABULARY_MAJOR } from './version.js';
 import {
     type TrustTier,
@@ -49,6 +51,10 @@ import {
     isKnownCapability,
     tierGrants,
 } from './tiers.js';
+
+// The pure pre-render gate has no React provider. Its diagnostic contract
+// reads the published defaults without ambient locale state.
+const messages = createMessages(catalog.messages);
 
 /**
  * What a remote component declares about itself. Ships as DATA the host reads before
@@ -120,7 +126,7 @@ export function evaluateManifest(
             return {
                 kind: 'refuse',
                 reason: 'capability_unknown',
-                message: `component requests unknown capability "${String(cap)}" — not a host capability`,
+                message: messages.t('schemastud-frame-remote::messages.capability_unknown', { capability: String(cap) }),
                 hostMajor,
                 componentMajor,
             };
@@ -129,9 +135,7 @@ export function evaluateManifest(
             return {
                 kind: 'refuse',
                 reason: 'capability_over_ask',
-                message:
-                    `component (tier "${options.tier}") requests capability "${cap}" beyond its tier — ` +
-                    `refused at load before render`,
+                message: messages.t('schemastud-frame-remote::messages.capability_over_ask', { tier: options.tier, capability: cap }),
                 hostMajor,
                 componentMajor,
             };
@@ -140,9 +144,9 @@ export function evaluateManifest(
 
     // --- 2. version compatibility — same major renders; mismatch shims-or-refuses ---
     if (componentMajor !== hostMajor) {
-        const message =
-            `component built for vocabulary major v${componentMajor}, host is on v${hostMajor} — ` +
-            (allowShim ? 'painting a host-owned shim instead of the guest tree' : 'refused (shim disabled)');
+        const message = messages.t(allowShim
+            ? 'schemastud-frame-remote::messages.vocabulary_shim'
+            : 'schemastud-frame-remote::messages.vocabulary_refuse', { componentMajor, hostMajor });
         return {
             kind: allowShim ? 'shim' : 'refuse',
             reason: 'vocabulary_major_mismatch',
@@ -166,21 +170,21 @@ export function readManifest(
     raw: unknown,
 ): { ok: true; manifest: ComponentManifest } | { ok: false; reason: string; message: string } {
     if (raw == null || typeof raw !== 'object') {
-        return { ok: false, reason: 'manifest_missing', message: 'no component manifest supplied' };
+        return { ok: false, reason: 'manifest_missing', message: messages.t('schemastud-frame-remote::messages.manifest_missing') };
     }
     const obj = raw as Record<string, unknown>;
     if (typeof obj.vocabularyMajor !== 'number' || !Number.isInteger(obj.vocabularyMajor)) {
         return {
             ok: false,
             reason: 'manifest_no_major',
-            message: 'manifest.vocabularyMajor must be an integer',
+            message: messages.t('schemastud-frame-remote::messages.manifest_no_major'),
         };
     }
     if (!Array.isArray(obj.capabilities) || !obj.capabilities.every((c) => typeof c === 'string')) {
         return {
             ok: false,
             reason: 'manifest_bad_capabilities',
-            message: 'manifest.capabilities must be an array of capability-name strings',
+            message: messages.t('schemastud-frame-remote::messages.manifest_bad_capabilities'),
         };
     }
     const tier = obj.tier;

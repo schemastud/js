@@ -2,18 +2,18 @@
   "version": 1,
   "counts": {
     "@schemastud/ui": 0,
-    "@schemastud/blockdoc": 9,
+    "@schemastud/blockdoc": 0,
     "@schemastud/messages": 0,
-    "@schemastud/facets": 23,
-    "@schemastud/chat": 18,
-    "@schemastud/frame-remote": 9,
+    "@schemastud/facets": 0,
+    "@schemastud/chat": 0,
+    "@schemastud/frame-remote": 0,
     "@schemastud/frame": 0,
-    "@schemastud/seam": 4,
-    "@schemastud/combobox": 3,
-    "@schemastud/big-calendar": 5,
-    "@schemastud/nav": 4,
-    "@schemastud/mainframe": 23,
-    "@schemastud/breadcrumb": 1,
+    "@schemastud/seam": 0,
+    "@schemastud/combobox": 0,
+    "@schemastud/big-calendar": 0,
+    "@schemastud/nav": 0,
+    "@schemastud/mainframe": 0,
+    "@schemastud/breadcrumb": 0,
     "@schemastud/_resources": 0
   }
 }

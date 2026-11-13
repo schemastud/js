@@ -140,3 +140,12 @@ it('generated descendants are excluded while configured excluded roots refuse', 
         expect(refused.stderr).toContain('Excluded source root');
     }
 });
+
+it('logical-and counts rendered copy but not a technical identifier used as the guard', () => {
+    const root = fixture();
+    writeFileSync(join(root, 'src/view.tsx'), 'const listId = `${id}-suggestions`; const View = () => <>{listId && <datalist id={listId} />}{cond && "Copy"}</>');
+    const result = run(root, '--write');
+    expect(result.status, result.stderr).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.findings.fixture.map((item: { text: string }) => item.text)).toEqual(['Copy']);
+});

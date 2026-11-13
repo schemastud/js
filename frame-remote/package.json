@@ -22,14 +22,16 @@
         "./host": {
             "types": "./dist/host.d.ts",
             "import": "./dist/host.js"
-        }
+        },
+        "./messages": "./messages.default.json"
     },
     "sideEffects": false,
     "files": [
         "dist",
         "src",
         "README.md",
-        "VERIFY.md"
+        "VERIFY.md",
+        "messages.default.json"
     ],
     "publishConfig": {
         "registry": "https://registry.npmjs.org",
@@ -49,7 +51,8 @@
     },
     "peerDependencies": {
         "react": ">=18",
-        "react-dom": ">=18"
+        "react-dom": ">=18",
+        "@schemastud/messages": "^0.1.0"
     },
     "peerDependenciesMeta": {
         "react": {
@@ -80,6 +83,13 @@
         "tsup": "^8.5.1",
         "typescript": "^5.7.0",
         "vite": "^6.0.0",
-        "vitest": "^4.1.10"
+        "vitest": "^4.1.10",
+        "@schemastud/messages": "^0.1.0"
+    },
+    "schemastud": {
+        "messages": {
+            "version": 1,
+            "catalog": "./messages"
+        }
     }
 }

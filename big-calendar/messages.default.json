@@ -1,0 +1,33 @@
+{
+    "version": 1,
+    "package": "@schemastud/big-calendar",
+    "sourceLocale": "en",
+    "namespace": "schemastud-big-calendar",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-big-calendar::messages.event_detail": "Event detail",
+        "schemastud-big-calendar::messages.close": "Close",
+        "schemastud-big-calendar::messages.new_release": "New release",
+        "schemastud-big-calendar::messages.moved": "Moved \u201c:title\u201d.",
+        "schemastud-big-calendar::messages.undo": "Undo",
+        "schemastud-big-calendar::messages.mode.create": "create",
+        "schemastud-big-calendar::messages.mode.resident-edit": "resident-edit",
+        "schemastud-big-calendar::messages.mode.reference": "reference",
+        "schemastud-big-calendar::messages.toolbar.date": "Date",
+        "schemastud-big-calendar::messages.toolbar.time": "Time",
+        "schemastud-big-calendar::messages.toolbar.event": "Event",
+        "schemastud-big-calendar::messages.toolbar.allDay": "All Day",
+        "schemastud-big-calendar::messages.toolbar.week": "Week",
+        "schemastud-big-calendar::messages.toolbar.work_week": "Work Week",
+        "schemastud-big-calendar::messages.toolbar.day": "Day",
+        "schemastud-big-calendar::messages.toolbar.month": "Month",
+        "schemastud-big-calendar::messages.toolbar.previous": "Back",
+        "schemastud-big-calendar::messages.toolbar.next": "Next",
+        "schemastud-big-calendar::messages.toolbar.yesterday": "Yesterday",
+        "schemastud-big-calendar::messages.toolbar.tomorrow": "Tomorrow",
+        "schemastud-big-calendar::messages.toolbar.today": "Today",
+        "schemastud-big-calendar::messages.toolbar.agenda": "Agenda",
+        "schemastud-big-calendar::messages.toolbar.noEventsInRange": "There are no events in this range.",
+        "schemastud-big-calendar::messages.toolbar.showMore": "+:shownCount more"
+    }
+}

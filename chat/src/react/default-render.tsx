@@ -12,6 +12,9 @@
  * `renderSegment.text` override that owns the peerDep.
  */
 import type { ReactNode } from 'react';
+import { createMessages } from '@schemastud/messages';
+import { useChatMessages } from '../messages';
+import catalog from '../../messages.default.json';
 import type { ChatMessage, Segment } from '../core/index';
 import type { MessageMetaApi, RenderSegmentMap } from './slots';
 
@@ -34,13 +37,14 @@ export function renderSegment(
     }
     return (
         <div data-chat-segment={segment.type} data-chat-tail={tail || undefined} key={key}>
-            {defaultSegment(segment)}
+            {<DefaultSegment segment={segment} />}
         </div>
     );
 }
 
 /** The built-in per-segment render (used when no `renderSegment[type]` override). */
-function defaultSegment(segment: Segment): ReactNode {
+function DefaultSegment({ segment }: { segment: Segment }): ReactNode {
+    const messages = useChatMessages();
     switch (segment.type) {
         case 'text':
             // `body` (blockdoc) is intentionally not rendered here — that needs the
@@ -59,7 +63,7 @@ function defaultSegment(segment: Segment): ReactNode {
                 </div>
             );
         case 'citation':
-            return <span data-chat-citation-segment>{segment.name ?? segment.id ?? 'citation'}</span>;
+            return <span data-chat-citation-segment>{segment.name ?? segment.id ?? messages.t('schemastud-chat::messages.citation')}</span>;
         default: {
             const _exhaustive: never = segment;
             void _exhaustive;
@@ -96,13 +100,6 @@ export function renderMessageBody(
     return <div data-chat-content data-chat-tail={streaming || undefined}>{message.content}</div>;
 }
 
-/** The display label a turn falls back to when it carries no `author`. */
-const ROLE_LABEL: Record<ChatMessage['role'], string> = {
-    user: 'You',
-    assistant: 'Assistant',
-    system: 'System',
-};
-
 /** Up to two initials for an author mark. */
 export function initials(label: string): string {
     return label
@@ -121,13 +118,17 @@ export function authorKey(message: ChatMessage): string {
 
 /** Format an ISO timestamp as a short local clock time (date prefix when not today). */
 export function formatMessageTime(iso: string, now: Date = new Date()): string {
+    return messageTime(iso, now, createMessages(catalog.messages));
+}
+
+function messageTime(iso: string, now: Date, messages: ReturnType<typeof useChatMessages>): string {
     const at = new Date(iso);
     if (Number.isNaN(at.getTime())) return '';
     const sameDay = at.toDateString() === now.toDateString();
-    const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(at);
+    const time = messages.date(at, { hour: 'numeric', minute: '2-digit' });
     if (sameDay) return time;
-    const day = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(at);
-    return `${day}, ${time}`;
+    const day = messages.date(at, { month: 'short', day: 'numeric' });
+    return messages.t('schemastud-chat::messages.message_time', { day, time });
 }
 
 /**
@@ -138,7 +139,12 @@ export function formatMessageTime(iso: string, now: Date = new Date()): string {
  * `data-streaming` / `aria-busy` and the caret tail carry that state.
  */
 export function renderMessageMeta(message: ChatMessage, api: MessageMetaApi): ReactNode {
-    const label = message.author?.label ?? ROLE_LABEL[message.role];
+    return <MessageMeta message={message} api={api} />;
+}
+
+function MessageMeta({ message, api }: { message: ChatMessage; api: MessageMetaApi }): ReactNode {
+    const messages = useChatMessages();
+    const label = message.author?.label ?? messages.t(`schemastud-chat::messages.${message.role}`);
     return (
         <>
             {api.identity === 'avatar' && message.role !== 'user' ? (
@@ -151,7 +157,7 @@ export function renderMessageMeta(message: ChatMessage, api: MessageMetaApi): Re
             </span>
             {message.createdAt ? (
                 <time data-chat-time dateTime={message.createdAt}>
-                    {formatMessageTime(message.createdAt)}
+                    {messageTime(message.createdAt, new Date(), messages)}
                 </time>
             ) : null}
         </>

@@ -1,3 +1,4 @@
+import { useNavMessages } from './messages';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { scanHeadings, type TocHeading } from './headings';
@@ -43,11 +44,13 @@ export function OnThisPage({
     routeKey,
     container,
     selector,
-    title = 'On this page',
+    title,
     minHeadings = 2,
     classes = {},
-    'aria-label': ariaLabel = 'On this page',
+    'aria-label': ariaLabel,
 }: OnThisPageProps) {
+    const messages = useNavMessages();
+    const resolvedTitle = title === undefined ? messages.t('schemastud-nav::messages.on_this_page') : title;
     const [headings, setHeadings] = useState<TocHeading[]>([]);
     const [activeId, setActiveId] = useState<string>('');
 
@@ -107,8 +110,8 @@ export function OnThisPage({
     }
 
     return (
-        <nav className={classes.root} aria-label={ariaLabel}>
-            {title != null && <p className={classes.title}>{title}</p>}
+        <nav className={classes.root} aria-label={ariaLabel ?? messages.t('schemastud-nav::messages.on_this_page')}>
+            {resolvedTitle != null && <p className={classes.title}>{resolvedTitle}</p>}
             <ul className={classes.list}>
                 {headings.map((h) => (
                     <li key={h.id} className={classes.item}>

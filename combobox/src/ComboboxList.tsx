@@ -1,3 +1,4 @@
+import { useComboboxMessages } from './messages';
 import { useEffect, useId, useRef, useState, type ComponentType, type KeyboardEvent, type Ref } from 'react';
 
 export interface ComboboxOption {
@@ -61,9 +62,9 @@ export function ComboboxList({
     onOpenChange,
     autoFocus = false,
     label,
-    placeholder = 'Search…',
-    emptyText = 'No matches',
-    loadingText = 'Searching…',
+    placeholder,
+    emptyText,
+    loadingText,
     debounceMs = 200,
     inputClassName,
     inputWrapperClassName,
@@ -71,6 +72,10 @@ export function ComboboxList({
     optionClassName,
     inputRef,
 }: ComboboxListProps) {
+    const messages = useComboboxMessages();
+    placeholder ??= messages.t('schemastud-combobox::messages.search');
+    emptyText ??= messages.t('schemastud-combobox::messages.no_matches');
+    loadingText ??= messages.t('schemastud-combobox::messages.searching');
     const [query, setQuery] = useState('');
     const [options, setOptions] = useState<ComboboxOption[]>([]);
     const [loading, setLoading] = useState(false);

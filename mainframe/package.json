@@ -1,7 +1,7 @@
 {
     "name": "@schemastud/mainframe",
     "version": "0.1.0",
-    "description": "The generic Mainframe engine (React-only, host-agnostic): the frozen slot contract, an SSR-safe named-slot registry, a mode registry, a `can`-gated resolver, and the host→Mainframe React delegation seam. Relocated out of @splicewire/beam-mainframe (Frame OS ADR-0011) so any host composes the frame without a CMS or beam dependency. Carries react-rnd as the window-frame geometry atom for the Frame OS `os` mode.",
+    "description": "The generic Mainframe engine (React-only, host-agnostic): the frozen slot contract, an SSR-safe named-slot registry, a mode registry, a `can`-gated resolver, and the host\u2192Mainframe React delegation seam. Relocated out of @splicewire/beam-mainframe (Frame OS ADR-0011) so any host composes the frame without a CMS or beam dependency. Carries react-rnd as the window-frame geometry atom for the Frame OS `os` mode.",
     "license": "MIT",
     "type": "module",
     "main": "dist/index.js",
@@ -15,13 +15,15 @@
             "types": "./dist/os.d.ts",
             "import": "./dist/os.js"
         },
-        "./os/shell.css": "./src/os/shell.css"
+        "./os/shell.css": "./src/os/shell.css",
+        "./messages": "./messages.default.json"
     },
     "sideEffects": false,
     "files": [
         "dist",
         "src",
-        "README.md"
+        "README.md",
+        "messages.default.json"
     ],
     "publishConfig": {
         "registry": "https://registry.npmjs.org",
@@ -38,7 +40,8 @@
         "typecheck": "tsc --noEmit"
     },
     "peerDependencies": {
-        "react": ">=18"
+        "react": ">=18",
+        "@schemastud/messages": "^0.1.0"
     },
     "dependencies": {
         "@schemastud/frame-remote": "^0.1.0",
@@ -53,6 +56,13 @@
         "react-dom": "^19.2.0",
         "tsup": "^8.5.1",
         "typescript": "^5.7.2",
-        "vitest": "^4.1.10"
+        "vitest": "^4.1.10",
+        "@schemastud/messages": "^0.1.0"
+    },
+    "schemastud": {
+        "messages": {
+            "version": 1,
+            "catalog": "./messages"
+        }
     }
 }

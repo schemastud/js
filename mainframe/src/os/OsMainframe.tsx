@@ -1,3 +1,4 @@
+import { useMainframeMessages } from '../messages';
 /**
  * The `os` Mainframe mode — pure empty structure (Frame OS ticket 04, ADR-0012 §A).
  *
@@ -163,6 +164,7 @@ function WindowChrome({
     chromeEnd?: ReactNode;
 }) {
     const { wm } = useOs();
+    const messages = useMainframeMessages();
     const win = wm.state.windows[spec.key];
     return (
         <div className={`os-window-titlebar${focused ? ' is-focused' : ''}`} data-window={spec.key}>
@@ -176,21 +178,21 @@ function WindowChrome({
                 {/* Stage toggle: a float can "take the stage" (become the primary backdrop); the stage
                     can "pop out" back to a floating window. This is the site-sits-inside-the-OS control. */}
                 {win?.presentation === 'stage' ? (
-                    <button type="button" className="os-window-btn" aria-label="Pop out" title="Pop out of the stage" onClick={() => wm.unstage(spec.key)}>⿴</button>
+                    <button type="button" className="os-window-btn" aria-label={messages.t('schemastud-mainframe::messages.pop_out')} title={messages.t('schemastud-mainframe::messages.pop_out_title')} onClick={() => wm.unstage(spec.key)}>⿴</button>
                 ) : (
-                    <button type="button" className="os-window-btn" aria-label="Send to stage" title="Send to the stage" onClick={() => wm.stage(spec.key)}>⤢</button>
+                    <button type="button" className="os-window-btn" aria-label={messages.t('schemastud-mainframe::messages.send_stage')} title={messages.t('schemastud-mainframe::messages.send_stage_title')} onClick={() => wm.stage(spec.key)}>⤢</button>
                 )}
-                <button type="button" className="os-window-btn" aria-label="Minimize" onClick={() => wm.minimize(spec.key)}>–</button>
+                <button type="button" className="os-window-btn" aria-label={messages.t('schemastud-mainframe::messages.minimize')} onClick={() => wm.minimize(spec.key)}>–</button>
                 {win?.presentation !== 'stage' && (
                     <button
                         type="button"
                         className="os-window-btn"
-                        aria-label={win?.maximized ? 'Restore' : 'Maximize'}
+                        aria-label={messages.t(win?.maximized ? 'schemastud-mainframe::messages.restore' : 'schemastud-mainframe::messages.maximize')}
                         onClick={() => (win?.maximized ? wm.restore(spec.key) : wm.maximize(spec.key))}
                     >▢</button>
                 )}
                 {spec.role?.closable === false || spec.role?.persistent ? null : (
-                    <button type="button" className="os-window-btn" aria-label="Close" onClick={() => wm.close(spec.key)}>✕</button>
+                    <button type="button" className="os-window-btn" aria-label={messages.t('schemastud-mainframe::messages.close')} onClick={() => wm.close(spec.key)}>✕</button>
                 )}
             </div>
         </div>
@@ -451,10 +453,11 @@ function DesktopLayer({ host }: { host: OsHostContext }) {
 /** Dock + launcher regions that need `useOs()` — rendered inside the DesktopLayer's OsContext. */
 const OsChromeInDesktopCtx = createContext<{ dock?: ReactNode; launcher?: ReactNode }>({});
 function OsChromeInDesktop() {
+    const messages = useMainframeMessages();
     const { dock, launcher } = useContext(OsChromeInDesktopCtx);
     return (
         <>
-            {dock != null && <div className="os-dock" role="toolbar" aria-label="Dock">{dock}</div>}
+            {dock != null && <div className="os-dock" role="toolbar" aria-label={messages.t('schemastud-mainframe::messages.dock')}>{dock}</div>}
             {launcher != null && <div className="os-launcher">{launcher}</div>}
         </>
     );

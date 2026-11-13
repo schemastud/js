@@ -10,6 +10,7 @@
  * props do. The guest can *name* a `type` and pass serialized props; it cannot inject a
  * component, markup, raw HTML, or a handler function — events bridge back by handler id.
  */
+import { usePackageMessages } from '../messages';
 import { createElement, Fragment, useEffect, useState, type ReactNode } from 'react';
 import type {
     RemoteReceiverNode,
@@ -42,17 +43,22 @@ function renderNode(node: RemoteReceiverNode, opts: RenderTreeOptions, key: numb
         if (!Comp) {
             // VOCABULARY ENFORCEMENT — guest named a type the host does not own.
             if (!isDev()) return null; // prod: nothing rendered.
-            return createElement(
-                'div',
-                { key, 'data-frame-remote-blocked': node.element, style: { color: 'var(--stud-danger)', fontSize: 12 } },
-                `⛔ unknown block <${String(node.element)}> — not in host vocabulary`,
-            );
+            return createElement(UnknownBlock, { key, block: String(node.element) });
         }
         const children = () => renderChildren(node, opts);
         return createElement(Fragment, { key }, Comp(node, { fire: opts.fire, children }));
     }
     // comment nodes render nothing
     return null;
+}
+
+
+function UnknownBlock({ block }: { block: string }): ReactNode {
+    const messages = usePackageMessages();
+    return createElement('div', {
+        'data-frame-remote-blocked': block,
+        style: { color: 'var(--stud-danger)', fontSize: 12 },
+    }, messages.t('schemastud-frame-remote::messages.unknown_block', { block }));
 }
 
 function renderChildren(parent: RemoteReceiverParent, opts: RenderTreeOptions): ReactNode {

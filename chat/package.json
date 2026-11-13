@@ -22,12 +22,14 @@
         "./thread": {
             "types": "./dist/thread.d.ts",
             "import": "./dist/thread.js"
-        }
+        },
+        "./messages": "./messages.default.json"
     },
     "files": [
         "README.md",
         "dist",
-        "src"
+        "src",
+        "messages.default.json"
     ],
     "repository": {
         "type": "git",
@@ -44,7 +46,8 @@
         "@schemastud/blockdoc": "^0.1.0",
         "@schemastud/seam": "^0.2.0",
         "react": ">=18",
-        "react-dom": ">=18"
+        "react-dom": ">=18",
+        "@schemastud/messages": "^0.1.0"
     },
     "peerDependenciesMeta": {
         "@schemastud/blockdoc": {
@@ -70,10 +73,17 @@
         "react-dom": "^19.0.0",
         "tsup": "^8.5.1",
         "typescript": "^5.7.0",
-        "vitest": "^3.0.0"
+        "vitest": "^3.0.0",
+        "@schemastud/messages": "^0.1.0"
     },
     "publishConfig": {
         "registry": "https://registry.npmjs.org",
         "access": "public"
+    },
+    "schemastud": {
+        "messages": {
+            "version": 1,
+            "catalog": "./messages"
+        }
     }
 }

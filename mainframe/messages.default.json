@@ -1,0 +1,25 @@
+{
+    "version": 1,
+    "package": "@schemastud/mainframe",
+    "sourceLocale": "en",
+    "namespace": "schemastud-mainframe",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-mainframe::messages.unlock": "Unlock :title",
+        "schemastud-mainframe::messages.upgrade": "Upgrade",
+        "schemastud-mainframe::messages.upsell_copy": "The :title app is available on a higher plan. Upgrade to launch it.",
+        "schemastud-mainframe::messages.apps": "Apps",
+        "schemastud-mainframe::messages.launch": "Launch",
+        "schemastud-mainframe::messages.locked": "locked",
+        "schemastud-mainframe::messages.operator": "Operator",
+        "schemastud-mainframe::messages.minimize": "Minimize",
+        "schemastud-mainframe::messages.restore": "Restore",
+        "schemastud-mainframe::messages.maximize": "Maximize",
+        "schemastud-mainframe::messages.close": "Close",
+        "schemastud-mainframe::messages.pop_out": "Pop out",
+        "schemastud-mainframe::messages.pop_out_title": "Pop out of the stage",
+        "schemastud-mainframe::messages.send_stage": "Send to stage",
+        "schemastud-mainframe::messages.send_stage_title": "Send to the stage",
+        "schemastud-mainframe::messages.dock": "Dock"
+    }
+}

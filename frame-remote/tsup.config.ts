@@ -28,5 +28,7 @@ export default defineConfig({
         // The frame vocabulary seam stays external — resolved at runtime by the
         // consumer, exactly as @schemastud/frame keeps seam external.
         '@schemastud/seam',
+        '@schemastud/messages',
+        '@schemastud/messages/react',
     ],
 });

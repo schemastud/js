@@ -1,3 +1,4 @@
+import { useFacetsMessages } from './messages';
 import { ArrowDownAZ, ArrowUpAZ, ListFilter, Plus, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FacetsResourceProvider, useFacetsInjection } from './context';
@@ -64,15 +65,15 @@ type ChipSummary = { kind: 'text'; text: string } | { kind: 'neutral' } | { kind
  * Options Source does not promise complete (a capped list may omit a valid applied value, which must stay visible and
  * clearable). The x-filter descriptor names no default option, so there is no default chip to fall back to.
  */
-function chipSummary(value: string, descriptor: FilterDescriptor, labels: ReadonlyMap<string, string>): ChipSummary {
+function chipSummary(value: string, descriptor: FilterDescriptor, labels: ReadonlyMap<string, string>, selected: (count: number) => string): ChipSummary {
     const parts = value.split(',').filter(Boolean);
     if (parts.length === 0) return { kind: 'text', text: '…' };
     const optionBacked = descriptor.options !== undefined || descriptor.optionsRef !== undefined;
-    if (!optionBacked) return { kind: 'text', text: parts.length === 1 ? parts[0] : `${parts.length} selected` };
+    if (!optionBacked) return { kind: 'text', text: parts.length === 1 ? parts[0] : selected(parts.length) };
     // Membership by the facet's own options only: a Map, so an inherited Object key (`toString`) is never an option.
     const matched = parts.filter((part) => labels.has(part));
     if (matched.length === 1) return { kind: 'text', text: labels.get(matched[0])! };
-    if (matched.length > 1) return { kind: 'text', text: `${matched.length} selected` };
+    if (matched.length > 1) return { kind: 'text', text: selected(matched.length) };
     return descriptor.options !== undefined ? { kind: 'none' } : { kind: 'neutral' };
 }
 
@@ -93,6 +94,7 @@ function FacetControl({
     onChange: (value: string | null) => void;
     onLabelsResolved?: (labels: Record<string, string>) => void;
 }) {
+    const messages = useFacetsMessages();
     const { Input } = useFacetsInjection().primitives;
     if (descriptor.control === 'multiselect' || descriptor.control === 'select') {
         return (
@@ -109,7 +111,7 @@ function FacetControl({
         <Input
             autoFocus
             value={value}
-            placeholder={descriptor.control === 'search' ? 'Search…' : 'Value…'}
+            placeholder={descriptor.control === 'search' ? messages.t('schemastud-facets::messages.search_placeholder') : messages.t('schemastud-facets::messages.value_placeholder')}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value || null)}
         />
     );
@@ -147,6 +149,7 @@ export function FacetsBar({
     onFilterChange: (name: string, value: string | null) => void;
     onSortChange: (value: string | null) => void;
 }) {
+    const messages = useFacetsMessages();
     const { Button, Input, Label, Popover, PopoverContent, PopoverTrigger, SimpleSelect } =
         useFacetsInjection().primitives;
     const [openChip, setOpenChip] = useState<string | null>(null);
@@ -207,6 +210,7 @@ export function FacetsBar({
             facet.descriptor.options !== undefined
                 ? new Map(facet.descriptor.options.map((option) => [String(option.value), option.label]))
                 : (facet.descriptor.optionsRef !== undefined ? labelCache.get(facet.descriptor.optionsRef) : undefined) ?? new Map(),
+            (count) => messages.choice('schemastud-facets::messages.selected', count, { shownCount: messages.number(count) }),
         );
     // An active inline-options facet whose value matches no option draws no chip; it is offered from `+ Filter` again.
     const isShown = (facet: Facet) => isActive(facet) && summaryOf(facet).kind !== 'none';
@@ -260,8 +264,8 @@ export function FacetsBar({
                     <Input
                         className="h-8 w-56 !pl-9"
                         value={values[searchFacet.descriptor.name] ?? ''}
-                        placeholder="Search…"
-                        aria-label="Search"
+                        placeholder={messages.t('schemastud-facets::messages.search_placeholder')}
+                        aria-label={messages.t('schemastud-facets::messages.search')}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                             onFilterChange(searchFacet.descriptor.name, e.target.value || null)
                         }
@@ -310,7 +314,7 @@ export function FacetsBar({
                                 {active && (
                                     <button
                                         type="button"
-                                        aria-label={`Clear ${facet.label}`}
+                                        aria-label={messages.t('schemastud-facets::messages.clear', { label: facet.label })}
                                         className="flex h-full items-center px-1.5 text-muted-foreground hover:bg-accent hover:text-destructive"
                                         onClick={() => onFilterChange(facet.descriptor.name, null)}
                                     >
@@ -342,7 +346,7 @@ export function FacetsBar({
                 <Popover open={addOpen} onOpenChange={setAddOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="h-8 gap-1 border-dashed">
-                            <Plus className="size-3.5" /> Filter
+                            <Plus className="size-3.5" /> {messages.t('schemastud-facets::messages.filter')}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent>
@@ -369,12 +373,12 @@ export function FacetsBar({
                     <>
                         <SimpleSelect
                             className="h-8 w-40"
-                            aria-label="Sort by"
+                            aria-label={messages.t('schemastud-facets::messages.sort_by')}
                             value={sortField}
                             onValueChange={(field: string) =>
                                 field ? setPrimarySort(field, sortDesc) : clearPrimarySort()
                             }
-                            placeholder="Sort by…"
+                            placeholder={messages.t('schemastud-facets::messages.sort_placeholder')}
                             options={sorts.map(([key, prop]) => ({
                                 value: prop['x-sort']!.name,
                                 label: humanize(key),
@@ -385,7 +389,7 @@ export function FacetsBar({
                                 variant="outline"
                                 size="icon"
                                 className="size-8"
-                                aria-label={sortDesc ? 'Descending' : 'Ascending'}
+                                aria-label={sortDesc ? messages.t('schemastud-facets::messages.descending') : messages.t('schemastud-facets::messages.ascending')}
                                 onClick={() => setPrimarySort(sortField, !sortDesc)}
                             >
                                 {sortDesc ? <ArrowDownAZ /> : <ArrowUpAZ />}

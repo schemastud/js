@@ -1,3 +1,5 @@
+import { createMessages } from '@schemastud/messages';
+import catalog from '../messages.default.json';
 import type { CalendarServices, EditPanelMode, FoundationCalendarEvent, NotifyMessage } from './types';
 
 /**
@@ -42,15 +44,16 @@ export async function reAnchorEvent<E extends FoundationCalendarEvent>(
     event: E,
     newDate: Date,
 ): Promise<void> {
+    const messages = createMessages(catalog.messages);
     const notify = services.notify ?? (() => {});
     const oldDate = event.start;
     try {
         await services.client.reAnchor(event.ref, newDate);
         const msg: NotifyMessage = {
             level: 'success',
-            text: `Moved “${event.title}”.`,
+            text: messages.t('schemastud-big-calendar::messages.moved', { title: event.title }),
             action: {
-                label: 'Undo',
+                label: messages.t('schemastud-big-calendar::messages.undo'),
                 run: () => {
                     void services.client.reAnchor(event.ref, oldDate);
                 },

@@ -1,5 +1,7 @@
 import { useEffect, type ReactElement, type ReactNode } from 'react';
 import { isDevelopment } from './development';
+import { useMessages } from '@schemastud/messages/react';
+import catalog from '../messages.default.json';
 
 export interface UnboundWidgetProps {
     /**
@@ -24,6 +26,7 @@ export interface UnboundWidgetProps {
  * resource, the pointer, the context and the name once, with `console.error`.
  */
 export function UnboundWidget({ context, name, label, resource, pointer }: UnboundWidgetProps): ReactElement {
+    const messages = useMessages(catalog.messages);
     useEffect(() => {
         if (!isDevelopment()) return;
         const where = [resource !== undefined ? `resource "${resource}"` : '', pointer !== undefined ? `pointer "${pointer}"` : '']
@@ -35,7 +38,7 @@ export function UnboundWidget({ context, name, label, resource, pointer }: Unbou
     return (
         <div data-frame-unbound={context} data-frame-unbound-widget={name}>
             {label !== undefined && label !== null && label !== '' ? <span data-frame-unbound-label>{label}</span> : null}
-            <span data-frame-unbound-message>Unable to display this field</span>
+            <span data-frame-unbound-message>{messages.t('schemastud-seam::messages.widget.unbound')}</span>
         </div>
     );
 }

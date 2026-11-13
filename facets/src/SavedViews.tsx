@@ -1,3 +1,4 @@
+import { useFacetsMessages } from './messages';
 import { Bookmark, Check, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useFacetsInjection } from './context';
@@ -13,7 +14,7 @@ function firstValidationMessage(error: unknown): string | null {
     if (err.response?.status !== 422) return null;
     const errors = err.response.data?.errors;
     const first = errors ? Object.values(errors)[0]?.[0] : undefined;
-    return first ?? err.response.data?.message ?? 'That view could not be saved.';
+    return first ?? err.response.data?.message ?? null;
 }
 
 /**
@@ -34,6 +35,7 @@ export function SavedViews({
     current: SavedFilterQueryParameters;
     onApply: (params: SavedFilterQueryParameters) => void | Promise<void>;
 }) {
+    const messages = useFacetsMessages();
     const {
         primitives: { Button, Input },
         can,
@@ -46,7 +48,7 @@ export function SavedViews({
 
     const [naming, setNaming] = useState(false);
     const [name, setName] = useState('');
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<{ text: string } | { key: 'save_failed' | 'apply_failed' } | null>(null);
     const canCreate = Boolean(
         savedResource &&
             schema?.savedViewsCan?.create === true &&
@@ -61,7 +63,8 @@ export function SavedViews({
             setName('');
             setNaming(false);
         } catch (e) {
-            setError(firstValidationMessage(e) ?? 'That view could not be saved.');
+            const text = firstValidationMessage(e);
+            setError(text !== null ? { text } : { key: 'save_failed' });
         }
     };
 
@@ -70,7 +73,7 @@ export function SavedViews({
         try {
             await onApply(params);
         } catch {
-            setError('That view could not be applied.');
+            setError({ key: 'apply_failed' });
         }
     };
 
@@ -79,7 +82,7 @@ export function SavedViews({
     return (
         <div className="flex flex-wrap items-center gap-2">
             <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-                <Bookmark className="size-3.5" /> Saved views
+                <Bookmark className="size-3.5" /> {messages.t('schemastud-facets::messages.saved_views')}
             </span>
 
             {(views.data ?? []).map((view) => (
@@ -97,7 +100,7 @@ export function SavedViews({
                     {view.can?.delete === true && (!can || can('delete', savedResource, view)) && (
                         <button
                             type="button"
-                            aria-label={`Delete ${view.name}`}
+                            aria-label={messages.t('schemastud-facets::messages.delete', { name: view.name })}
                             disabled={remove.isPending}
                             onClick={() => remove.mutate(view.id)}
                         >
@@ -108,7 +111,7 @@ export function SavedViews({
             ))}
 
             {(views.data ?? []).length === 0 && (
-                <span className="text-xs text-muted-foreground">None yet.</span>
+                <span className="text-xs text-muted-foreground">{messages.t('schemastud-facets::messages.none_yet')}</span>
             )}
 
             {canCreate &&
@@ -117,7 +120,7 @@ export function SavedViews({
                         <Input
                             value={name}
                             autoFocus
-                            placeholder="View name"
+                            placeholder={messages.t('schemastud-facets::messages.view_name')}
                             className="h-7 w-40 text-xs"
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                                 setName(e.target.value)
@@ -130,7 +133,7 @@ export function SavedViews({
                             size="icon"
                             variant="outline"
                             className="size-7"
-                            aria-label="Confirm save"
+                            aria-label={messages.t('schemastud-facets::messages.confirm_save')}
                             disabled={!name || save.isPending}
                             onClick={submit}
                         >
@@ -140,7 +143,7 @@ export function SavedViews({
                             size="icon"
                             variant="ghost"
                             className="size-7"
-                            aria-label="Cancel save"
+                            aria-label={messages.t('schemastud-facets::messages.cancel_save')}
                             onClick={() => {
                                 setNaming(false);
                                 setError(null);
@@ -151,11 +154,11 @@ export function SavedViews({
                     </div>
                 ) : (
                     <Button size="sm" variant="outline" onClick={() => setNaming(true)}>
-                        Save current view
+                        {messages.t('schemastud-facets::messages.save_current_view')}
                     </Button>
                 ))}
 
-            {error && <span className="text-xs text-destructive">{error}</span>}
+            {error && <span className="text-xs text-destructive">{'text' in error ? error.text : error.key === 'save_failed' ? messages.t('schemastud-facets::messages.save_failed') : messages.t('schemastud-facets::messages.apply_failed')}</span>}
         </div>
     );
 }

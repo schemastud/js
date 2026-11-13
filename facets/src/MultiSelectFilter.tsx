@@ -1,3 +1,4 @@
+import { useFacetsMessages } from './messages';
 import { ComboboxList, type ComboboxOption } from '@schemastud/combobox';
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -37,6 +38,7 @@ export function MultiSelectFilter({
     // can render names instead of ids for values chosen here.
     onLabelsResolved?: (labels: Record<string, string>) => void;
 }) {
+    const messages = useFacetsMessages();
     const { Badge, Input } = useFacetsInjection().primitives;
     const single = descriptor.control === 'select';
     const [open, setOpen] = useState(false);
@@ -121,7 +123,7 @@ export function MultiSelectFilter({
                     {selected.map((val) => (
                         <Badge key={val} variant="secondary" className="gap-1">
                             {labels.current[val] ?? val}
-                            <button type="button" aria-label={`Remove ${labels.current[val] ?? val}`} onClick={() => remove(val)}>
+                            <button type="button" aria-label={messages.t('schemastud-facets::messages.remove', { label: labels.current[val] ?? val })} onClick={() => remove(val)}>
                                 <X className="size-3" />
                             </button>
                         </Badge>
@@ -137,7 +139,7 @@ export function MultiSelectFilter({
                 open={open}
                 onOpenChange={setOpen}
                 label={label ?? descriptor.name}
-                placeholder="Search…"
+                placeholder={messages.t('schemastud-facets::messages.search_placeholder')}
                 // Inline options are already here; only a server search waits for a pause.
                 debounceMs={inlineOptions ? 0 : 200}
                 listClassName="max-h-56 overflow-auto rounded-md border bg-background p-1 shadow-md"

@@ -1,7 +1,7 @@
 {
     "name": "@schemastud/breadcrumb",
     "version": "0.1.0",
-    "description": "A host-agnostic breadcrumb renderer. Renders a crumb array where any crumb can be a plain link or a searchable sibling-switcher (backed by @schemastud/combobox) — so record breadcrumbs scale to large dynamic lists instead of dumping every sibling into a static menu. Navigation and UI atoms are injected as props; the crumb data derivation stays with the host.",
+    "description": "A host-agnostic breadcrumb renderer. Renders a crumb array where any crumb can be a plain link or a searchable sibling-switcher (backed by @schemastud/combobox) \u2014 so record breadcrumbs scale to large dynamic lists instead of dumping every sibling into a static menu. Navigation and UI atoms are injected as props; the crumb data derivation stays with the host.",
     "license": "MIT",
     "type": "module",
     "main": "dist/index.js",
@@ -10,12 +10,14 @@
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
-        }
+        },
+        "./messages": "./messages.default.json"
     },
     "files": [
         "dist",
         "src",
-        "README.md"
+        "README.md",
+        "messages.default.json"
     ],
     "publishConfig": {
         "registry": "https://registry.npmjs.org",
@@ -29,11 +31,13 @@
         "build": "tsup",
         "dev": "tsup --watch",
         "typecheck": "tsc --noEmit",
-        "prepublishOnly": "npm run build"
+        "prepublishOnly": "npm run build",
+        "test": "vitest run"
     },
     "peerDependencies": {
         "@schemastud/combobox": "^0.1.0 || ^0.2.0",
-        "react": ">=18"
+        "react": ">=18",
+        "@schemastud/messages": "^0.1.0"
     },
     "devDependencies": {
         "@schemastud/combobox": "*",
@@ -41,6 +45,18 @@
         "@types/react": "^19.0.0",
         "react": "^19.0.0",
         "tsup": "^8.5.1",
-        "typescript": "^5.7.0"
+        "typescript": "^5.7.0",
+        "@schemastud/messages": "^0.1.0",
+        "@testing-library/dom": "^10.4.1",
+        "@testing-library/react": "^16.3.2",
+        "jsdom": "^26.0.0",
+        "react-dom": "^19.2.7",
+        "vitest": "^4.1.10"
+    },
+    "schemastud": {
+        "messages": {
+            "version": 1,
+            "catalog": "./messages"
+        }
     }
 }

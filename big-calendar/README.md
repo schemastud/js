@@ -46,3 +46,7 @@ import { BigCalendarProvider, BigCalendarSurface } from '@schemastud/big-calenda
 - **§8a runtime:** `npm test` — the surface mounts off a pure `FoundationCalendarEvent[]`
   fixture (no Laravel); residence-gated interaction is asserted.
 - **§8b static:** `npm run lint:imports` (deny-list) + `npm run typecheck`.
+
+## Messages and dates
+
+The surface reads its published `./messages` catalog through the host's outer MessageProvider. Existing service-render slots and event/lane titles stay host-owned. Toolbar and date locale follow provider changes without a remount; date-fns matches an installed locale's full BCP47 code, then its base language, with en-US as the fallback for unavailable locale data. The existing exported `localizer` keeps its English behavior for direct Calendar callers. Pure reAnchorEvent retains its signature and English default feedback; the surface translates that feedback before forwarding it to the injected notify sink.

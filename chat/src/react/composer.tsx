@@ -12,6 +12,7 @@
  * the host's own fill.
  */
 import { type ReactNode, useState } from 'react';
+import { useChatMessages } from '../messages';
 import type { ComposerApi } from './slots';
 
 export interface ComposerProps extends ComposerApi {
@@ -38,11 +39,12 @@ export function Composer({
     requestHuman,
     streaming,
     escalated,
-    placeholder = 'Type a message…',
-    sendLabel = 'Send',
+    placeholder,
+    sendLabel,
     allowRequestHuman = false,
-    requestHumanLabel = 'Talk to a human',
+    requestHumanLabel,
 }: ComposerProps): ReactNode {
+    const messages = useChatMessages();
     const [value, setValue] = useState('');
 
     const canSend = value.trim().length > 0 && !streaming;
@@ -67,11 +69,11 @@ export function Composer({
             }}
         >
             <label data-chat-composer-label>
-                <span data-chat-composer-label-text>Message</span>
+                <span data-chat-composer-label-text>{messages.t('schemastud-chat::messages.message')}</span>
                 <textarea
                     data-chat-composer-input
                     value={value}
-                    placeholder={placeholder}
+                    placeholder={placeholder ?? messages.t('schemastud-chat::messages.placeholder')}
                     disabled={streaming}
                     onChange={(event) => setValue(event.target.value)}
                     onKeyDown={(event) => {
@@ -91,11 +93,11 @@ export function Composer({
                         disabled={escalated}
                         onClick={() => void requestHuman()}
                     >
-                        {requestHumanLabel}
+                        {requestHumanLabel ?? messages.t('schemastud-chat::messages.request_human')}
                     </button>
                 ) : null}
                 <button type="submit" data-chat-composer-send disabled={!canSend}>
-                    {sendLabel}
+                    {sendLabel ?? messages.t('schemastud-chat::messages.send')}
                 </button>
             </div>
         </form>

@@ -13,6 +13,7 @@ export default defineConfig({
     // 844-line theme.css + the thin Calendar re-export are the ONLY vendored-and-owned
     // artifacts; everything else here is authored around the RBC accessor/prop-getter seam.
     external: [
+        '@schemastud/messages',
         'react',
         'react/jsx-runtime',
         'react-dom',

@@ -1,0 +1,23 @@
+{
+    "version": 1,
+    "package": "@schemastud/blockdoc",
+    "sourceLocale": "en",
+    "namespace": "schemastud-blockdoc",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-blockdoc::messages.drag_to_reorder": "Drag to reorder",
+        "schemastud-blockdoc::messages.required": "required",
+        "schemastud-blockdoc::messages.edit_via_inspector": "Edit via the inspector →",
+        "schemastud-blockdoc::messages.empty_value": "—",
+        "schemastud-blockdoc::messages.bold": "B",
+        "schemastud-blockdoc::messages.italic": "I",
+        "schemastud-blockdoc::messages.code": "</>",
+        "schemastud-blockdoc::messages.link_placeholder": "https://…",
+        "schemastud-blockdoc::messages.link": "Link",
+        "schemastud-blockdoc::messages.unlink": "Unlink",
+        "schemastud-blockdoc::messages.no_block_selected": "no block selected",
+        "schemastud-blockdoc::messages.revise_instruction": "Revise instruction…",
+        "schemastud-blockdoc::messages.revise": "Revise",
+        "schemastud-blockdoc::messages.advisory_error": ":path :message"
+    }
+}

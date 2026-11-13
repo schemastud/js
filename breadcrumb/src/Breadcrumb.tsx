@@ -1,3 +1,4 @@
+import { useBreadcrumbMessages } from './messages';
 import { Fragment, type ReactNode } from 'react';
 import { Combobox, type ComboboxOption, type ComboboxPrimitives } from '@schemastud/combobox';
 
@@ -57,10 +58,11 @@ export function Breadcrumb({
     switcherTriggerClassName,
     comboboxContentClassName,
 }: BreadcrumbProps) {
+    const messages = useBreadcrumbMessages();
     const sep = separator ?? <span className="text-muted-foreground/60">/</span>;
 
     return (
-        <nav className={className ?? 'flex items-center gap-1 text-sm'} aria-label="Breadcrumb">
+        <nav className={className ?? 'flex items-center gap-1 text-sm'} aria-label={messages.t('schemastud-breadcrumb::messages.breadcrumb')}>
             {crumbs.map((crumb, index) => (
                 <Fragment key={index}>
                     {index > 0 && <span className="mx-0.5 flex items-center">{sep}</span>}

@@ -7,5 +7,5 @@ export default defineConfig({
     sourcemap: true,
     clean: true,
     // React is a peer; the consuming app provides the single copy.
-    external: ['react', 'react/jsx-runtime'],
+    external: ['@schemastud/messages', '@schemastud/messages/react', 'react', 'react/jsx-runtime'],
 });

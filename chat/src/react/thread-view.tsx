@@ -1,3 +1,4 @@
+import { useChatMessages } from '../messages';
 /**
  * `<ThreadView>` — the indent/collapse render of a nested reply thread.
  *
@@ -35,6 +36,7 @@ export interface ThreadViewProps {
 }
 
 export function ThreadView({ snapshot, maxDepth = null, slots = {}, initialCollapsed = [] }: ThreadViewProps) {
+    const messages = useChatMessages();
     const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set(initialCollapsed));
 
     // Derived, never stored: the tree is recomputed from the snapshot the fold
@@ -81,7 +83,7 @@ export function ThreadView({ snapshot, maxDepth = null, slots = {}, initialColla
                             </div>
                         ) : childCount > 0 ? (
                             <button type="button" data-thread-toggle onClick={() => toggle(row.message.id)}>
-                                {isCollapsed ? `Show ${childCount} replies` : `Hide ${childCount} replies`}
+                                {messages.choice(isCollapsed ? 'schemastud-chat::messages.show_replies' : 'schemastud-chat::messages.hide_replies', childCount, { shownCount: messages.number(childCount) })}
                             </button>
                         ) : null}
 

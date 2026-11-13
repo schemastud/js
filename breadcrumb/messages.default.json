@@ -1,0 +1,10 @@
+{
+    "version": 1,
+    "package": "@schemastud/breadcrumb",
+    "sourceLocale": "en",
+    "namespace": "schemastud-breadcrumb",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-breadcrumb::messages.breadcrumb": "Breadcrumb"
+    }
+}

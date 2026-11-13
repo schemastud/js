@@ -1,0 +1,31 @@
+{
+    "version": 1,
+    "package": "@schemastud/facets",
+    "sourceLocale": "en",
+    "namespace": "schemastud-facets",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-facets::messages.search": "Search",
+        "schemastud-facets::messages.search_placeholder": "Search\u2026",
+        "schemastud-facets::messages.value_placeholder": "Value\u2026",
+        "schemastud-facets::messages.selected": ":shownCount selected",
+        "schemastud-facets::messages.clear": "Clear :label",
+        "schemastud-facets::messages.remove": "Remove :label",
+        "schemastud-facets::messages.filter": "Filter",
+        "schemastud-facets::messages.sort_by": "Sort by",
+        "schemastud-facets::messages.sort_placeholder": "Sort by\u2026",
+        "schemastud-facets::messages.descending": "Descending",
+        "schemastud-facets::messages.ascending": "Ascending",
+        "schemastud-facets::messages.filter_variant": "Filter variant",
+        "schemastud-facets::messages.default": "Default",
+        "schemastud-facets::messages.save_failed": "That view could not be saved.",
+        "schemastud-facets::messages.apply_failed": "That view could not be applied.",
+        "schemastud-facets::messages.saved_views": "Saved views",
+        "schemastud-facets::messages.delete": "Delete :name",
+        "schemastud-facets::messages.none_yet": "None yet.",
+        "schemastud-facets::messages.view_name": "View name",
+        "schemastud-facets::messages.confirm_save": "Confirm save",
+        "schemastud-facets::messages.cancel_save": "Cancel save",
+        "schemastud-facets::messages.save_current_view": "Save current view"
+    }
+}

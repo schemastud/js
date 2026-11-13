@@ -1,3 +1,4 @@
+import { usePackageMessages } from '../messages';
 import {proseShortcuts} from './prose-shortcuts';
 import { Extension } from '@tiptap/core';
 import type { Editor } from '@tiptap/core';
@@ -144,9 +145,9 @@ const buttonStyle: CSSProperties = {
 };
 
 const BUBBLE_TOGGLE_MARKS = [
-    ['strong', 'B'],
-    ['em', 'I'],
-    ['code', '</>'],
+    ['strong', 'schemastud-blockdoc::messages.bold'],
+    ['em', 'schemastud-blockdoc::messages.italic'],
+    ['code', 'schemastud-blockdoc::messages.code'],
 ] as const;
 
 function markIsActive(editor: Editor, name: string): boolean {
@@ -181,6 +182,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
     },
     ref,
 ) {
+    const messages = usePackageMessages();
     const manifestList = useMemo(() => (Array.isArray(manifests) ? manifests : [manifests]), [manifests]);
 
     const controllerRef = useRef<CommitController | null>(null);
@@ -549,7 +551,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                                 background: activeMarks?.[name] === true ? 'var(--stud-line)' : 'var(--stud-surface)',
                             }}
                         >
-                            {label}
+                            {messages.t(label)}
                         </button>
                     ))}
                     {hasLinkMark && (
@@ -559,7 +561,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                                 data-blockdoc-bubble-link-input=""
                                 value={linkDraft}
                                 onChange={(event) => setLinkDraft(event.target.value)}
-                                placeholder="https://…"
+                                placeholder={messages.t('schemastud-blockdoc::messages.link_placeholder')}
                                 style={{
                                     font: 'inherit',
                                     fontSize: 12,
@@ -580,7 +582,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                                 }}
                                 style={{ ...buttonStyle, opacity: linkDraft === '' ? 0.5 : 1 }}
                             >
-                                Link
+                                {messages.t('schemastud-blockdoc::messages.link')}
                             </button>
                             {activeMarks?.link === true && (
                                 <button
@@ -590,7 +592,7 @@ export const BlockdocEditor = forwardRef<BlockdocEditorHandle, BlockdocEditorPro
                                     onClick={() => editor.chain().focus().unsetMark('link').run()}
                                     style={buttonStyle}
                                 >
-                                    Unlink
+                                    {messages.t('schemastud-blockdoc::messages.unlink')}
                                 </button>
                             )}
                         </>

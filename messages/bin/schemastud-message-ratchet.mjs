@@ -40,7 +40,9 @@ export function scanDisplayStrings(filename, contents = readFileSync(filename, '
         else if (ts.isIdentifier(node) && constants.has(node.text) && !assigned.has(node.text) && !visited.has(node.text)) {
             display(constants.get(node.text), new Set([...visited, node.text]));
         } else if (ts.isConditionalExpression(node)) { display(node.whenTrue, visited); display(node.whenFalse, visited); }
-        else if (ts.isBinaryExpression(node) && [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.PlusToken].includes(node.operatorToken.kind)) {
+        // && renders only its right operand; the left is a condition (often an ID).
+        else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) display(node.right, visited);
+        else if (ts.isBinaryExpression(node) && [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.PlusToken].includes(node.operatorToken.kind)) {
             display(node.left, visited); display(node.right, visited);
         } else if (ts.isArrayLiteralExpression(node)) { for (const element of node.elements) display(element, visited); }
         else if (ts.isObjectLiteralExpression(node)) {

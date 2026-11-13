@@ -17,5 +17,5 @@ export default defineConfig({
     // React and the schemastud socket peers (seam, blockdoc) resolve to the
     // HOST's single copies — chat carries no bundled runtime of its own yet.
     // `./core` must stay framework-agnostic: it pulls none of these.
-    external: ['react', 'react-dom', 'react/jsx-runtime', '@schemastud/seam', '@schemastud/blockdoc'],
+    external: ['@schemastud/messages', '@schemastud/messages/react', 'react', 'react-dom', 'react/jsx-runtime', '@schemastud/seam', '@schemastud/blockdoc'],
 });

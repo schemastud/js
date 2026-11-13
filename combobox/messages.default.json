@@ -1,0 +1,12 @@
+{
+    "version": 1,
+    "package": "@schemastud/combobox",
+    "sourceLocale": "en",
+    "namespace": "schemastud-combobox",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-combobox::messages.search": "Search\u2026",
+        "schemastud-combobox::messages.no_matches": "No matches",
+        "schemastud-combobox::messages.searching": "Searching\u2026"
+    }
+}

@@ -30,7 +30,23 @@ import type { ReactNode } from 'react';
 import type { Participant } from '../core/index';
 import { Composer } from './composer';
 import { renderMessageMeta } from './default-render';
-import type { ChatSlots } from './slots';
+import type { ChatSlots, ComposerApi } from './slots';
+import { useChatMessages } from '../messages';
+
+type CopyKey = Parameters<ReturnType<typeof useChatMessages>['t']>[0];
+function Copy({ name, ...attributes }: { name: CopyKey; [key: `data-${string}`]: unknown }) {
+    const messages = useChatMessages();
+    return <div {...attributes}>{messages.t(name)}</div>;
+}
+function PresetComposer({ api, kind }: { api: ComposerApi; kind: 'popover' | 'siteAsk' | 'support' }) {
+    const messages = useChatMessages();
+    const key = kind === 'popover' ? 'ask_question' : kind === 'siteAsk' ? 'ask_page' : 'support_placeholder';
+    return <Composer {...api} allowRequestHuman={kind === 'support'} placeholder={messages.t(`schemastud-chat::messages.${key}`)} sendLabel={kind === 'siteAsk' ? messages.t('schemastud-chat::messages.ask') : undefined} />;
+}
+function JoiningBanner({ who }: { who: Participant | undefined }) {
+    const messages = useChatMessages();
+    return <div data-chat-joining-banner>{messages.t('schemastud-chat::messages.joining', { name: who?.label ?? messages.t('schemastud-chat::messages.teammate') })}</div>;
+}
 
 /** A preset: a layout tag + a partial slot fill a host spreads and overrides. */
 export interface ChatPreset {
@@ -55,7 +71,7 @@ function rosterLine(roster: Participant[]): ReactNode {
 
 /** A default "a human is joining" banner — the lean presets' HITL affordance (atom A). */
 function joiningBanner(who: Participant | undefined): ReactNode {
-    return <div data-chat-joining-banner>{who?.label ?? 'A teammate'} is joining…</div>;
+    return <JoiningBanner who={who} />;
 }
 
 /**
@@ -73,8 +89,8 @@ export const viewport: ChatPreset = {
         participants: (roster) => rosterLine(roster),
         // The author-label column of the table above: who said it, and when.
         messageMeta: renderMessageMeta,
-        emptyState: () => <div data-chat-empty>No messages yet. Ask anything.</div>,
-        loadingState: () => <div data-chat-loading-indicator>Thinking…</div>,
+        emptyState: () => <Copy data-chat-empty name="schemastud-chat::messages.empty_viewport" />,
+        loadingState: () => <Copy data-chat-loading-indicator name="schemastud-chat::messages.thinking" />,
         // Wired, ships UNFILLED — the verdict shell is a downstream capability.
         adjudicationPanel: undefined,
     },
@@ -89,9 +105,9 @@ export const viewport: ChatPreset = {
 export const popover: ChatPreset = {
     layout: 'popover',
     slots: {
-        composer: (api) => <Composer {...api} placeholder="Ask a question…" />,
+        composer: (api) => <PresetComposer api={api} kind="popover" />,
         participantBanner: (who) => joiningBanner(who),
-        emptyState: () => <div data-chat-empty>How can we help?</div>,
+        emptyState: () => <Copy data-chat-empty name="schemastud-chat::messages.empty_popover" />,
     },
 };
 
@@ -103,9 +119,9 @@ export const popover: ChatPreset = {
 export const siteAsk: ChatPreset = {
     layout: 'site-ask',
     slots: {
-        composer: (api) => <Composer {...api} placeholder="Ask about this page…" sendLabel="Ask" />,
+        composer: (api) => <PresetComposer api={api} kind="siteAsk" />,
         participantBanner: (who) => joiningBanner(who),
-        emptyState: () => <div data-chat-empty>Ask about this page.</div>,
+        emptyState: () => <Copy data-chat-empty name="schemastud-chat::messages.empty_page" />,
     },
 };
 
@@ -120,15 +136,13 @@ export const siteAsk: ChatPreset = {
 export const support: ChatPreset = {
     layout: 'support',
     slots: {
-        composer: (api) => <Composer {...api} allowRequestHuman placeholder="Message support…" />,
+        composer: (api) => <PresetComposer api={api} kind="support" />,
         participants: (roster) => rosterLine(roster),
         participantBanner: (who) => joiningBanner(who),
         escalatedState: (reason) => (
-            <div data-chat-escalated-notice data-reason={reason}>
-                A human is joining this conversation.
-            </div>
+            <Copy data-chat-escalated-notice data-reason={reason} name="schemastud-chat::messages.escalated" />
         ),
-        emptyState: () => <div data-chat-empty>Tell us what you need help with.</div>,
+        emptyState: () => <Copy data-chat-empty name="schemastud-chat::messages.empty_support" />,
     },
 };
 

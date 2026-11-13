@@ -1,3 +1,4 @@
+import { useChatMessages } from '../messages';
 /**
  * `<ChatView>` — the ONE slotted view (CH-04, PRD §5 Shape 4). It folds the
  * canonical CH-02 snapshot into a message list and exposes the FIXED slot
@@ -127,6 +128,7 @@ function MessageRow({
 }
 
 export function ChatView({ chat, layout, slots = {}, follow = true, identity = 'byline', frame = 'bleed' }: ChatViewProps): ReactNode {
+    const messagesText = useChatMessages();
     const { snapshot, send, requestHuman } = chat;
     const { messages, roster, escalation, streaming } = snapshot;
 
@@ -184,7 +186,7 @@ export function ChatView({ chat, layout, slots = {}, follow = true, identity = '
                         slots.jumpToLatest({ jump: list.jump, unseen: list.unseen })
                     ) : (
                         <button type="button" data-chat-jump-latest onClick={list.jump}>
-                            {list.unseen ? 'New messages' : 'Jump to latest'}
+                            {messagesText.t(list.unseen ? 'schemastud-chat::messages.new_messages' : 'schemastud-chat::messages.jump_latest')}
                         </button>
                     )}
                 </div>

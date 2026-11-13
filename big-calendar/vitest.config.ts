@@ -15,6 +15,8 @@ const reactDom = pkgDir('react-dom');
 export default defineConfig({
     resolve: {
         alias: {
+            '@schemastud/messages/react': new URL('../messages/src/react.tsx', import.meta.url).pathname,
+            '@schemastud/messages': new URL('../messages/src/index.ts', import.meta.url).pathname,
             'react/jsx-runtime': join(react, 'jsx-runtime.js'),
             'react/jsx-dev-runtime': join(react, 'jsx-dev-runtime.js'),
             'react-dom/client': join(reactDom, 'client.js'),

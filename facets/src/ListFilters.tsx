@@ -1,3 +1,4 @@
+import { useFacetsMessages } from './messages';
 import { FacetsBar } from './FacetsBar';
 import { SavedViews } from './SavedViews';
 import { useFacetsInjection } from './context';
@@ -5,6 +6,7 @@ import type { ListFilters as ListFiltersState } from './useListFilters';
 
 /** Render the declared filter vocabulary, with saved views only when advertised. */
 export function ListFilters(state: ListFiltersState) {
+    const messages = useFacetsMessages();
     const {
         resource,
         collection,
@@ -35,12 +37,12 @@ export function ListFilters(state: ListFiltersState) {
         <div className="space-y-3">
             {hasVariants && (
                 <SimpleSelect
-                    aria-label="Filter variant"
+                    aria-label={messages.t('schemastud-facets::messages.filter_variant')}
                     value={filterVariant ?? canonical}
                     onValueChange={(key: string) => onVariantChange(key === canonical ? null : key)}
                     options={choices.map((variant) => ({
                         value: variant.key,
-                        label: variant.canonical ? 'Default' : variant.key,
+                        label: variant.canonical ? messages.t('schemastud-facets::messages.default') : variant.key,
                     }))}
                 />
             )}

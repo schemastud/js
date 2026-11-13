@@ -7,5 +7,5 @@ export default defineConfig({
     sourcemap: true,
     clean: true,
     // Peers stay external; the consuming app provides the single copy of each.
-    external: ['react', 'react-dom', '@tanstack/react-query', 'lucide-react'],
+    external: ['@schemastud/messages', '@schemastud/messages/react', 'react', 'react-dom', '@tanstack/react-query', 'lucide-react'],
 });

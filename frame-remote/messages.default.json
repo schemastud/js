@@ -1,0 +1,17 @@
+{
+    "version": 1,
+    "package": "@schemastud/frame-remote",
+    "sourceLocale": "en",
+    "namespace": "schemastud-frame-remote",
+    "sharesWith": null,
+    "messages": {
+        "schemastud-frame-remote::messages.unknown_block": "⛔ unknown block <:block> — not in host vocabulary",
+        "schemastud-frame-remote::messages.capability_unknown": "component requests unknown capability \":capability\" — not a host capability",
+        "schemastud-frame-remote::messages.capability_over_ask": "component (tier \":tier\") requests capability \":capability\" beyond its tier — refused at load before render",
+        "schemastud-frame-remote::messages.vocabulary_shim": "component built for vocabulary major v:componentMajor, host is on v:hostMajor — painting a host-owned shim instead of the guest tree",
+        "schemastud-frame-remote::messages.vocabulary_refuse": "component built for vocabulary major v:componentMajor, host is on v:hostMajor — refused (shim disabled)",
+        "schemastud-frame-remote::messages.manifest_missing": "no component manifest supplied",
+        "schemastud-frame-remote::messages.manifest_no_major": "manifest.vocabularyMajor must be an integer",
+        "schemastud-frame-remote::messages.manifest_bad_capabilities": "manifest.capabilities must be an array of capability-name strings"
+    }
+}

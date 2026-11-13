@@ -15,5 +15,5 @@ export default defineConfig({
     // @schemastud/frame-remote (the `remote` fill mode's isolation substrate, ticket 16)
     // is likewise a real dep kept external — resolved at runtime, never inlined, so the host
     // dedupes React through it (frame-remote peers on react/react-dom).
-    external: ['react', 'react/jsx-runtime', 'react-dom', 'react-rnd', '@schemastud/frame-remote', '@schemastud/frame-remote/host'],
+    external: ['@schemastud/messages', '@schemastud/messages/react', 'react', 'react/jsx-runtime', 'react-dom', 'react-rnd', '@schemastud/frame-remote', '@schemastud/frame-remote/host'],
 });

@@ -1,3 +1,4 @@
+import { useNavMessages } from './messages';
 import {
     useEffect,
     useMemo,
@@ -149,8 +150,9 @@ export function ExpandableNav({
     initialGroupState = 'expanded',
     classes = {},
     renderChevron = defaultChevron,
-    'aria-label': ariaLabel = 'Navigation',
+    'aria-label': ariaLabel,
 }: ExpandableNavProps) {
+    const messages = useNavMessages();
     const reduceMotion = usePrefersReducedMotion();
 
     // Data comes either straight from `items` (the direct, synchronous path) or from the
@@ -228,7 +230,7 @@ export function ExpandableNav({
     };
 
     return (
-        <nav className={classes.nav} aria-label={ariaLabel}>
+        <nav className={classes.nav} aria-label={ariaLabel ?? messages.t('schemastud-nav::messages.navigation')}>
             {tree.map((navTrack) => (
                 <div key={navTrack.track} className={classes.track}>
                     <p className={classes.trackLabel}>
@@ -353,7 +355,7 @@ export function ExpandableNav({
             {pending.length > 0 && (
                 <div className={classes.loading} aria-live="polite">
                     {pending.map((s) => (
-                        <span key={s.id}>Loading…</span>
+                        <span key={s.id}>{messages.t('schemastud-nav::messages.loading')}</span>
                     ))}
                 </div>
             )}

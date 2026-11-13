@@ -7,5 +7,5 @@ export default defineConfig({
     sourcemap: true,
     clean: true,
     // React stays external; the consumer provides the single copy.
-    external: ['react', 'react-dom'],
+    external: ['@schemastud/messages', '@schemastud/messages/react', 'react', 'react-dom'],
 });

@@ -1,5 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { SchemaNode } from '../types';
+import { useMessages } from '@schemastud/messages/react';
+import catalog from '../../messages.default.json';
 
 // A generic RJSF widget: render a numeric/enum rating as a row of clickable ★
 // stars, two-way against formData. Opt in per-attr with `x-widget: 'star-rating'`.
@@ -45,6 +47,7 @@ function maxStars(props: StarRatingWidgetProps): number {
 }
 
 export function StarRatingWidget(props: StarRatingWidgetProps) {
+    const messages = useMessages(catalog.messages);
     const { id, value, disabled, readonly, onChange } = props;
     const locked = Boolean(disabled || readonly);
     const current = Number(value) || 0;
@@ -62,7 +65,7 @@ export function StarRatingWidget(props: StarRatingWidgetProps) {
                         data-star={star}
                         role="radio"
                         aria-checked={star === current}
-                        aria-label={`${star} star${star > 1 ? 's' : ''}`}
+                        aria-label={messages.choice('schemastud-seam::messages.widget.stars', star, { shownCount: messages.number(star) })}
                         disabled={locked}
                         onClick={() => onChange(star)}
                         style={{ ...STAR_STYLE, color: filled ? 'var(--stud-star)' : 'var(--stud-line-strong)' }}

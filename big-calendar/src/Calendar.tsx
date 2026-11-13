@@ -7,6 +7,7 @@
  */
 import { format, getDay, parse, startOfWeek } from 'date-fns';
 import { enUS } from 'date-fns/locale';
+import * as dateLocales from 'date-fns/locale';
 import { useEffect, useState, type ComponentType } from 'react';
 import { Calendar, dateFnsLocalizer, Views, type CalendarProps } from 'react-big-calendar';
 
@@ -18,6 +19,16 @@ export const localizer = dateFnsLocalizer({
     getDay,
     locales: { 'en-US': enUS },
 });
+
+/** Match the provider's BCP47 locale, then its language; unavailable data uses en-US. */
+export function calendarLocalizer(locale: string) {
+    const normalized = locale.toLowerCase();
+    const language = normalized.split('-')[0];
+    const available = Object.values(dateLocales);
+    const selected = available.find(item => item.code.toLowerCase() === normalized)
+        ?? available.find(item => item.code.toLowerCase() === language) ?? enUS;
+    return dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { [locale]: selected } });
+}
 
 /**
  * The drag-and-drop props RBC's addon layers on top of `CalendarProps` (PRD §5.1: resident

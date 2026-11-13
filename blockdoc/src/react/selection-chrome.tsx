@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
+import { usePackageMessages } from '../messages';
 
 /**
  * The uniform selection-chrome primitive (B3) — row 2 of the four-part render
@@ -96,6 +97,7 @@ export function SelectionChrome({
     incomplete = false,
     children,
 }: SelectionChromeProps) {
+    const messages = usePackageMessages();
     return (
         <div
             data-blockdoc-chrome=""
@@ -114,7 +116,7 @@ export function SelectionChrome({
             {localSelected && (
                 <>
                     <div data-blockdoc-selection-ring="" style={RING_STYLE} />
-                    <span data-blockdoc-drag-handle="" style={HANDLE_STYLE} aria-label="Drag to reorder">
+                    <span data-blockdoc-drag-handle="" style={HANDLE_STYLE} aria-label={messages.t('schemastud-blockdoc::messages.drag_to_reorder')}>
                         ⠿
                     </span>
                 </>
@@ -122,7 +124,7 @@ export function SelectionChrome({
 
             {required && (
                 <span data-blockdoc-required-badge="" style={REQUIRED_BADGE_STYLE}>
-                    required
+                    {messages.t('schemastud-blockdoc::messages.required')}
                 </span>
             )}
 

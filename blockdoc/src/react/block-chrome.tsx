@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { usePackageMessages } from '../messages';
 import type { SkinContext, SkinNode } from './skin-types';
 
 // The built-in fallback skin. When a node-type has no registered skin, the
@@ -53,27 +54,32 @@ function attrKeys(node: SkinNode, ctx?: SkinContext): string[] {
     return node.attrs ? Object.keys(node.attrs) : [];
 }
 
-function formatValue(value: unknown): string {
+function formatValue(value: unknown, empty: string): string {
     if (value === undefined || value === null || value === '') {
-        return '—';
+        return empty;
     }
 
     return typeof value === 'object' ? JSON.stringify(value) : String(value);
 }
 
 export function BlockChromeFallback(node: SkinNode, ctx?: SkinContext) {
+    return <FallbackCard node={node} ctx={ctx} />;
+}
+
+function FallbackCard({ node, ctx }: { node: SkinNode; ctx?: SkinContext }) {
+    const messages = usePackageMessages();
     const attrs = node.attrs ?? {};
 
     return (
         <div data-blockdoc-skin="block-chrome" data-node-type={node.type} style={CARD_STYLE}>
             <div style={HEADER_STYLE}>
                 <span>{node.type}</span>
-                <span style={HINT_STYLE}>Edit via the inspector →</span>
+                <span style={HINT_STYLE}>{messages.t('schemastud-blockdoc::messages.edit_via_inspector')}</span>
             </div>
             {attrKeys(node, ctx).map((key) => (
                 <div key={key} data-attr={key} style={ANCHOR_STYLE}>
                     <span style={KEY_STYLE}>{key}</span>
-                    <span>{formatValue(attrs[key])}</span>
+                    <span>{formatValue(attrs[key], messages.t('schemastud-blockdoc::messages.empty_value'))}</span>
                 </div>
             ))}
         </div>

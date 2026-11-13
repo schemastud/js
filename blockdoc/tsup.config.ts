@@ -24,6 +24,8 @@ export default defineConfig({
         '@rjsf/utils',
         '@rjsf/validator-ajv8',
         '@schemastud/seam',
+        '@schemastud/messages',
+        '@schemastud/messages/react',
     ],
     noExternal: [/@tiptap\//, 'uuid'],
     esbuildOptions(options) {

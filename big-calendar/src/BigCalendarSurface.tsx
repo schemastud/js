@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { EventProps } from 'react-big-calendar';
-import { DndCalendar, localizer, Views } from './Calendar';
+import { DndCalendar, calendarLocalizer, Views } from './Calendar';
+import { useCalendarMessages } from './messages';
 import { useCalendarEvents, useInvalidateCalendar } from './hooks';
 import { planEventDrop, planEventSelect, reAnchorEvent } from './interaction';
 import { useCalendarServices } from './provider';
@@ -69,6 +70,26 @@ export function BigCalendarSurface<E extends FoundationCalendarEvent = Foundatio
     filterEvent,
 }: BigCalendarSurfaceProps<E>) {
     const services = useCalendarServices<E>();
+    const messages = useCalendarMessages();
+    const localizer = useMemo(() => calendarLocalizer(messages.locale), [messages.locale]);
+    const calendarCopy = {
+        date: messages.t('schemastud-big-calendar::messages.toolbar.date'),
+        time: messages.t('schemastud-big-calendar::messages.toolbar.time'),
+        event: messages.t('schemastud-big-calendar::messages.toolbar.event'),
+        allDay: messages.t('schemastud-big-calendar::messages.toolbar.allDay'),
+        week: messages.t('schemastud-big-calendar::messages.toolbar.week'),
+        work_week: messages.t('schemastud-big-calendar::messages.toolbar.work_week'),
+        day: messages.t('schemastud-big-calendar::messages.toolbar.day'),
+        month: messages.t('schemastud-big-calendar::messages.toolbar.month'),
+        previous: messages.t('schemastud-big-calendar::messages.toolbar.previous'),
+        next: messages.t('schemastud-big-calendar::messages.toolbar.next'),
+        yesterday: messages.t('schemastud-big-calendar::messages.toolbar.yesterday'),
+        tomorrow: messages.t('schemastud-big-calendar::messages.toolbar.tomorrow'),
+        today: messages.t('schemastud-big-calendar::messages.toolbar.today'),
+        agenda: messages.t('schemastud-big-calendar::messages.toolbar.agenda'),
+        noEventsInRange: messages.t('schemastud-big-calendar::messages.toolbar.noEventsInRange'),
+        showMore: (count: number) => messages.choice('schemastud-big-calendar::messages.toolbar.showMore', count, { shownCount: messages.number(count) }),
+    };
     const invalidate = useInvalidateCalendar();
     const query = useCalendarEvents<E>();
     const events = useMemo(() => {
@@ -97,13 +118,17 @@ export function BigCalendarSurface<E extends FoundationCalendarEvent = Foundatio
             const newDate = start instanceof Date ? start : new Date(start);
             const plan = planEventDrop(event, newDate);
             if (plan.kind === 'reAnchor') {
-                void reAnchorEvent(services, event, plan.newDate).then(invalidate).catch(() => {});
+                void reAnchorEvent({ ...services, notify: (notice) => services.notify?.({
+                    ...notice,
+                    text: messages.t('schemastud-big-calendar::messages.moved', { title: event.title }),
+                    action: notice.action ? { ...notice.action, label: messages.t('schemastud-big-calendar::messages.undo') } : undefined,
+                }) }, event, plan.newDate).then(invalidate).catch(() => {});
             } else {
                 // Non-resident drop → the gated reference-mode panel (no silent materialize).
                 setPanel({ mode: 'reference', event: plan.event, date: plan.newDate });
             }
         },
-        [services, invalidate],
+        [services, invalidate, messages],
     );
 
     const eventPropGetter = useCallback(
@@ -151,6 +176,8 @@ export function BigCalendarSurface<E extends FoundationCalendarEvent = Foundatio
 
             <DndCalendar<E, LaneResource>
                 localizer={localizer}
+                culture={messages.locale}
+                messages={calendarCopy}
                 events={events}
                 defaultDate={defaultDate}
                 defaultView={Views.MONTH}
@@ -179,12 +206,12 @@ export function BigCalendarSurface<E extends FoundationCalendarEvent = Foundatio
                 ? services.renderEditPanel(panelCtx)
                 : panelCtx
                   ? (
-                      <div className="rbc-default-panel" role="dialog" aria-label="Event detail">
+                      <div className="rbc-default-panel" role="dialog" aria-label={messages.t('schemastud-big-calendar::messages.event_detail')}>
                           <button type="button" className="rbc-default-panel-close" onClick={closePanel}>
-                              Close
+                              {messages.t('schemastud-big-calendar::messages.close')}
                           </button>
-                          <div className="rbc-default-panel-title">{panelCtx.event?.title ?? 'New release'}</div>
-                          <div className="rbc-default-panel-mode">{panelCtx.mode}</div>
+                          <div className="rbc-default-panel-title">{panelCtx.event?.title ?? messages.t('schemastud-big-calendar::messages.new_release')}</div>
+                          <div className="rbc-default-panel-mode">{messages.t(`schemastud-big-calendar::messages.mode.${panelCtx.mode}`)}</div>
                       </div>
                   )
                   : null}

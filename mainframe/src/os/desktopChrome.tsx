@@ -1,3 +1,4 @@
+import { useMainframeMessages } from '../messages';
 /**
  * `@schemastud/mainframe/os` desktop CHROME — the generic, realm-AGNOSTIC desktop shell furniture
  * (Frame OS chrome tier; promoted out of the audiostud host per editor-promotion ticket 07 / ADR-0017).
@@ -83,10 +84,10 @@ function Glyph({ app, className = 'glyph' }: { app: DesktopApp; className?: stri
 }
 
 /** Resolve the display upsell copy for a locked app (falling back to generic labels). */
-function upsellText(a: DesktopApp): { title: string; cta: string } {
+function upsellText(a: DesktopApp, messages: ReturnType<typeof useMainframeMessages>): { title: string; cta: string } {
     return {
-        title: (a.upsell?.title as string) || `Unlock ${a.title}`,
-        cta: (a.upsell?.cta as string) || 'Upgrade',
+        title: (a.upsell?.title as string) || messages.t('schemastud-mainframe::messages.unlock', { title: a.title }),
+        cta: (a.upsell?.cta as string) || messages.t('schemastud-mainframe::messages.upgrade'),
     };
 }
 
@@ -94,15 +95,16 @@ function upsellText(a: DesktopApp): { title: string; cta: string } {
 
 /** A live wall-clock for the menu-bar status. */
 export function Clock() {
+    const messages = useMainframeMessages();
     const [now, setNow] = useState('—');
     useEffect(() => {
         const tick = () =>
-            setNow(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+            setNow(messages.date(new Date(), { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
         tick();
         const id = setInterval(tick, 1000);
 
         return () => clearInterval(id);
-    }, []);
+    }, [messages]);
 
     return <span className="clock">{now}</span>;
 }
@@ -111,18 +113,19 @@ export function Clock() {
 
 /** Shown when a locked app's tile is clicked. Never opens the window; surfaces the upsell copy + CTA. */
 export function UpsellPopover({ app, onClose }: { app: DesktopApp; onClose: () => void }) {
-    const { title, cta } = upsellText(app);
+    const messages = useMainframeMessages();
+    const { title, cta } = upsellText(app, messages);
 
     return (
         <>
             <div className="launcher-scrim" onClick={onClose} />
-            <div className="upsell-pop" role="dialog" aria-label={`Unlock ${app.title}`}>
+            <div className="upsell-pop" role="dialog" aria-label={messages.t('schemastud-mainframe::messages.unlock', { title: app.title })}>
                 <div className="upsell-lock" style={{ background: app.accent }}>
                     🔒
                 </div>
                 <div className="upsell-title">{title}</div>
                 <p className="upsell-copy">
-                    The <b>{app.title}</b> app is available on a higher plan. Upgrade to launch it.
+                    {messages.t('schemastud-mainframe::messages.upsell_copy', { title: app.title })}
                 </p>
                 <button type="button" className="upsell-cta">
                     {cta}
@@ -137,7 +140,7 @@ export function UpsellPopover({ app, onClose }: { app: DesktopApp; onClose: () =
 /** The launcher popover — a grid of apps; a locked app routes to the upsell, an unlocked one opens. */
 export function Launcher({
     apps,
-    heading = 'Apps',
+    heading,
     onClose,
     onUpsell,
 }: {
@@ -146,13 +149,14 @@ export function Launcher({
     onClose: () => void;
     onUpsell: (app: DesktopApp) => void;
 }) {
+    const messages = useMainframeMessages();
     const { openApp } = useOs();
 
     return (
         <>
             <div className="launcher-scrim" onClick={onClose} />
             <div className="launcher-pop" role="menu">
-                <div className="launcher-heading">{heading}</div>
+                <div className="launcher-heading">{heading ?? messages.t('schemastud-mainframe::messages.apps')}</div>
                 <div className="launcher-grid">
                     {apps.map((a) => (
                         <button
@@ -176,7 +180,7 @@ export function Launcher({
                                     {a.locked ? <span className="lock-badge"> 🔒</span> : null}
                                 </span>
                                 <span className="realm">
-                                    {a.realm} · {a.locked ? upsellText(a).title : a.subtitle}
+                                    {a.realm} · {a.locked ? upsellText(a, messages).title : a.subtitle}
                                 </span>
                             </span>
                         </button>
@@ -197,7 +201,7 @@ export function Launcher({
 export function Dock({
     apps,
     activeKey,
-    launchLabel = 'Launch',
+    launchLabel,
     launcherHeading,
     onNavigate,
 }: {
@@ -207,13 +211,14 @@ export function Dock({
     launcherHeading?: string;
     onNavigate: (app: DesktopApp) => void;
 }) {
+    const messages = useMainframeMessages();
     const [launcherOpen, setLauncherOpen] = useState(false);
     const [upsell, setUpsell] = useState<DesktopApp | null>(null);
 
     return (
         <>
             <button type="button" className="dock-launch" onClick={() => setLauncherOpen((v) => !v)}>
-                <span>▦</span> {launchLabel}
+                <span>▦</span> {launchLabel ?? messages.t('schemastud-mainframe::messages.launch')}
             </button>
             <span className="dock-div" />
             {apps.map((a) =>
@@ -222,12 +227,12 @@ export function Dock({
                         key={a.key}
                         type="button"
                         className="dock-app is-locked"
-                        title={upsellText(a).title}
+                        title={upsellText(a, messages).title}
                         onClick={() => setUpsell(a)}
                     >
                         <Glyph app={a} />
                         {a.title}
-                        <span className="lock-badge" aria-label="locked">
+                        <span className="lock-badge" aria-label={messages.t('schemastud-mainframe::messages.locked')}>
                             🔒
                         </span>
                     </button>
@@ -408,11 +413,12 @@ export function OperatorOverlay({
     stableKeys,
     resolveWindow,
     renderLauncher,
-    orbLabel = 'Operator',
+    orbLabel,
     orbIcon,
     onWindowManager,
     onWindowBodyClickCapture,
 }: OperatorOverlayProps) {
+    const messages = useMainframeMessages();
     const overlayRef = useRef<HTMLDivElement>(null);
     const wm = useWindowManager();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -508,8 +514,8 @@ export function OperatorOverlay({
                                         type="button"
                                         className="op-win-x"
                                         onClick={() => wm.minimize(w.key)}
-                                        aria-label="Minimize"
-                                        title="Minimize"
+                                        aria-label={messages.t('schemastud-mainframe::messages.minimize')}
+                                        title={messages.t('schemastud-mainframe::messages.minimize')}
                                     >
                                         –
                                     </button>
@@ -517,8 +523,8 @@ export function OperatorOverlay({
                                         type="button"
                                         className="op-win-x"
                                         onClick={() => (w.maximized ? wm.restore(w.key) : wm.maximize(w.key))}
-                                        aria-label={w.maximized ? 'Restore' : 'Maximize'}
-                                        title={w.maximized ? 'Restore' : 'Maximize'}
+                                        aria-label={messages.t(w.maximized ? 'schemastud-mainframe::messages.restore' : 'schemastud-mainframe::messages.maximize')}
+                                        title={messages.t(w.maximized ? 'schemastud-mainframe::messages.restore' : 'schemastud-mainframe::messages.maximize')}
                                     >
                                         {w.maximized ? '❐' : '▢'}
                                     </button>
@@ -526,8 +532,8 @@ export function OperatorOverlay({
                                         type="button"
                                         className="op-win-x"
                                         onClick={() => wm.close(w.key)}
-                                        aria-label="Close"
-                                        title="Close"
+                                        aria-label={messages.t('schemastud-mainframe::messages.close')}
+                                        title={messages.t('schemastud-mainframe::messages.close')}
                                     >
                                         ×
                                     </button>
@@ -576,7 +582,7 @@ export function OperatorOverlay({
                 aria-expanded={menuOpen}
             >
                 {orbIcon ?? <span className="mark" />}
-                {orbLabel}
+                {orbLabel ?? messages.t('schemastud-mainframe::messages.operator')}
             </button>
         </div>
     );

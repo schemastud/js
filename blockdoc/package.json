@@ -1,7 +1,7 @@
 {
     "name": "@schemastud/blockdoc",
     "version": "0.1.1",
-    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest → ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
+    "description": "Manifest-driven rich-content documents on Tiptap: TypeScript types for the blockdoc node-manifest format, assemblePMSchema (manifest \u2192 ProseMirror Schema via category-derived content expressions, the conformance oracle), createManifestExtensions (the same derivation compiled to generated Tiptap Node/Mark extensions), node id conventions, a React editor island (/react) with a NodeView registry and BubbleMenu chrome, and an RJSF rich-content factory (/rjsf). MIT Tiptap core + free extensions only; every ProseMirror import rides @tiptap/pm/*.",
     "license": "MIT",
     "type": "module",
     "main": "dist/core.js",
@@ -22,12 +22,14 @@
         "./rjsf": {
             "types": "./dist/rjsf.d.ts",
             "import": "./dist/rjsf.js"
-        }
+        },
+        "./messages": "./messages.default.json"
     },
     "files": [
         "README.md",
         "dist",
-        "src"
+        "src",
+        "messages.default.json"
     ],
     "repository": {
         "type": "git",
@@ -53,7 +55,8 @@
         "@rjsf/utils": "^6.0.0",
         "@schemastud/seam": "^0.2.0",
         "react": ">=18",
-        "react-dom": ">=18"
+        "react-dom": ">=18",
+        "@schemastud/messages": "^0.1.0"
     },
     "peerDependenciesMeta": {
         "@rjsf/core": {
@@ -87,10 +90,17 @@
         "react-dom": "^19.0.0",
         "tsup": "^8.5.1",
         "typescript": "^5.7.0",
-        "vitest": "^3.0.0"
+        "vitest": "^3.0.0",
+        "@schemastud/messages": "^0.1.0"
     },
     "publishConfig": {
         "registry": "https://registry.npmjs.org",
         "access": "public"
+    },
+    "schemastud": {
+        "messages": {
+            "version": 1,
+            "catalog": "./messages"
+        }
     }
 }
