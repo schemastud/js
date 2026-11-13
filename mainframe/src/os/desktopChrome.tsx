@@ -21,7 +21,7 @@ import { useMainframeMessages } from '../messages';
  * local CSS). Router / navigation is injected: the dock's realm-switch and per-surface links are host
  * callbacks (`onNavigate`), never an Inertia import here.
  */
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import {
     createMainframeRegistry,
@@ -118,7 +118,14 @@ export function UpsellPopover({ app, onClose }: { app: DesktopApp; onClose: () =
     // Split a placeholder rather than translated text or authored HTML: the whole
     // sentence can reorder, repeat or omit the emphasized title safely.
     const titleMarker = '\u0000title\u0000';
-    const copyParts = messages.t('schemastud-mainframe::messages.upsell_copy', { title: titleMarker }).split(titleMarker);
+    // Explicit aliases keep the runtime's three case forms distinguishable even
+    // though ucfirst cannot capitalize a marker beginning with NUL.
+    const copyParts = messages.t('schemastud-mainframe::messages.upsell_copy', {
+        title: titleMarker, Title: '\u0000Title\u0000', TITLE: '\u0000TITLE\u0000',
+    }).split(/\u0000(title|Title|TITLE)\u0000/);
+    const first = [...app.title][0] ?? '';
+    const emphasizedTitle = (variant: string) => variant === 'TITLE' ? app.title.toUpperCase()
+        : variant === 'Title' ? first.toUpperCase() + app.title.slice(first.length) : app.title;
 
     return (
         <>
@@ -129,7 +136,7 @@ export function UpsellPopover({ app, onClose }: { app: DesktopApp; onClose: () =
                 </div>
                 <div className="upsell-title">{title}</div>
                 <p className="upsell-copy">
-                    {copyParts.map((part, index) => <Fragment key={index}>{index > 0 && <b>{app.title}</b>}{part}</Fragment>)}
+                    {copyParts.map((part, index) => index % 2 === 0 ? part : <b key={index}>{emphasizedTitle(part)}</b>)}
                 </p>
                 <button type="button" className="upsell-cta">
                     {cta}
