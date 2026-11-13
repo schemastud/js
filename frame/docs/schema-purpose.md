@@ -35,7 +35,7 @@ useFormSchema(resource, form, purpose = 'write')
 ```
 
 The producer's adapter must carry read to its server. For `schemastud/laravel-frame`, omitted/write
-uses the existing `/frame/resources/{resource}/schema` URL; read uses `?purpose=read`.
+uses the existing `{prefix}/resources/{resource}/schema` URL; read uses `?purpose=read`.
 The selected `schemastud/laravel-frame` candidate's `docs/resource-schemas.md`
 describes generator modes, declared selector validation, resource reach and resolver obligations.
 Use the matching local package candidate until that source is published.

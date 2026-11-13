@@ -44,6 +44,21 @@ const action: ResourceActionDefinition = {
 } as ResourceActionDefinition;
 
 describe('createHttpTransport', () => {
+    it("defaults to laravel-frame's api root, /stud/frame, for the manifest and every resource URL", async () => {
+        const { calls, fetch } = fakeFetch((call) =>
+            call.url.includes('?page=') ? { body: { data: [], total: 0, page: 1, perPage: 25 } } : { body: {} },
+        );
+        const transport = createHttpTransport({ fetch });
+
+        await transport.getManifest!();
+        await transport.list('members', { page: '1' });
+
+        expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+            'GET /stud/frame/manifest',
+            'GET /stud/frame/resources/members?page=1',
+        ]);
+    });
+
     it('sends each read and write to its URL with its method', async () => {
         const { calls, fetch } = fakeFetch((call) =>
             call.url.endsWith('/schema') && !call.url.includes('/filters/')

@@ -339,7 +339,7 @@ export interface AdminResourceDefinition {
     /**
      * The generated type of the declared edit/create DTO, in the same dot form as `data`; null means
      * the edit shape is the read projection. Informational like `data` — the form's schema comes from
-     * `GET /frame/resources/{key}/schema`, and a host need not emit every write DTO as a type.
+     * `GET {prefix}/resources/{key}/schema`, and a host need not emit every write DTO as a type.
      */
     editData: string | null;
     /** Generated create-result type identity, dot form; null means the ordinary read projection. */
@@ -347,7 +347,7 @@ export interface AdminResourceDefinition {
     form: FormMode;
     /**
      * The four capability gates the PHP `ResourceDefinition` has carried for some time and which
-     * `GET /frame/manifest` has been serving on every entry — and which this projection did not
+     * `GET {prefix}/manifest` has been serving on every entry — and which this projection did not
      * declare, so nothing on the client could read them without an `as any`. That gap is why the
      * flagship suppresses frame's create affordance by hand on nine surfaces: the declaration
      * already said `creatable: false` and the answer could not reach the shell.

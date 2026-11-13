@@ -5,7 +5,7 @@ import { createSessionRequest } from './session';
 import type { FrameManifest, FrameTransport, ResourcePage, Row } from './types';
 
 export interface HttpTransportOptions extends ResourceTransportOptions {
-    /** Where laravel-frame's socket is mounted. Default `/frame`, its default route prefix. */
+    /** Where laravel-frame's socket is mounted. Default `/stud/frame`, laravel-frame's default api root. */
     prefix?: string;
     /** The manifest's address. Default `{prefix}/manifest`; a host that mounts one manifest per realm passes the realm's. */
     manifestUrl?: string;
@@ -26,7 +26,7 @@ export interface HttpTransportOptions extends ResourceTransportOptions {
  * cursor page), a record `{data}`, a schema as raw JSON Schema, a create or save `{data}`, a delete 204.
  */
 export function createHttpTransport(options: HttpTransportOptions = {}): FrameTransport {
-    const prefix = (options.prefix ?? '/frame').replace(/\/+$/, '');
+    const prefix = (options.prefix ?? '/stud/frame').replace(/\/+$/, '');
     const manifestUrl = options.manifestUrl ?? `${prefix}/manifest`;
     const session = createSessionRequest({ fetch: options.fetch, headers: options.headers });
     const request = async <T>(method: string, url: string, params?: Record<string, string>, body?: unknown): Promise<T> =>

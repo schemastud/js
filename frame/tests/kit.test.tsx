@@ -42,6 +42,21 @@ const headers = () => screen.getAllByRole('columnheader').map((th) => th.textCon
  * manifest cache entry per kit.
  */
 describe('createFrameKit', () => {
+    it("a kit on defaults reads the manifest from laravel-frame's api root, /stud/frame", async () => {
+        const urls: string[] = [];
+        vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+            urls.push(String(input));
+            return Response.json({});
+        });
+        try {
+            await createFrameKit({ urlState: 'memory' }).transport.getManifest!();
+        } finally {
+            vi.unstubAllGlobals();
+        }
+
+        expect(urls).toEqual(['/stud/frame/manifest']);
+    });
+
     it('draws the declared headers and rows of a list with no other wiring', async () => {
         const frame = createFrameKit({
             transport: createMemoryTransport({ rows: { members: MEMBERS }, manifest: manifestWith({ name: 'Name', email: 'Email' }) }),

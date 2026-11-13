@@ -46,7 +46,7 @@ export function createFrameRegistry(options: FrameRegistryOptions = {}): WidgetR
 }
 
 export interface FrameKitOptions extends FrameRegistryOptions {
-    /** Where laravel-frame's socket is mounted. Default `/frame`. */
+    /** Where laravel-frame's socket is mounted. Default `/stud/frame`, laravel-frame's default api root. */
     prefix?: string;
     /** The manifest's address. Default `{prefix}/manifest`; beam mounts one per realm. */
     manifestUrl?: string;
@@ -113,7 +113,7 @@ function sameOriginSchemaFetcher(): SchemaFetcher {
  * ```
  */
 export function createFrameKit<Nav = unknown>(options: FrameKitOptions = {}): FrameKit<Nav> {
-    const prefix = (options.prefix ?? '/frame').replace(/\/+$/, '');
+    const prefix = (options.prefix ?? '/stud/frame').replace(/\/+$/, '');
     const manifestUrl = options.manifestUrl ?? `${prefix}/manifest`;
     const transport = options.transport ?? createHttpTransport({ prefix, manifestUrl });
     // The endpoint is part of the cache key only when the kit knows it: a handed-in transport is its own scope.
