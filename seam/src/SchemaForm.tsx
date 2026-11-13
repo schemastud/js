@@ -7,7 +7,7 @@ import { normalizeNullableRefs } from './nullable-refs';
 import type { SchemaFetcher, SchemaNode, WidgetRegistry } from './types';
 import { buildUiSchema, mergeUiSchema } from './ui-schema';
 import { themedForm, useRjsfTheme } from './theme';
-import { defaultValidator } from './validator';
+import { useFormMessages } from './messages';
 
 /**
  * Hosts provide their own extended registry through this context (or the
@@ -50,6 +50,7 @@ export function SchemaForm({
     registry,
     schemaFetcher,
     validator,
+    translateString,
     formData,
     formContext,
     templates,
@@ -59,6 +60,7 @@ export function SchemaForm({
     ...rest
 }: SchemaFormProps) {
     const ThemedForm = themedForm(useRjsfTheme(theme));
+    const { messages, translateString: catalogTranslator, validator: catalogValidator } = useFormMessages();
     const contextRegistry = useContext(WidgetRegistryContext);
     const activeRegistry = registry ?? contextRegistry ?? defaultRegistry;
 
@@ -104,6 +106,10 @@ export function SchemaForm({
         [formSchema, activeRegistry, plainData],
     );
 
+    const localizedUiSchema = useMemo(() => mergeUiSchema({
+        'ui:submitButtonOptions': { submitText: messages.t('schemastud-seam::messages.submit') },
+    }, mergeUiSchema(generatedUiSchema, uiSchema)), [generatedUiSchema, uiSchema, messages]);
+
     if (!formSchema) {
         return null;
     }
@@ -111,8 +117,9 @@ export function SchemaForm({
     return (
         <ThemedForm
             schema={formSchema as RJSFSchema}
-            uiSchema={mergeUiSchema(generatedUiSchema, uiSchema) as UiSchema}
-            validator={validator ?? defaultValidator}
+            uiSchema={localizedUiSchema as UiSchema}
+            validator={validator ?? catalogValidator}
+            translateString={translateString ?? catalogTranslator}
             // The theme (with seam's neutral rules wrapped round it) supplies templates and widgets;
             // `withTheme` merges these caller overrides over it, so they win.
             templates={templates}

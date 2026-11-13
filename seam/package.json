@@ -14,12 +14,14 @@
         "./vite": {
             "types": "./dist/vite.d.ts",
             "import": "./dist/vite.js"
-        }
+        },
+        "./messages": "./messages.default.json"
     },
     "files": [
         "dist",
         "src",
-        "README.md"
+        "README.md",
+        "messages.default.json"
     ],
     "publishConfig": {
         "registry": "https://registry.npmjs.org",
@@ -44,7 +46,8 @@
         "@rjsf/validator-ajv8": "^6.0.0",
         "ajv": "^8.12.0",
         "react": ">=18",
-        "vite": ">=5"
+        "vite": ">=5",
+        "@schemastud/messages": "^0.1.0"
     },
     "devDependencies": {
         "@rjsf/core": "^6.0.0",
@@ -61,11 +64,18 @@
         "tsup": "^8.5.1",
         "typescript": "^5.7.0",
         "vitest": "^4.1.10",
-        "vite": "^8.0.0"
+        "vite": "^8.0.0",
+        "@schemastud/messages": "^0.1.0"
     },
     "peerDependenciesMeta": {
         "vite": {
             "optional": true
+        }
+    },
+    "schemastud": {
+        "messages": {
+            "version": 1,
+            "catalog": "./messages"
         }
     }
 }

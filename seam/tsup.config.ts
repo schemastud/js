@@ -12,5 +12,5 @@ export default defineConfig({
     // `vite` is external for the same reason the peers are: the consumer owns the single copy. It is
     // only reachable from `src/vite.ts` (the `./vite` subpath), which is Node-only and never enters a
     // browser bundle.
-    external: ['react', 'react-dom', '@rjsf/core', '@rjsf/shadcn', '@rjsf/utils', '@rjsf/validator-ajv8', 'vite'],
+    external: ['@schemastud/messages', 'react', 'react-dom', '@rjsf/core', '@rjsf/shadcn', '@rjsf/utils', '@rjsf/validator-ajv8', 'vite'],
 });

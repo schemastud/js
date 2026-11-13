@@ -36,6 +36,7 @@ import draft07MetaSchema from 'ajv/dist/refs/json-schema-draft-07.json';
  */
 export function createFormValidator(
     options?: Parameters<typeof customizeValidator>[0],
+    localizer?: Parameters<typeof customizeValidator>[1],
 ) {
     return customizeValidator({
         AjvClass: Ajv2020,
@@ -49,7 +50,7 @@ export function createFormValidator(
             allErrors: true,
             ...options?.ajvOptionsOverrides,
         },
-    });
+    }, localizer);
 }
 
 export const defaultValidator = createFormValidator();

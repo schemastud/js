@@ -105,3 +105,26 @@ export default defineConfig({
 
 `src/vite.ts` records the measurements behind each choice (inclusive population, the `node_modules`
 realpath test, `@source not` over a positive glob).
+
+
+## Form messages
+
+`SchemaForm` consumes the host's `@schemastud/messages/react` context. Mount
+`MessageProvider` at the locale root beside the frame kit. The form creates no
+provider. `@schemastud/messages` is a peer; deduplicate it in the host.
+
+The committed English catalog is exported as `@schemastud/seam/messages`.
+Its `schemastud-seam::messages.rjsf.*` lines cover RJSF's translator enum;
+`messages.submit` supplies default submit copy and `messages.validation.*`
+supplies AJV keyword diagnostics. Positional RJSF values become `:p1`, `:p2`,
+etc.; validation parameters retain AJV's names (such as `:limit`). Counted
+validation lines use the shared plural selector and the resolved line's
+`sourceLocale`. Unknown/custom validation diagnostics retain their supplied
+text. No English diagnostic is parsed to discover a key.
+
+Validators belong to each form and follow provider changes; the exported
+`defaultValidator` remains an English validator. `createFormValidator(options,
+localizer?)` also accepts RJSF's localizer callback while preserving AJV2020,
+draft-07 support and caller options. Explicit `validator`, `translateString`,
+templates, widgets and `ui:submitButtonOptions.submitText` still win. With no
+provider the form uses English; field-key humanization remains the last resort.
