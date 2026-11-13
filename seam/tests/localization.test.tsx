@@ -6,10 +6,13 @@ import { SchemaForm } from '../src/SchemaForm';
 
 afterEach(cleanup);
 
+// A theme is a component identity: keep it stable when changing providers.
+const bareTheme = {};
+
 it('a form renders RJSF control copy from the active message catalog', () => {
     render(<MessageProvider value={{ version: 1, locale: 'es', realm: null, direction: 'ltr', messages: {
         'schemastud-seam::messages.rjsf.add_button': { text: 'Añadir', sourceLocale: 'es' },
-    } }}><SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={{}} /></MessageProvider>);
+    } }}><SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={bareTheme} /></MessageProvider>);
     expect(screen.getByRole('button', { name: 'Añadir' })).toBeTruthy();
 });
 
@@ -18,7 +21,7 @@ it('a form localizes the validation heading and required error while retaining t
     const { container } = render(<MessageProvider value={{ version: 1, locale: 'es', realm: null, direction: 'ltr', messages: {
         'schemastud-seam::messages.rjsf.errors_label': { text: 'Errores', sourceLocale: 'es' },
         'schemastud-seam::messages.validation.required': { text: 'debe tener la propiedad :missingProperty', sourceLocale: 'es' },
-    } }}><SchemaForm schema={{ type: 'object', required: ['name'], properties: { name: { type: 'string', title: 'Nombre' } } }} theme={{}} /></MessageProvider>);
+    } }}><SchemaForm schema={{ type: 'object', required: ['name'], properties: { name: { type: 'string', title: 'Nombre' } } }} theme={bareTheme} /></MessageProvider>);
     fireEvent.submit(container.querySelector('form')!);
     await waitFor(() => expect(screen.getByText('Errores')).toBeTruthy());
     expect(screen.getAllByText(/debe tener la propiedad/).length).toBeGreaterThan(0);
@@ -30,17 +33,17 @@ it('a form uses translated submit copy unless the caller supplies submitText', (
     const value = { version: 1 as const, locale: 'es', realm: null, direction: 'ltr' as const, messages: {
         'schemastud-seam::messages.submit': { text: 'Guardar', sourceLocale: 'es' },
     } };
-    const { rerender } = render(<MessageProvider value={value}><SchemaForm schema={{ type: 'string' }} theme={{}} /></MessageProvider>);
+    const { rerender } = render(<MessageProvider value={value}><SchemaForm schema={{ type: 'string' }} theme={bareTheme} /></MessageProvider>);
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeTruthy();
-    rerender(<MessageProvider value={value}><SchemaForm schema={{ type: 'string' }} theme={{}} uiSchema={{ 'ui:submitButtonOptions': { submitText: 'Enviar' } }} /></MessageProvider>);
+    rerender(<MessageProvider value={value}><SchemaForm schema={{ type: 'string' }} theme={bareTheme} uiSchema={{ 'ui:submitButtonOptions': { submitText: 'Enviar' } }} /></MessageProvider>);
     expect(screen.getByRole('button', { name: 'Enviar' })).toBeTruthy();
 });
 
 it('a provider-free form retains English and explicit translator overrides', () => {
-    const { rerender } = render(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={{}} />);
+    const { rerender } = render(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={bareTheme} />);
     expect(screen.getByRole('button', { name: 'Add' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy();
-    rerender(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={{}} translateString={() => 'Host copy'} />);
+    rerender(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={bareTheme} translateString={() => 'Host copy'} />);
     expect(screen.getByRole('button', { name: 'Host copy' })).toBeTruthy();
 });
 
@@ -52,7 +55,7 @@ it('validation follows provider changes without changing neighboring English for
     const fr = { ...es, locale: 'fr', messages: {
         'schemastud-seam::messages.validation.minLength': { text: 'au moins :limit caractères', sourceLocale: 'fr' },
     } };
-    const forms = (value: typeof es) => <><MessageProvider value={value}><SchemaForm schema={schema} formData="a" theme={{}} /></MessageProvider><SchemaForm schema={schema} formData="a" theme={{}} /></>;
+    const forms = (value: typeof es) => <><MessageProvider value={value}><SchemaForm schema={schema} formData="a" theme={bareTheme} /></MessageProvider><SchemaForm schema={schema} formData="a" theme={bareTheme} /></>;
     const { container, rerender } = render(forms(es));
     for (const form of container.querySelectorAll('form')) fireEvent.submit(form);
     await waitFor(() => expect(screen.getAllByText(/al menos 3 caracteres/).length).toBeGreaterThan(0));
@@ -70,7 +73,7 @@ it('an explicit validator and custom validation diagnostics remain host-owned', 
     });
     const { container } = render(<MessageProvider value={{ version: 1, locale: 'es', realm: null, direction: 'ltr', messages: {
         'schemastud-seam::messages.validation.minLength': { text: 'Catalog validation', sourceLocale: 'es' },
-    } }}><SchemaForm schema={{ type: 'string', minLength: 3 }} formData="a" validator={validator} theme={{}}
+    } }}><SchemaForm schema={{ type: 'string', minLength: 3 }} formData="a" validator={validator} theme={bareTheme}
         customValidate={(_data, errors) => { errors.addError('custom::diagnostic.literal'); return errors; }} /></MessageProvider>);
     fireEvent.submit(container.querySelector('form')!);
     await waitFor(() => expect(screen.getAllByText(/Host validation/).length).toBeGreaterThan(0));
