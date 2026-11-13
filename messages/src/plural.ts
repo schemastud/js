@@ -39,8 +39,8 @@ export function choosePlural(line: string, count: number, sourceLocale: string):
         if (condition.includes(',')) {
             const [from, to] = condition.split(',', 2);
             if ((to === '*' && count >= Number(from)) || (from === '*' && count <= Number(to))
-                || (from !== '*' && to !== '*' && count >= Number(from) && count <= Number(to))) return value.trim();
-        } else if (condition.trim() !== '' && Number(condition) === count) return value.trim();
+                || (from !== '*' && to !== '*' && count >= Number(from) && count <= Number(to))) return value.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, '');
+        } else if (condition.trim() !== '' && Number(condition) === count) return value.replace(/^[ \t\n\r\0\x0B]+|[ \t\n\r\0\x0B]+$/g, '');
     }
     const number = Math.abs(count);
     const index = rules.get(normalizedAlias(sourceLocale))?.(number) ?? 0;

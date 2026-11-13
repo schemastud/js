@@ -98,12 +98,12 @@ it('refuses conflicting copies of one catalog, without accepting traversal order
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('Conflicting catalog copies');
 });
-it('includes explicit host keys but excludes dev-only dependencies', () => {
+it('includes explicit host keys and explicitly excludes a missing dev-only fixture', () => {
     const root = fixture();
     const path = join(root, 'package.json');
     write(path, { ...JSON.parse(readFileSync(path, 'utf8')), devDependencies: { '@fixtures/missing-story': '1' } });
     write(join(root, 'messages.default.json'), { version: 1, sourceLocale: 'en', messages: { 'messages.profile_updated': 'Profile updated.' } });
-    expect(run(root, '--host-catalog', 'messages.default.json', '--write').status).toBe(0);
+    expect(run(root, '--host-catalog', 'messages.default.json', '--exclude', '@fixtures/missing-story', '--write').status).toBe(0);
     expect(JSON.parse(readFileSync(join(root, 'resources/beam/messages.json'), 'utf8')).payload.messages['messages.profile_updated'])
         .toEqual({ default: 'Profile updated.', owner: 'fixture-host' });
 });
@@ -112,4 +112,34 @@ it('requires --out and never invents a host output location', () => {
     const result = spawnSync(process.execPath, [cli, 'collect'], { cwd: root, encoding: 'utf8' });
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('--out is required');
+});
+
+it('collects a root devDependency catalog used by production host code', () => {
+    const root = fixture();
+    write(join(root, 'package.json'), { name: 'fixture-host', dependencies: { '@fixtures/two': '1' }, devDependencies: { '@fixtures/one': '1' } });
+    expect(run(root, '--write').status).toBe(0);
+    const payload = JSON.parse(readFileSync(join(root, 'resources/beam/messages.json'), 'utf8')).payload;
+    expect(payload.messages['one::messages.label']).toEqual({ default: 'One', owner: '@fixtures/one' });
+});
+
+it('supports repeatable exclusions for installed dev-only fixtures without catalog markers', () => {
+    const root = fixture();
+    write(join(root, 'package.json'), { name: 'fixture-host', dependencies: { '@fixtures/one': '1', '@fixtures/two': '1' }, devDependencies: { '@fixtures/story': '1', '@fixtures/test': '1' } });
+    for (const name of ['story', 'test']) write(join(root, 'node_modules/@fixtures', name, 'package.json'), { name: '@fixtures/' + name, dependencies: { '@fixtures/uninstalled-story-runtime': '1' } });
+    expect(run(root, '--exclude', '@fixtures/story', '--exclude', '@fixtures/test', '--write').status).toBe(0);
+});
+
+it('refuses to exclude an installed catalog even when the excluded name is a root devDependency', () => {
+    const root = fixture();
+    write(join(root, 'package.json'), { name: 'fixture-host', devDependencies: { '@fixtures/one': '1' } });
+    const result = run(root, '--exclude', '@fixtures/one', '--write');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Excluded package carries a catalog');
+});
+
+it('does not follow transitive package devDependencies', () => {
+    const root = fixture();
+    const path = join(root, 'node_modules/@fixtures/one/package.json');
+    write(path, { ...JSON.parse(readFileSync(path, 'utf8')), devDependencies: { '@fixtures/uninstalled-test-tool': '1' } });
+    expect(run(root, '--write').status).toBe(0);
 });

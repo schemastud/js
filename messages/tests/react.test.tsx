@@ -24,3 +24,8 @@ it('a separately evaluated adapter shares the provider context object', async ()
         messages: { 'messages.greeting': { text: 'Hola :name', sourceLocale: 'es' } } };
     expect(renderToString(createElement(MessageProvider, { value, children: createElement(OtherConsumer) }))).toBe('<span>Hola Ada</span>');
 });
+
+it('renders tag-looking message text and parameter values as literal text', () => {
+    function Literal() { return createElement('span', null, useMessages({ 'messages.line': '<b>:name</b>' }).t('messages.line', { name: '<i>Ada</i>' })); }
+    expect(renderToString(createElement(Literal))).toBe('<span>&lt;b&gt;&lt;i&gt;Ada&lt;/i&gt;&lt;/b&gt;</span>');
+});

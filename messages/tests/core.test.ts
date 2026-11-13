@@ -70,3 +70,32 @@ it('rejects an unknown runtime key instead of reporting raw-key success', () => 
     // @ts-expect-error Exercise JavaScript callers bypassing the declared key union.
     expect(() => messages.t('messages.missing')).toThrow('Unknown message key');
 });
+
+it('selects a plural before substituting a parameter containing a pipe', () => {
+    const messages = createMessages({ 'messages.line': '{0} none|[1,*] :count by :who' });
+    expect(messages.choice('messages.line', 2, { who: 'a|b' })).toBe('2 by a|b');
+});
+
+it('keeps the raw choice count even when the active formatting locale is German', () => {
+    const messages = createMessages({ 'messages.line': ':count items' }, {
+        catalog: { version: 1, locale: 'de-DE', realm: null, direction: 'ltr', messages: {} },
+    });
+    expect(messages.choice('messages.line', 1234.5)).toBe('1234.5 items');
+    expect(messages.number(1234.5)).toBe('1.234,5');
+});
+
+it.each([{ name: 'Ada' }, () => 'Ada'])('rejects object and closure parameters instead of evaluating them: %s', value => {
+    const messages = createMessages({ 'messages.line': 'Hello :name' });
+    // @ts-expect-error JavaScript callers must also be refused at runtime.
+    expect(() => messages.t('messages.line', { name: value })).toThrow(TypeError);
+});
+
+it('pseudo keeps dotted parameter tokens intact before replacing them', () => {
+    const messages = createMessages({ 'messages.line': 'Hi :first.name ok' }, { pseudo: true });
+    expect(messages.t('messages.line', { 'first.name': 'Ada' })).toContain('Ada');
+});
+
+it('keeps non-ASCII whitespace when trimming an explicit condition branch', () => {
+    const messages = createMessages({ 'messages.line': '{0}\u00a0none|other' });
+    expect(messages.choice('messages.line', 0)).toBe('\u00a0none');
+});

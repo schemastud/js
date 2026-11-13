@@ -60,10 +60,11 @@ function validItem(key) {
         && !['resources', 'data', 'enums', 'actions', 'nav', 'groups'].includes(key.split('.')[0]);
 }
 
-/** Read only the declared production graph and authored public workspaces, never execute catalog JS. */
-export function collect(root, hostCatalog) {
+/** Read declared root dependencies (including dev), transitive production dependencies and public workspaces, never execute catalog JS. */
+export function collect(root, hostCatalog, exclusions = []) {
     root = realpathSync(root);
     const host = read(join(root, 'package.json'));
+    const excluded = new Set(exclusions);
     const queue = [root, ...workspaces(root, host).filter(at => !read(join(at, 'package.json')).private)];
     const visited = new Set(); const runtimes = new Set();
     const packages = new Map(); const namespaceOwners = new Map(); const messages = Object.create(null);
@@ -72,6 +73,10 @@ export function collect(root, hostCatalog) {
         if (visited.has(at)) continue;
         visited.add(at);
         const manifest = read(join(at, 'package.json'));
+        if (at !== root && excluded.has(manifest.name)) {
+            if (Object.hasOwn(manifest.schemastud ?? {}, 'messages')) fail('Excluded package carries a catalog: ' + manifest.name);
+            continue;
+        }
         if (manifest.name === '@schemastud/messages') {
             if (manifest.schemastud?.messages?.runtimeAbi !== 1) fail('Incompatible messages runtime ABI');
             runtimes.add(at);
@@ -94,11 +99,11 @@ export function collect(root, hostCatalog) {
                 messages[key] = entry;
             }
         }
-        const dependencies = { ...manifest.dependencies, ...manifest.optionalDependencies, ...manifest.peerDependencies };
+        const dependencies = { ...(at === root ? manifest.devDependencies : {}), ...manifest.dependencies, ...manifest.optionalDependencies, ...manifest.peerDependencies };
         for (const name of Object.keys(dependencies)) {
             const dependency = installed(name, at);
             if (dependency) queue.push(dependency);
-            else if (!Object.hasOwn(manifest.optionalDependencies ?? {}, name) && !manifest.peerDependenciesMeta?.[name]?.optional) fail('Missing installed production dependency: ' + name);
+            else if (!excluded.has(name) && !Object.hasOwn(manifest.optionalDependencies ?? {}, name) && !manifest.peerDependenciesMeta?.[name]?.optional) fail('Missing installed production dependency: ' + name);
         }
     }
     if (hostCatalog) {

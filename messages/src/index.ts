@@ -31,15 +31,6 @@ export function createMessages<const D extends Readonly<Record<string, string>>>
         return translated && Object.hasOwn(translated, key) ? translated[key] : { text: defaults[key], sourceLocale: 'en' };
     }
     function replace(line: string, parameters: MessageParameters): string {
-        if (options.pseudo) {
-            const vowels: Readonly<Record<string, string>> = { a: 'á', e: 'ë', i: 'ï', o: 'ô', u: 'ü' };
-            const marked = line.split(/(:[\p{L}_][\p{L}\p{N}_-]*)/u).map(part =>
-                /^:[\p{L}_][\p{L}\p{N}_-]*$/u.test(part) ? part : part.replace(/[aeiou]/gi, letter => {
-                    const accent = vowels[letter.toLowerCase()];
-                    return letter === letter.toUpperCase() ? accent.toUpperCase() : accent;
-                })).join('');
-            line = `⟦${marked} ${'·'.repeat(Math.max(1, Math.ceil(line.length * 0.3)))}⟧`;
-        }
         const replacements = new Map<string, string>();
         const ucfirst = (value: string) => {
             const first = [...value][0] ?? '';
@@ -54,9 +45,17 @@ export function createMessages<const D extends Readonly<Record<string, string>>>
             replacements.set(':' + key, text);
         }
         const tokens = [...replacements.keys()].sort((a, b) => b.length - a.length);
-        if (!tokens.length) return line;
         const escaped = tokens.map(token => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-        return line.replace(new RegExp(escaped.join('|'), 'gu'), token => replacements.get(token)!);
+        if (options.pseudo) {
+            const vowels: Readonly<Record<string, string>> = { a: 'á', e: 'ë', i: 'ï', o: 'ô', u: 'ü' };
+            const protectedTokens = tokens.length ? new RegExp('(' + escaped.join('|') + ')', 'gu') : /(:[\p{L}_][\p{L}\p{N}_-]*)/u;
+            const marked = line.split(protectedTokens).map((part, index) => index % 2 ? part : part.replace(/[aeiou]/gi, letter => {
+                const accent = vowels[letter.toLowerCase()];
+                return letter === letter.toUpperCase() ? accent.toUpperCase() : accent;
+            })).join('');
+            line = `⟦${marked} ${'·'.repeat(Math.max(1, Math.ceil(line.length * 0.3)))}⟧`;
+        }
+        return tokens.length ? line.replace(new RegExp(escaped.join('|'), 'gu'), token => replacements.get(token)!) : line;
     }
     const locale = options.catalog?.locale ?? 'en-US';
     return {
