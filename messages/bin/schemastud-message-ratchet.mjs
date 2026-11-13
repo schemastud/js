@@ -54,10 +54,22 @@ export function scanDisplayStrings(filename, contents = readFileSync(filename, '
         else if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node)) display(node.expression, visited);
     }
     const nameOf = node => node && (ts.isIdentifier(node) || ts.isStringLiteral(node)) ? node.text : undefined;
+    // Rich parameters use a NUL-bounded identifier as a split marker. It is
+    // technical only inside a translation argument, never in a JSX/display sink.
+    function richParameterMarker(node, visited = new Set()) {
+        if (!node) return false;
+        if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return /^\u0000[A-Za-z_][A-Za-z0-9_]*\u0000$/.test(node.text);
+        if (ts.isIdentifier(node) && constants.has(node.text) && !assigned.has(node.text) && !visited.has(node.text)) return richParameterMarker(constants.get(node.text), new Set([...visited, node.text]));
+        if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node)) return richParameterMarker(node.expression, visited);
+        return false;
+    }
     function isDisplayProperty(property) {
         const name = nameOf(property.name);
         if (!displayProps.has(name)) return false;
         const object = property.parent;
+        if (object && ts.isObjectLiteralExpression(object) && ts.isCallExpression(object.parent)
+            && isMessageCall(object.parent.expression) && object.parent.arguments.slice(1).includes(object)
+            && richParameterMarker(property.initializer)) return false;
         if (object && ts.isObjectLiteralExpression(object)) {
             const siblings = new Set(object.properties.map(item => nameOf(item.name)));
             // Process/CLI receipts carry diagnostic messages, not browser display copy.
@@ -85,8 +97,8 @@ export function scanDisplayStrings(filename, contents = readFileSync(filename, '
         if (!node) return;
         if (ts.isObjectLiteralExpression(node)) {
             for (const property of node.properties) {
-                if (ts.isPropertyAssignment(property)) display(property.initializer);
-                else if (ts.isShorthandPropertyAssignment(property)) display(property.name);
+                if (ts.isPropertyAssignment(property) && !richParameterMarker(property.initializer)) display(property.initializer);
+                else if (ts.isShorthandPropertyAssignment(property) && !richParameterMarker(property.name)) display(property.name);
             }
         } else if (ts.isIdentifier(node) && constants.has(node.text) && !assigned.has(node.text) && !visited.has(node.text)) {
             translationParameters(constants.get(node.text), new Set([...visited, node.text]));

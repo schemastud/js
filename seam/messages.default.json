@@ -78,6 +78,7 @@
         "schemastud-seam::messages.validation.dependentRequired": "must have property :deps when property :property is present",
         "schemastud-seam::messages.validation.dependentRequired_many": "must have properties :deps when property :property is present",
         "schemastud-seam::messages.widget.unbound": "Unable to display this field",
-        "schemastud-seam::messages.widget.stars": "{1} :shownCount star|[2,*] :shownCount stars"
+        "schemastud-seam::messages.widget.stars": "{1} :shownCount star|[2,*] :shownCount stars",
+        "schemastud-seam::messages.widget.json_invalid_object": "Enter a valid JSON object."
     }
 }

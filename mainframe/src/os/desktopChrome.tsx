@@ -21,7 +21,7 @@ import { useMainframeMessages } from '../messages';
  * local CSS). Router / navigation is injected: the dock's realm-switch and per-surface links are host
  * callbacks (`onNavigate`), never an Inertia import here.
  */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import {
     createMainframeRegistry,
@@ -115,6 +115,10 @@ export function Clock() {
 export function UpsellPopover({ app, onClose }: { app: DesktopApp; onClose: () => void }) {
     const messages = useMainframeMessages();
     const { title, cta } = upsellText(app, messages);
+    // Split a placeholder rather than translated text or authored HTML: the whole
+    // sentence can reorder, repeat or omit the emphasized title safely.
+    const titleMarker = '\u0000title\u0000';
+    const copyParts = messages.t('schemastud-mainframe::messages.upsell_copy', { title: titleMarker }).split(titleMarker);
 
     return (
         <>
@@ -125,7 +129,7 @@ export function UpsellPopover({ app, onClose }: { app: DesktopApp; onClose: () =
                 </div>
                 <div className="upsell-title">{title}</div>
                 <p className="upsell-copy">
-                    {messages.t('schemastud-mainframe::messages.upsell_copy', { title: app.title })}
+                    {copyParts.map((part, index) => <Fragment key={index}>{index > 0 && <b>{app.title}</b>}{part}</Fragment>)}
                 </p>
                 <button type="button" className="upsell-cta">
                     {cta}

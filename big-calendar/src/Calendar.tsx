@@ -5,10 +5,9 @@
  * meets RBC here, at its accessor/prop-getter API. MIT (react-big-calendar, list-jonas) —
  * kept intact; no upstream upgrade path to lose.
  */
-import { format, getDay, parse, startOfWeek } from 'date-fns';
-import { enUS } from 'date-fns/locale';
-import * as dateLocales from 'date-fns/locale';
-import { useEffect, useState, type ComponentType } from 'react';
+import { format, getDay, parse, startOfWeek, type Locale } from 'date-fns';
+import { enUS } from 'date-fns/locale/en-US';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import { Calendar, dateFnsLocalizer, Views, type CalendarProps } from 'react-big-calendar';
 
 /** The shared localizer — day-granular, all-day editorial events (PRD §6). */
@@ -20,14 +19,36 @@ export const localizer = dateFnsLocalizer({
     locales: { 'en-US': enUS },
 });
 
-/** Match the provider's BCP47 locale, then its language; unavailable data uses en-US. */
-export function calendarLocalizer(locale: string) {
-    const normalized = locale.toLowerCase();
+// The non-English table is a separate lazy chunk. English-only hosts never load it.
+let localeTable: Promise<typeof import('date-fns/locale')> | undefined;
+const english = (locale: string) => /^(en|en-us)(-u-.*)?$/i.test(locale);
+
+/** Match BCP47 then language; unsupported data and pending loads use en-US. */
+function selectLocale(locale: string, locales: typeof import('date-fns/locale')): Locale {
+    const normalized = locale.toLowerCase().split('-u-')[0];
     const language = normalized.split('-')[0];
-    const available = Object.values(dateLocales);
-    const selected = available.find(item => item.code.toLowerCase() === normalized)
+    const available = Object.values(locales);
+    return available.find(item => item.code.toLowerCase() === normalized)
         ?? available.find(item => item.code.toLowerCase() === language) ?? enUS;
-    return dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { [locale]: selected } });
+}
+
+/** Private surface hook: keep the mounted calendar while the date data arrives. */
+export function useCalendarLocalizer(locale: string) {
+    const [loaded, setLoaded] = useState<{ locale: string; value: Locale } | null>(null);
+    useEffect(() => {
+        if (english(locale)) return;
+        let active = true;
+        const pending = localeTable ??= import('date-fns/locale').catch(error => {
+            localeTable = undefined;
+            throw error;
+        });
+        void pending.then(table => {
+            if (active) setLoaded({ locale, value: selectLocale(locale, table) });
+        }).catch(() => { /* Offline/chunk failure keeps the English fallback. */ });
+        return () => { active = false; };
+    }, [locale]);
+    const selected = !english(locale) && loaded?.locale === locale ? loaded.value : enUS;
+    return useMemo(() => dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales: { [locale]: selected } }), [locale, selected]);
 }
 
 /**

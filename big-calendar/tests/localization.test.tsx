@@ -40,7 +40,7 @@ it('calendar toolbar dates and panel follow provider changes without remounting'
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const view = render(tree(value('de-DE', 'Heute'), qc));
     await waitFor(() => expect(screen.getByRole('button', { name: 'Heute' })).toBeDefined());
-    expect(screen.getByText('Juli 2026')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('Juli 2026')).toBeDefined(), { timeout: 5000 });
     fireEvent.click(await screen.findByText('Own title'));
     const panel = screen.getByRole('dialog', { name: 'Eintrag' });
     const grid = screen.getByRole('table');
@@ -50,7 +50,7 @@ it('calendar toolbar dates and panel follow provider changes without remounting'
     expect(screen.getByRole('button', { name: 'Schließen' })).toBeDefined();
     view.rerender(tree(value('fr', "Aujourd’hui"), qc));
     expect(screen.getByRole('button', { name: 'Aujourd’hui' })).toBeDefined();
-    expect(screen.getByText('juillet 2026')).toBeDefined();
+    await waitFor(() => expect(screen.getByText('juillet 2026')).toBeDefined(), { timeout: 5000 });
     expect(screen.getByRole('dialog', { name: 'Eintrag' })).toBe(panel);
     expect(screen.getByRole('table')).toBe(grid);
     expect(within(grid).getByText('Own title')).toBe(eventNode);

@@ -50,3 +50,13 @@ import { BigCalendarProvider, BigCalendarSurface } from '@schemastud/big-calenda
 ## Messages and dates
 
 The surface reads its published `./messages` catalog through the host's outer MessageProvider. Existing service-render slots and event/lane titles stay host-owned. Toolbar and date locale follow provider changes without a remount; date-fns matches an installed locale's full BCP47 code, then its base language, with en-US as the fallback for unavailable locale data. The existing exported `localizer` keeps its English behavior for direct Calendar callers. Pure reAnchorEvent retains its signature and English default feedback; the surface translates that feedback before forwarding it to the injected notify sink.
+
+Keep the QueryClient and the injected services object stable across message-provider
+updates; changing services intentionally rebuilds injected event components. Date
+locales other than en-US load on demand. The mounted surface uses English dates
+until the locale chunk resolves, and retains English if the chunk fails to load.
+
+Train-end release: bump this standalone package from 0.1.0 to 0.2.0 (minor),
+including its own lock metadata, before publishing. It is not a root workspace, so
+Changesets does not version it. Hosts must install and dedupe @schemastud/messages
+^0.1.0 for the new required peer and ./messages catalog export.

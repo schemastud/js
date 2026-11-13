@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { EventProps } from 'react-big-calendar';
-import { DndCalendar, calendarLocalizer, Views } from './Calendar';
+import { DndCalendar, useCalendarLocalizer, Views } from './Calendar';
 import { useCalendarMessages } from './messages';
 import { useCalendarEvents, useInvalidateCalendar } from './hooks';
 import { planEventDrop, planEventSelect, reAnchorEvent } from './interaction';
@@ -71,8 +71,8 @@ export function BigCalendarSurface<E extends FoundationCalendarEvent = Foundatio
 }: BigCalendarSurfaceProps<E>) {
     const services = useCalendarServices<E>();
     const messages = useCalendarMessages();
-    const localizer = useMemo(() => calendarLocalizer(messages.locale), [messages.locale]);
-    const calendarCopy = {
+    const localizer = useCalendarLocalizer(messages.locale);
+    const calendarCopy = useMemo(() => ({
         date: messages.t('schemastud-big-calendar::messages.toolbar.date'),
         time: messages.t('schemastud-big-calendar::messages.toolbar.time'),
         event: messages.t('schemastud-big-calendar::messages.toolbar.event'),
@@ -89,7 +89,7 @@ export function BigCalendarSurface<E extends FoundationCalendarEvent = Foundatio
         agenda: messages.t('schemastud-big-calendar::messages.toolbar.agenda'),
         noEventsInRange: messages.t('schemastud-big-calendar::messages.toolbar.noEventsInRange'),
         showMore: (count: number) => messages.choice('schemastud-big-calendar::messages.toolbar.showMore', count, { shownCount: messages.number(count) }),
-    };
+    }), [messages]);
     const invalidate = useInvalidateCalendar();
     const query = useCalendarEvents<E>();
     const events = useMemo(() => {

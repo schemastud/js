@@ -2,13 +2,13 @@ import type { FieldProps } from '@rjsf/utils';
 import { useEffect, useRef, useState } from 'react';
 import { FIELD_BORDER, FIELD_INK, FIELD_SURFACE } from './field-tokens';
 import { displayLabel } from '../display-label';
+import { useFormTranslation } from '../messages';
 
-const invalidObjectMessage = 'Enter a valid JSON object.';
 
 function parseObject(draft: string): object {
     const value: unknown = JSON.parse(draft);
     if (value === null || Array.isArray(value) || typeof value !== 'object') {
-        throw new Error(invalidObjectMessage);
+        throw new Error('InvalidJSONObject');
     }
     return value;
 }
@@ -23,6 +23,8 @@ export function JsonField({
     disabled,
     readonly,
 }: FieldProps<unknown>) {
+    const { messages } = useFormTranslation();
+    const invalidObjectMessage = messages.t('schemastud-seam::messages.widget.json_invalid_object');
     const display = (value: unknown) =>
         typeof value === 'string' ? value : JSON.stringify(value ?? {}, null, 2);
     const [text, setText] = useState(() => display(formData));

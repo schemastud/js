@@ -95,3 +95,15 @@ repositories carry config/baseline data only: run this candidate's Node CLI
 against their config, with no install. Installing the released tool and wiring
 host commands is owed after release; its owning ticket is TBD by root. The
 workspace CI runs the read-only comparison as a required step.
+
+The ratchet is a conservative syntax scan, not exhaustive data-flow analysis. It
+does not follow a reassigned mutable local (for example `let error; error = COPY;
+return <p>{error}</p>`) and does not treat RJSF `__errors` object properties as
+display sinks. A zero count therefore does not prove those paths are translated;
+review rendered validation errors explicitly. Ticket 34 found and localized the
+JSON field error through both paths without broadening the scanner heuristics.
+
+Rich translation parameters may use a NUL-bounded identifier marker (for example
+\u0000title\u0000) to split a sentence into React text and emphasized nodes. The
+scanner ignores that technical marker only inside translation parameters; the
+same literal in a JSX/display sink and ordinary parameter copy remain findings.

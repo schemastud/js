@@ -149,3 +149,20 @@ it('logical-and counts rendered copy but not a technical identifier used as the 
     const report = JSON.parse(result.stdout);
     expect(report.findings.fixture.map((item: { text: string }) => item.text)).toEqual(['Copy']);
 });
+
+it('rich translation parameter sentinels are technical while visible and ordinary parameter copy still counts', () => {
+    const root = fixture();
+    writeFileSync(join(root, 'src/view.tsx'), `
+const marker = '\\u0000title\\u0000';
+const message = t('copy', { title: marker });
+const ordinary = t('copy', { title: 'Ordinary param copy' });
+const visibleMarker = '\\u0000visible\\u0000';
+const View = () => <><p>{visibleMarker}</p><p title={'\\u0000Display copy\\u0000'} /></>;
+`);
+    const result = run(root, '--write');
+    expect(result.status, result.stderr).toBe(0);
+    const report = JSON.parse(result.stdout);
+    expect(report.findings.fixture.map((item: { text: string }) => item.text)).toEqual([
+        'Ordinary param copy', '\u0000visible\u0000', '\u0000Display copy\u0000',
+    ]);
+});

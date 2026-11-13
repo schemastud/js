@@ -46,7 +46,7 @@ describe('public mainframe localization', () => {
         const tree = (word: string) => <MessageProvider value={catalog(word)}><OperatorOverlay stableKeys={[]} resolveWindow={() => null} renderLauncher={() => null} /><UpsellPopover app={app} onClose={() => {}} /></MessageProvider>;
         const view = render(tree('Opérateur'));
         const orb = view.getByRole('button', { name: 'Opérateur' });
-        expect(view.getByText('Pour lancer Studio, changez de forfait.')).toBeTruthy();
+        expect(view.getByRole('dialog').querySelector('.upsell-copy')?.textContent).toBe('Pour lancer Studio, changez de forfait.');
         view.rerender(tree('Administration'));
         expect(view.getByRole('button', { name: 'Administration' })).toBe(orb);
         expect(view.getByRole('dialog').getAttribute('aria-label')).toBe('Débloquer Studio');
