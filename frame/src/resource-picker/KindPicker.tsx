@@ -243,7 +243,7 @@ function pickedNames(kinds: ResourceKindOption[], picked: Set<string>): string {
 }
 
 function Picked({ picked, kinds, select, sections }: { picked: Set<string>; kinds: ResourceKindOption[]; select: string; sections: Group[] }) {
-    const { t } = useFrameMessages();
+    const { choice, number: fmt } = useFrameMessages();
     const chosen = kinds.filter((k) => picked.has(k.key));
     if (chosen.length === 0) return null;
     if (select === 'single' || chosen.length === 1) {
@@ -256,7 +256,7 @@ function Picked({ picked, kinds, select, sections }: { picked: Set<string>; kind
             </span>
         );
     }
-    return <span>{t("schemastud-frame::messages.count_resources", { count: chosen.length })}</span>;
+    return <span>{choice("schemastud-frame::messages.kind.count", chosen.length, { count: fmt(chosen.length) })}</span>;
 }
 
 /* ─────────────────────────────── palette ─────────────────────────────── */
@@ -347,7 +347,7 @@ function SearchBox({ value, onChange, label, autoFocus }: { value: string; onCha
 }
 
 function PaletteBody(props: BodyProps) {
-    const { t } = useFrameMessages();
+    const { t, choice, number: fmt } = useFrameMessages();
     const [query, setQuery] = useState('');
     const [open, setOpen] = useState(false);
     if (props.resolved.density === 'expanded') {
@@ -356,7 +356,7 @@ function PaletteBody(props: BodyProps) {
                 <SearchBox value={query} onChange={setQuery} label={t("schemastud-frame::messages.search_resources")} />
                 <PaletteList {...props} query={query} />
                 <div className="border-t border-border px-2.5 py-1.5 text-xs text-muted-foreground tabular-nums">
-                    {props.picked.size > 0 && props.resolved.select === 'multi' ? t("schemastud-frame::messages.size_of_total_picked", { size: props.picked.size, total: props.total }) : t("schemastud-frame::messages.total_resources", { total: props.total })}
+                    {props.picked.size > 0 && props.resolved.select === 'multi' ? choice("schemastud-frame::messages.kind.picked_total", props.picked.size, { count: fmt(props.picked.size), total: fmt(props.total) }) : choice("schemastud-frame::messages.kind.total", props.total, { total: fmt(props.total) })}
                 </div>
             </div>
         );
@@ -369,7 +369,7 @@ function PaletteBody(props: BodyProps) {
                     type="button"
                     variant="outline"
                     disabled={props.disabled}
-                    aria-label={`${props.label}: ${pickedNames(props.kinds, props.picked) || t("schemastud-frame::messages.none_chosen")}`}
+                    aria-label={pickedNames(props.kinds, props.picked) ? t("schemastud-frame::messages.kind.summary", { label: props.label, names: pickedNames(props.kinds, props.picked) }) : t("schemastud-frame::messages.kind.summary_empty", { label: props.label })}
                     className="w-full min-w-0 justify-between font-normal sm:w-72"
                 >
                     <Picked picked={props.picked} kinds={props.kinds} select={props.resolved.select} sections={props.groups} />
@@ -433,7 +433,7 @@ function RailFlyout({ g, picked, onPick, close, select, disabled }: { g: Group; 
 }
 
 function RailBody(props: BodyProps) {
-    const { t } = useFrameMessages();
+    const { t, choice, number: fmt } = useFrameMessages();
     const { groups, picked, onPick, resolved } = props;
     const [query, setQuery] = useState('');
     const [openKey, setOpenKey] = useState<string | null>(null);
@@ -473,7 +473,7 @@ function RailBody(props: BodyProps) {
                                         <button
                                             type="button"
                                             disabled={props.disabled}
-                                            aria-label={t("schemastud-frame::messages.label_count_resourcesvalue", { label: g.label, count: g.items.length, value: has ? t("schemastud-frame::messages.has_a_pick") : '' })}
+                                            aria-label={choice(has ? "schemastud-frame::messages.kind.section_picked" : "schemastud-frame::messages.kind.section", g.items.length, { label: g.label, count: fmt(g.items.length) })}
                                             className={cn(
                                                 'relative flex size-10 items-center justify-center sm:size-8 rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                                 (open || has) && 'bg-accent text-foreground',

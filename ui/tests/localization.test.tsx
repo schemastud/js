@@ -11,6 +11,8 @@ it('shared UI default copy follows the catalog and caller labels still win', () 
     } };
     const { rerender } = render(<MessageProvider value={value}><SaveButton saving={false} /></MessageProvider>);
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeTruthy();
+    rerender(<MessageProvider value={value}><SaveButton saving={false} label="Aplicar" /></MessageProvider>);
+    expect(screen.getByRole('button', { name: 'Aplicar' })).toBeTruthy();
     rerender(<MessageProvider value={value}><SaveButton saving label="Aplicar" savingLabel="Aplicando…" /></MessageProvider>);
     expect(screen.getByRole('button', { name: 'Aplicando…' })).toBeTruthy();
 });

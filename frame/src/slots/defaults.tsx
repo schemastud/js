@@ -249,7 +249,7 @@ export function DefaultPagination(props: PaginationSlotProps) {
                         ? props.onPageChange(props.page - 1)
                         : props.onPrevious()
                 }
-            >{t("schemastud-frame::messages.prev_2")}</Button>
+            >{t("schemastud-frame::messages.pagination.prev_compact")}</Button>
             {props.mode === 'offset' && (
                 <span data-frame-page>
                     {props.page} / {lastPage}
@@ -264,7 +264,7 @@ export function DefaultPagination(props: PaginationSlotProps) {
                 onClick={() =>
                     props.mode === 'offset' ? props.onPageChange(props.page + 1) : props.onNext()
                 }
-            >{t("schemastud-frame::messages.next_2")}</Button>
+            >{t("schemastud-frame::messages.pagination.next_compact")}</Button>
         </div>
     );
 }

@@ -270,7 +270,7 @@ function BadgeCell({ value, options }: { value: unknown; options: BadgeCellOptio
 // are strings or objects; `labelKey`/`labelFallbackKey` name where the label lives.
 
 function BadgesCell({ value, options }: { value: unknown; options: BadgesCellOptions }) {
-    const { t } = useFrameMessages();
+    const { choice, number: fmt } = useFrameMessages();
     const { primitives } = useFrameInjection();
     const Badge = primitives.Badge;
 
@@ -315,7 +315,7 @@ function BadgesCell({ value, options }: { value: unknown; options: BadgesCellOpt
                 );
             })}
             {options.overflow !== false && rest > 0 ? (
-                <span style={{ color: MUTED, fontSize: SIZES.xs }}>{t("schemastud-frame::messages.rest_more", { rest: rest })}</span>
+                <span style={{ color: MUTED, fontSize: SIZES.xs }}>{choice("schemastud-frame::messages.column.more", rest, { count: fmt(rest) })}</span>
             ) : null}
         </div>
     );

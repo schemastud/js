@@ -33,6 +33,9 @@ jobs:
 
       - run: npm run build
 
+      - name: Compare committed message baselines without writing
+        run: npm run lint:messages
+
       - name: Typecheck seam, facets and frame
         run: npm run typecheck -w @schemastud/seam -w @schemastud/facets -w @schemastud/frame
 

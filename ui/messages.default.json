@@ -20,6 +20,14 @@
         "schemastud-ui::messages.save": "Save",
         "schemastud-ui::messages.saving": "Saving…",
         "schemastud-ui::messages.descending": "descending",
-        "schemastud-ui::messages.ascending": "ascending"
+        "schemastud-ui::messages.ascending": "ascending",
+        "schemastud-ui::messages.money.pricing_unknown": "Pricing unknown",
+        "schemastud-ui::messages.money.not_priced": "Not priced",
+        "schemastud-ui::messages.money.free": "Free",
+        "schemastud-ui::messages.money.replayed": ":amount · replayed",
+        "schemastud-ui::messages.money.less_than": "less than :amount",
+        "schemastud-ui::messages.money.greater_than": "greater than :amount",
+        "schemastud-ui::messages.money.less_than_replayed": "less than :amount · replayed",
+        "schemastud-ui::messages.money.greater_than_replayed": "greater than :amount · replayed"
     }
 }

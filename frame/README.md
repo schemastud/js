@@ -73,3 +73,22 @@ the line by hand.
 - `npm test` — vitest.
 
 See [schema purpose](docs/schema-purpose.md) for separate write/read projection, presentation, cache and compatibility, and the independent Frame example.
+
+### Message locale and diagnostics
+
+Date cells use the outer message provider's locale. Without a message provider,
+DateCell uses `en-US`; it no longer selects the browser locale implicitly. This
+is an intentional change from the previous browser-dependent date display.
+
+Errors from `useResourceAction` about unavailable actions or missing record IDs,
+and `resourceTransport` errors about missing saved-view addresses, are developer
+diagnostics describing invalid integration calls. Their stable English Error
+messages remain unchanged. Server-authored error messages pass through unchanged.
+Default frame notices and rendered picker/card copy use the frame catalog.
+
+Counted defaults now select singular and plural forms (`1 node` and `1 resource`,
+correcting the earlier `1 nodes` / `1 resources`). Selection summaries emphasize
+only the count; their matching-total suffix now shares the surrounding text tone
+instead of a separate muted span. Set summaries translate the whole exclusion
+sentence together and emphasize that complete summary. Rich elements are rendered
+after scalar substitution; catalogs do not contain HTML or React elements.

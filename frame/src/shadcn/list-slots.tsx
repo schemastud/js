@@ -339,7 +339,7 @@ export function ShadcnToolbar({
 }
 
 export function ShadcnPagination(props: PaginationSlotProps) {
-    const { t } = useFrameMessages();
+    const { t, choice, number: fmt } = useFrameMessages();
     const {
         primitives: { Button, SimpleSelect },
     } = useFrameInjection();
@@ -353,7 +353,7 @@ export function ShadcnPagination(props: PaginationSlotProps) {
         >
             <div className="flex items-center gap-2 text-muted-foreground">
                 {props.mode === 'offset' && (
-                    <span>{t("schemastud-frame::messages.page_page_of_lastpage_total_total", { page: props.page, lastPage: lastPage, total: props.total })}</span>
+                    <span>{choice("schemastud-frame::messages.pagination.summary", props.total, { page: fmt(props.page), lastPage: fmt(lastPage), total: fmt(props.total) })}</span>
                 )}
                 {props.onPerPageChange && SimpleSelect && (
                     <span className="flex items-center gap-1.5">

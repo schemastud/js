@@ -16,7 +16,7 @@ const SEG: CSSProperties = { display: 'inline-flex', gap: 4 };
 const CONTROL: CSSProperties = { ...SEG, cursor: 'pointer', textDecoration: 'underline dotted', border: 'none', background: 'none', font: 'inherit', color: 'inherit', padding: 0 };
 
 export function StatusBar() {
-    const { t, choice } = useFrameMessages();
+    const { t, choice, number: fmt } = useFrameMessages();
     const mount = useEditShellMount();
     const c = mount.conformance;
     const cursor = useRef(0);
@@ -41,14 +41,14 @@ export function StatusBar() {
 
     return (
         <div data-frame-status-bar="" style={BAR}>
-            <span data-status-seg="nodes" style={SEG}>{choice("schemastud-frame::messages.nodes_nodes", nodes, { nodes })}</span>
-            <span data-status-seg="required" style={SEG}>{choice("schemastud-frame::messages.requiredtotal_required_requiredfilled_of_requiredtotal", requiredTotal, { requiredTotal, requiredFilled })}</span>
+            <span data-status-seg="nodes" style={SEG}>{choice("schemastud-frame::messages.status.nodes", nodes, { count: fmt(nodes) })}</span>
+            <span data-status-seg="required" style={SEG}>{choice("schemastud-frame::messages.status.required_progress", requiredTotal, { total: fmt(requiredTotal), filled: fmt(requiredFilled) })}</span>
             {complete ? (
                 <span data-status-seg="complete" style={SEG}>{t("schemastud-frame::messages.complete")}</span>
             ) : (
                 <button type="button" data-status-seg="incomplete" onClick={cycleIncomplete} style={CONTROL}>{t("schemastud-frame::messages.incomplete")}</button>
             )}
-            <span data-status-seg="grammar" data-grammar={grammarValid ? 'valid' : 'invalid'} style={SEG}>{t("schemastud-frame::messages.grammar_value", { value: grammarValid ? t("schemastud-frame::messages.valid") : '✗' })}</span>
+            <span data-status-seg="grammar" data-grammar={grammarValid ? 'valid' : 'invalid'} style={SEG}>{t(grammarValid ? "schemastud-frame::messages.status.grammar_valid" : "schemastud-frame::messages.status.grammar_invalid")}</span>
         </div>
     );
 }

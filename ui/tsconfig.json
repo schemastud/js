@@ -18,6 +18,9 @@
         "paths": {
             "@schemastud/messages/react": [
                 "../messages/src/react.tsx"
+            ],
+            "@schemastud/messages": [
+                "../messages/src/index.ts"
             ]
         },
         "resolveJsonModule": true

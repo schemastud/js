@@ -274,7 +274,7 @@ function ActionDialog({
                 <p style={{ margin: 0 }}>
                     {action.destructive
                         ? t("schemastud-frame::messages.label_this_cannot_be_undone", { label: action.label })
-                        : `${action.label}?`}
+                        : t("schemastud-frame::messages.actions.confirm", { label: action.label })}
                 </p>
             )}
             {error ? (

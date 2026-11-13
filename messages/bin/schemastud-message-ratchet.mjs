@@ -4,8 +4,8 @@ import { resolve, dirname, relative, extname } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 
-const displayProps = new Set(['title', 'label', 'placeholder', 'description', 'aria-label', 'aria-description', 'alt', 'emptyText', 'emptyMessage', 'loadingText', 'submitText', 'message', 'helperText', 'tooltip', 'header', 'triggerLabel', 'saveLabel', 'savingLabel', 'cancelLabel', 'confirmLabel', 'children']);
-const excluded = /(^|\/)(?:tests?|testing|__tests__|__fixtures__|fixtures|stories|node_modules|vendor|dist|build|coverage|\.git)(\/|$)|\.(?:test|spec|stories|story|d)\.[cm]?[jt]sx?$|(?:story-harness|fixtures)\.[jt]sx?$/;
+const displayProps = new Set(['title', 'label', 'placeholder', 'description', 'aria-label', 'aria-description', 'alt', 'emptyText', 'emptyMessage', 'loadingText', 'submitText', 'message', 'helperText', 'tooltip', 'header', 'triggerLabel', 'saveLabel', 'savingLabel', 'cancelLabel', 'confirmLabel', 'children', 'heading', 'subtitle', 'text', 'content', 'caption', 'hint', 'emptyState', 'aria-valuetext', 'aria-roledescription', 'aria-placeholder']);
+const excluded = /(^|\/)(?:tests?|testing|__tests__|__fixtures__|fixtures|stories|generated|node_modules|vendor|dist|build|coverage|\.git)(\/|$)|\.(?:test|spec|stories|story|d)\.[cm]?[jt]sx?$|(?:story-harness|fixtures)\.[jt]sx?$/;
 const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.mjs', '.cjs']);
 const hasCopy = text => /\p{L}/u.test(text);
 
@@ -35,16 +35,61 @@ export function scanDisplayStrings(filename, contents = readFileSync(filename, '
         if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) add(node, node.text);
         else if (ts.isTemplateExpression(node)) {
             add(node, [node.head.text, ...node.templateSpans.map(span => span.literal.text)].join('…'));
-            for (const span of node.templateSpans) if (ts.isConditionalExpression(span.expression) || ts.isTemplateExpression(span.expression)) display(span.expression, visited);
+            for (const span of node.templateSpans) display(span.expression, visited);
         }
         else if (ts.isIdentifier(node) && constants.has(node.text) && !assigned.has(node.text) && !visited.has(node.text)) {
             display(constants.get(node.text), new Set([...visited, node.text]));
         } else if (ts.isConditionalExpression(node)) { display(node.whenTrue, visited); display(node.whenFalse, visited); }
-        else if (ts.isBinaryExpression(node) && [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.PlusToken].includes(node.operatorToken.kind)) {
+        else if (ts.isBinaryExpression(node) && [ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.PlusToken].includes(node.operatorToken.kind)) {
             display(node.left, visited); display(node.right, visited);
-        } else if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node)) display(node.expression, visited);
+        } else if (ts.isArrayLiteralExpression(node)) { for (const element of node.elements) display(element, visited); }
+        else if (ts.isObjectLiteralExpression(node)) {
+            for (const property of node.properties) {
+                if (ts.isPropertyAssignment(property) && isDisplayProperty(property)) display(property.initializer, visited);
+                else if (ts.isShorthandPropertyAssignment(property) && displayProps.has(property.name.text)) display(property.name, visited);
+            }
+        }
+        else if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node)) display(node.expression, visited);
     }
     const nameOf = node => node && (ts.isIdentifier(node) || ts.isStringLiteral(node)) ? node.text : undefined;
+    function isDisplayProperty(property) {
+        const name = nameOf(property.name);
+        if (!displayProps.has(name)) return false;
+        const object = property.parent;
+        if (object && ts.isObjectLiteralExpression(object)) {
+            const siblings = new Set(object.properties.map(item => nameOf(item.name)));
+            // Process/CLI receipts carry diagnostic messages, not browser display copy.
+            if (name === 'message' && siblings.has('exitCode')) return false;
+            // Resource reference configuration names the record's label field; it is
+            // not a label default. Keep actual option/column labels in the census.
+            if (name === 'label' && ['resource', 'value', 'multiple', 'select'].every(key => siblings.has(key))) return false;
+        }
+        return true;
+    }
+    const isMessageCall = node => ts.isIdentifier(node) ? ['t', 'choice'].includes(node.text)
+        : ts.isPropertyAccessExpression(node) && ['t', 'choice'].includes(node.name.text);
+    // Return values are display copy only in formatting/presentation helpers. Ordinary
+    // protocol factories, enum selectors and class-name helpers return technical strings.
+    function presentationReturn(node) {
+        for (let parent = node.parent; parent; parent = parent.parent) {
+            if (ts.isFunctionLike(parent)) {
+                const name = nameOf(parent.name) ?? (ts.isVariableDeclaration(parent.parent) ? nameOf(parent.parent.name) : undefined);
+                return !!name && /^(?:format|render|display|describe|humanize|caption|title|message|label)(?:[A-Z_]|$)/.test(name);
+            }
+        }
+        return false;
+    }
+    function translationParameters(node, visited = new Set()) {
+        if (!node) return;
+        if (ts.isObjectLiteralExpression(node)) {
+            for (const property of node.properties) {
+                if (ts.isPropertyAssignment(property)) display(property.initializer);
+                else if (ts.isShorthandPropertyAssignment(property)) display(property.name);
+            }
+        } else if (ts.isIdentifier(node) && constants.has(node.text) && !assigned.has(node.text) && !visited.has(node.text)) {
+            translationParameters(constants.get(node.text), new Set([...visited, node.text]));
+        }
+    }
     function visit(node) {
         if (ts.isJsxText(node)) add(node, node.getText(source));
         else if (ts.isJsxAttribute(node) && displayProps.has(node.name.text)) {
@@ -53,9 +98,22 @@ export function scanDisplayStrings(filename, contents = readFileSync(filename, '
         } else if (ts.isJsxExpression(node) && node.parent && !ts.isJsxAttribute(node.parent)) display(node.expression);
         else if (ts.isBindingElement(node) && displayProps.has(nameOf(node.propertyName) ?? nameOf(node.name))) display(node.initializer);
         else if (ts.isParameter(node) && displayProps.has(nameOf(node.name))) display(node.initializer);
-        else if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && ['t', 'choice'].includes(node.expression.text)) {
-            for (const argument of node.arguments.slice(1)) if (ts.isObjectLiteralExpression(argument)) for (const property of argument.properties) if (ts.isPropertyAssignment(property)) display(property.initializer);
+        else if (ts.isPropertyAssignment(node) && isDisplayProperty(node)) display(node.initializer);
+        else if (ts.isShorthandPropertyAssignment(node) && displayProps.has(node.name.text)) {
+            display(node.name); display(node.objectAssignmentInitializer);
         }
+        else if (ts.isReturnStatement(node) && presentationReturn(node)) display(node.expression);
+        else if (ts.isArrowFunction(node) && !ts.isBlock(node.body) && presentationReturn(node.body)) display(node.body);
+        else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+            && ts.isPropertyAccessExpression(node.left)
+            && (displayProps.has(node.left.name.text) || ['textContent', 'innerText'].includes(node.left.name.text))) display(node.right);
+        else if (ts.isCallExpression(node) && isMessageCall(node.expression)) {
+            for (const argument of node.arguments.slice(1)) translationParameters(argument);
+        }
+        else if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+            && node.expression.name.text === 'setAttribute'
+            && node.arguments[0] && ts.isStringLiteral(node.arguments[0])
+            && displayProps.has(node.arguments[0].text)) display(node.arguments[1]);
         else if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
             && ['confirm', 'alert', 'prompt'].includes(node.expression.name.text)
             && node.expression.expression.getText(source) === 'window') display(node.arguments[0]);
@@ -85,6 +143,7 @@ export function scanConfig(configPath) {
         }
         for (const path of roots) {
             const full = resolve(root, path);
+            if (excluded.test(relative(root, full).replaceAll('\\', '/'))) throw new Error('Excluded source root: ' + full);
             if (!existsSync(full) || !statSync(full).isDirectory()) throw new Error('Missing source root: ' + full);
             walk(full);
         }
@@ -108,6 +167,11 @@ export function runRatchet(args) {
         || Object.values(previous.counts).some(value => !Number.isSafeInteger(value) || value < 0)
         || JSON.stringify(Object.keys(previous.counts).sort()) !== JSON.stringify(Object.keys(result.counts).sort()))) throw new Error('Invalid baseline or package set differs');
     const increases = previous ? Object.keys(result.counts).filter(name => result.counts[name] > previous.counts[name]) : [];
+    const decreases = previous ? Object.keys(result.counts).filter(name => result.counts[name] < previous.counts[name]) : [];
+    if (previous && !write && decreases.length && !increases.length) {
+        console.error(JSON.stringify({ error: 'stale baseline: run --write to lower counts', decreases, ...result }, null, 2));
+        return 1;
+    }
     if ((!previous && !write) || increases.length) {
         console.error(JSON.stringify({ error: previous ? 'display copy increased' : 'missing baseline', increases, ...result }, null, 2));
         return 1;

@@ -1,3 +1,9 @@
+import { createMessages } from '@schemastud/messages';
+import catalog from '../messages.default.json';
+import { formatMoneyWithMessages } from './money-internal';
+
+const english = createMessages(catalog.messages);
+
 /** Host-declared presentation only. Amounts remain in currency units, never integer cents. */
 export interface MoneyFormat {
     currency: string;
@@ -23,31 +29,5 @@ export const defaultMoneyFormat: Readonly<MoneyFormat> = {
 
 /** Charge rounding is presentation, not accounting. Cost/rate never hide a nonzero under the cap. */
 export function formatMoney(amount: number, options: MoneyOptions = {}, format: MoneyFormat = defaultMoneyFormat): string {
-    if (!Number.isFinite(amount)) throw new RangeError('Money amount must be finite');
-    const currency = new Intl.NumberFormat(format.locale ?? 'en-US', { style: 'currency', currency: format.currency });
-    // Intl types allow absent fraction digits; currency defaults normally supply them.
-    const minor = format.minorDigits ?? currency.resolvedOptions().maximumFractionDigits ?? 2;
-    const cap = format.costMaxDigits ?? 6;
-    for (const digits of [minor, cap]) {
-        if (!Number.isInteger(digits) || digits < 0 || digits > 20) throw new RangeError('Money digits must be an integer from 0 to 20');
-    }
-    if (options.basis === null) return 'Pricing unknown';
-    if (options.basis === 'unpriced') return 'Not priced';
-    if (amount === 0 && options.price) return 'Free';
-
-    const precise = options.mode === 'cost' || options.mode === 'rate';
-    const max = precise ? cap : minor;
-    const number = new Intl.NumberFormat(format.locale ?? 'en-US', {
-        style: 'currency', currency: format.currency,
-        minimumFractionDigits: Math.min(minor, max), maximumFractionDigits: max,
-    });
-    const replay = options.basis === 'replayed' ? ' · replayed' : '';
-    // A nonzero below half the final place would round to zero. Name its magnitude instead.
-    if (precise && amount !== 0 && Math.abs(amount) < 0.5 * 10 ** -max) {
-        const floor = number.format((amount < 0 ? -1 : 1) * 10 ** -max);
-        return `${amount < 0 ? 'greater than' : 'less than'} ${floor}${replay}`;
-    }
-    // Suppress both IEEE -0 and a negative charge that rounds to zero at the minor unit.
-    const value = amount === 0 || (!precise && Math.abs(amount) < 0.5 * 10 ** -minor) ? 0 : amount;
-    return `${number.format(value)}${replay}`;
+    return formatMoneyWithMessages(amount, options, format, english.t);
 }

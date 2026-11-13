@@ -1,4 +1,6 @@
 import { useFrameMessages } from '../messages';
+import { createMessages } from '@schemastud/messages';
+import catalog from '../../messages.default.json';
 import { useId } from 'react';
 import { displayLabel } from '@schemastud/seam';
 import { CardHeading, EmptyState } from './chrome';
@@ -113,19 +115,25 @@ export function forecastBoundary(points: readonly TrendPoint[]): TrendPoint | nu
 }
 
 /** The one-sentence description of the series the chart's `<title>` carries. */
-export function describeTrend(label: string, points: readonly TrendPoint[]): string {
-    if (points.length === 0) return `${label}: no periods.`;
+// The existing pure helper formats raw counts; widgets use their provider formatter.
+const trendDefaults = { ...createMessages(catalog.messages), number: (count: number) => String(count) };
 
+export function describeTrend(label: string, points: readonly TrendPoint[]): string {
+    return describeTrendWithMessages(label, points, trendDefaults);
+}
+
+/** The pure exported helper retains its English defaults; the widget supplies the active catalog. */
+function describeTrendWithMessages(label: string, points: readonly TrendPoint[], messages: ReturnType<typeof useFrameMessages>): string {
+    const { t, choice, number: fmt } = messages;
+    if (points.length === 0) return t("schemastud-frame::messages.trend.empty", { label });
     const first = points[0];
     const last = points[points.length - 1];
-    const span =
-        points.length === 1
-            ? `1 period, ${first.label}: ${first.display}${first.forecast ? ' (forecast)' : ''}`
-            : `${points.length} periods, ${first.label} to ${last.label}`;
+    if (points.length === 1) return choice(first.forecast ? "schemastud-frame::messages.trend.one_forecast" : "schemastud-frame::messages.trend.one", 1, { label, count: fmt(1), period: first.label, value: first.display });
     const forecast = points.filter((point) => point.forecast);
-    const forecastFrom = forecast.length > 0 && points.length > 1 ? `; ${forecast.length} forecast from ${forecast[0].label}` : '';
-
-    return `${label}: ${span}${forecastFrom}.`;
+    return choice(forecast.length ? "schemastud-frame::messages.trend.span_forecast" : "schemastud-frame::messages.trend.span", points.length, {
+        label, count: fmt(points.length), first: first.label, last: last.label,
+        forecast: fmt(forecast.length), forecastFrom: forecast[0]?.label ?? '',
+    });
 }
 
 // ── Geometry ────────────────────────────────────────────────────────────────────────────
@@ -168,7 +176,8 @@ const STROKE = {
  * so the lead is left to it.
  */
 export function TrendCard({ value, options, row }: CardWidgetProps<SummaryPayload>) {
-    const { t } = useFrameMessages();
+    const messages = useFrameMessages();
+    const { t } = messages;
     const titleId = useId();
     const figures = value?.figures ?? [];
     const label = displayLabel({ title: value?.label ?? row?.label }, value?.key);
@@ -193,7 +202,7 @@ export function TrendCard({ value, options, row }: CardWidgetProps<SummaryPayloa
                         </div>
                     ) : null}
                     {plotted.length > 0 ? (
-                        <TrendChart points={points} titleId={titleId} title={describeTrend(label, points)} />
+                        <TrendChart points={points} titleId={titleId} title={describeTrendWithMessages(label, points, messages)} />
                     ) : (
                         <EmptyState>{t("schemastud-frame::messages.no_plottable_periods")}</EmptyState>
                     )}
