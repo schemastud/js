@@ -40,10 +40,13 @@ it('a form uses translated submit copy unless the caller supplies submitText', (
 });
 
 it('a provider-free form retains English and explicit translator overrides', () => {
-    const { rerender } = render(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={bareTheme} />);
+    const view = render(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={bareTheme} />);
     expect(screen.getByRole('button', { name: 'Add' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Submit' })).toBeTruthy();
-    rerender(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={bareTheme} translateString={() => 'Host copy'} />);
+    // RJSF deepEquals deliberately considers functions equal. Exercise the
+    // explicit caller override on its own mount, separately from the English control.
+    view.unmount();
+    render(<SchemaForm schema={{ type: 'array', items: { type: 'string' } }} theme={bareTheme} translateString={() => 'Host copy'} />);
     expect(screen.getByRole('button', { name: 'Host copy' })).toBeTruthy();
 });
 
