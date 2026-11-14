@@ -1,6 +1,6 @@
 {
   "name": "@schemastud/frame",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "The batteries-included schema-driven admin editor rung atop @schemastud/seam + @schemastud/facets: resource-blind ListShell + EditShell, a three-seam injection bundle (transport, design-system primitives, URL-state), layered slots, and a resolveColumns seam. The shell renders any resource from its schema + a thin manifest entry, with no per-resource UI code.",
   "license": "MIT",
   "type": "module",
@@ -85,9 +85,9 @@
     "@schemastud/messages": ">=0.1.0 <1"
   },
   "dependencies": {
-    "@schemastud/facets": "^0.2.2",
-    "@schemastud/seam": "^0.2.2",
-    "@schemastud/ui": "^0.1.2"
+    "@schemastud/facets": "^0.3.0",
+    "@schemastud/seam": "^0.3.0",
+    "@schemastud/ui": "^0.2.0"
   },
   "devDependencies": {
     "@rjsf/core": "^6.0.0",
@@ -108,7 +108,7 @@
     "typescript": "^5.7.0",
     "vitest": "^4.1.10",
     "zustand": "^5.0.14",
-    "@schemastud/messages": "^0.1.0"
+    "@schemastud/messages": "^0.2.0"
   },
   "bin": {
     "frame-vocabulary": "bin/frame-vocabulary.mjs"

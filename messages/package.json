@@ -1,6 +1,6 @@
 {
   "name": "@schemastud/messages",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed Laravel-compatible messages, a React peer adapter and explicit JSON catalog collection.",
   "license": "MIT",
   "type": "module",

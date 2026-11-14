@@ -1,6 +1,6 @@
 {
     "name": "@schemastud/combobox",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "A host-agnostic async combobox: a searchable, debounced, keyboard-navigable select whose UI atoms (Popover, Input) are injected as props so it carries no design-system dependency. Fetches options through a caller-supplied search function — usable for navigation switchers, filter value pickers, or resource-ref widgets.",
     "license": "MIT",
     "type": "module",
@@ -39,7 +39,7 @@
         "@schemastud/messages": ">=0.1.0 <1"
     },
     "devDependencies": {
-        "@schemastud/ui": "^0.1.2",
+        "@schemastud/ui": "^0.2.0",
         "@testing-library/dom": "^10.4.1",
         "@testing-library/react": "^16.3.2",
         "@types/react": "^19.0.0",
@@ -49,7 +49,7 @@
         "tsup": "^8.5.1",
         "typescript": "^5.7.0",
         "vitest": "^4.1.10",
-        "@schemastud/messages": "^0.1.0"
+        "@schemastud/messages": "^0.2.0"
     },
     "schemastud": {
         "messages": {
