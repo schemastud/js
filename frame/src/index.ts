@@ -168,3 +168,5 @@ export {
     type FormIntentBus,
 } from '@schemastud/seam';
 export { useBrowserUrlState, type UseUrlState, type ListFiltersState } from '@schemastud/facets';
+// A nested FrameProvider's own list state, so two lists on one page keep their own filters and page (ticket 62).
+export { createMemoryUrlState } from './memoryUrlState';

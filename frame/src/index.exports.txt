@@ -106,6 +106,7 @@ value createFrameKit
 value createFrameRegistry
 value createGuardRegistry
 value createHttpTransport
+value createMemoryUrlState
 value createMountDispatcher
 value createResourceTransport
 value createRouteRegistry
