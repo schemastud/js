@@ -57,7 +57,7 @@ function packageCatalog(manifest, catalog) {
 }
 function validItem(key) {
     return /^[A-Za-z0-9_:/-]+(?:\.[A-Za-z0-9_:/-]+)+$/.test(key)
-        && !['resources', 'data', 'enums', 'actions', 'nav', 'groups'].includes(key.split('.')[0]);
+        && !['resources', 'data', 'enums', 'actions', 'nav', 'groups', 'realms'].includes(key.split('.')[0]);
 }
 
 /** Read declared root dependencies (including dev), transitive production dependencies and public workspaces, never execute catalog JS. */

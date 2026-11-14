@@ -143,3 +143,29 @@ it('does not follow transitive package devDependencies', () => {
     write(path, { ...JSON.parse(readFileSync(path, 'utf8')), devDependencies: { '@fixtures/uninstalled-test-tool': '1' } });
     expect(run(root, '--write').status).toBe(0);
 });
+
+
+it.each([
+    'realms.console.label',
+    'realms.console.capabilities.manage.title',
+    'realms.console.upsell.pro',
+])('refuses reserved realms key %s in package and host catalogs', key => {
+    const root = fixture();
+    const catalogPath = join(root, 'node_modules/@fixtures/one/messages.default.json');
+    const catalog = JSON.parse(readFileSync(catalogPath, 'utf8'));
+    write(catalogPath, { ...catalog, messages: { ['one::' + key]: 'Reserved' } });
+    const packageResult = run(root, '--write');
+    expect(packageResult.status).not.toBe(0);
+    expect(packageResult.stderr).toContain('Invalid catalog key/default: one::' + key);
+    write(catalogPath, catalog);
+    write(join(root, 'messages.default.json'), { version: 1, sourceLocale: 'en', messages: { [key]: 'Reserved' } });
+    const hostResult = run(root, '--host-catalog', 'messages.default.json', '--write');
+    expect(hostResult.status).not.toBe(0);
+    expect(hostResult.stderr).toContain('Invalid host key/default: ' + key);
+});
+
+it('keeps explicit messages.realms keys valid outside the reserved derived group', () => {
+    const root = fixture();
+    write(join(root, 'messages.default.json'), { version: 1, sourceLocale: 'en', messages: { 'messages.realms': 'Realms' } });
+    expect(run(root, '--host-catalog', 'messages.default.json', '--write').status).toBe(0);
+});
