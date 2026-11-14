@@ -40,20 +40,20 @@
         "prepack": "npm run build && npm run check:node"
     },
     "peerDependencies": {
-        "@rjsf/core": "^6.0.0",
-        "@rjsf/shadcn": "^6.0.0",
-        "@rjsf/utils": "^6.0.0",
-        "@rjsf/validator-ajv8": "^6.0.0",
+        "@rjsf/core": "~6.6.2",
+        "@rjsf/shadcn": "~6.6.2",
+        "@rjsf/utils": "~6.6.2",
+        "@rjsf/validator-ajv8": "~6.6.2",
         "ajv": "^8.12.0",
         "react": ">=18",
         "vite": ">=5",
         "@schemastud/messages": ">=0.1.0 <1"
     },
     "devDependencies": {
-        "@rjsf/core": "^6.0.0",
-        "@rjsf/shadcn": "^6.0.0",
-        "@rjsf/utils": "^6.0.0",
-        "@rjsf/validator-ajv8": "^6.0.0",
+        "@rjsf/core": "~6.6.2",
+        "@rjsf/shadcn": "~6.6.2",
+        "@rjsf/utils": "~6.6.2",
+        "@rjsf/validator-ajv8": "~6.6.2",
         "@testing-library/react": "^16.1.0",
         "@types/node": "^26.1.1",
         "@types/react": "^19.0.0",
