@@ -22,15 +22,25 @@ const shared: SharedContext = isShared(existing) ? existing : {
 if (existing === undefined) Reflect.set(globalThis, identity, shared);
 
 export interface MessageProviderProps {
-    value: ClientCatalog;
+    /**
+     * The catalog for this subtree, or `null` for "none served here": the provider then re-provides the outer
+     * provider's options unchanged (same object, so consumers don't re-render) and `pseudo` is ignored — the outer
+     * setting is inherited. At the root, `null` behaves exactly like no provider.
+     */
+    value: ClientCatalog | null;
+    /** Pseudo-localize this subtree's lines. Ignored when `value` is `null` (the outer setting applies). */
     pseudo?: boolean;
     children: ReactNode;
 }
 
-/** The context identity is shared; catalog values remain confined to this render tree. */
+/**
+ * The context identity is shared; catalog values remain confined to this render tree. Always renders the same
+ * Provider element, so switching `value` between a catalog and `null` never remounts the subtree.
+ */
 export function MessageProvider({ value, pseudo = false, children }: MessageProviderProps) {
-    const options = useMemo(() => ({ catalog: value, pseudo }), [value, pseudo]);
-    return createElement(shared.context.Provider, { value: options }, children);
+    const outer = useContext(shared.context);
+    const own = useMemo(() => (value === null ? null : { catalog: value, pseudo }), [value, pseudo]);
+    return createElement(shared.context.Provider, { value: value === null ? outer : own }, children);
 }
 
 export function useMessages<const D extends Readonly<Record<string, string>>>(defaults: D) {

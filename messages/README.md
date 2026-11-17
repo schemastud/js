@@ -37,6 +37,8 @@ Import `MessageProvider`, `useMessages` and `useMessageLocale` from `@schemastud
 </MessageProvider>
 ```
 
+`value` may be `null` when no catalog is served: the provider then passes the outer provider's options through unchanged (and ignores its own `pseudo`); at the root it is the same as no provider. Render `<MessageProvider value={catalog ?? null}>` rather than switching between a provider and a fragment, so a page that gains or loses a catalog keeps one tree shape and its state.
+
 `RichMessage` and `richMessage(messages, key, parts, { emphasis? })` render one complete translated sentence whose parameters are React nodes: each node travels as an opaque slot and is swapped back after translation, a slot used twice keeps distinct keys, and translated text is never parsed as markup. With `emphasis`, the line's `:emphasis_start` … `:emphasis_end` run is wrapped by it; `RichMessage` also takes `wrapText` for each plain-text run.
 
 ```tsx
