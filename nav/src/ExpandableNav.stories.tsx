@@ -83,6 +83,7 @@ const meta = {
         classes,
         renderLink,
         trackLabel: (t: string) => t,
+        groupLabel: (g: string) => g,
     },
 } satisfies Meta<typeof ExpandableNav>;
 

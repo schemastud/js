@@ -59,6 +59,13 @@ export type ExpandableNavProps = {
     trackOrder?: string[];
     /** Map a track key to its display label; defaults to the raw key. */
     trackLabel?: (track: string) => string;
+    /**
+     * Map a group key to its display label (the heading text only); defaults to the raw key.
+     * The group's identity stays the raw key: its persisted open/closed state, panel id
+     * (`aria-controls`) and React key don't change, so a translated heading keeps each
+     * reader's saved rail state across locales.
+     */
+    groupLabel?: (group: string) => string;
     /** localStorage key prefix for persisted open/closed group state. */
     storagePrefix?: string;
     /**
@@ -146,6 +153,7 @@ export function ExpandableNav({
     currentHref,
     trackOrder,
     trackLabel = (t) => t,
+    groupLabel = (g) => g,
     storagePrefix = 'schemastud-nav:open',
     initialGroupState = 'expanded',
     classes = {},
@@ -285,7 +293,7 @@ export function ExpandableNav({
                                     >
                                         {renderChevron(open)}
                                     </span>
-                                    <span>{group.group}</span>
+                                    <span>{groupLabel(group.group)}</span>
                                 </button>
                                 <div
                                     id={panelId}

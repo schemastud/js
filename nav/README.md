@@ -19,6 +19,8 @@ what you're importing, and tree-shaking keeps a consumer paying only for what it
 - **`<ExpandableNav>`.** A collapsible sidebar over the seam: `<button aria-expanded>`
   group disclosures, the active guide's group open on load, localStorage persistence,
   `initialGroupState: 'expanded' | 'collapsed'`, and injected `classes` + `renderLink`.
+  `trackLabel` and `groupLabel` map a track or group key to its display text (e.g. a
+  translated heading); the keys stay the identity, so persisted state survives a locale change.
   The only inline styles are the grid-rows collapse animation + chevron rotation, both
   suppressed under `prefers-reduced-motion`.
 - **`navTrail(tree, href)`.** The breadcrumb trail (track → group → page) derived from the
