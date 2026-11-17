@@ -40,10 +40,10 @@
         "prepack": "npm run build && npm run check:node"
     },
     "peerDependencies": {
-        "@rjsf/core": "~6.6.2",
-        "@rjsf/shadcn": "~6.6.2",
-        "@rjsf/utils": "~6.6.2",
-        "@rjsf/validator-ajv8": "~6.6.2",
+        "@rjsf/core": "~6.6.2 || ~6.7.x",
+        "@rjsf/shadcn": "~6.6.2 || ~6.7.x",
+        "@rjsf/utils": "~6.6.2 || ~6.7.x",
+        "@rjsf/validator-ajv8": "~6.6.2 || ~6.7.x",
         "ajv": "^8.12.0",
         "react": ">=18",
         "vite": ">=5",

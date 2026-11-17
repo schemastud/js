@@ -42,6 +42,8 @@
         "schemastud-seam::messages.rjsf.unsupported_field_with_reason": "Unsupported field schema: _:p1_.",
         "schemastud-seam::messages.rjsf.unsupported_field_with_id_and_reason": "Unsupported field schema for field `:p1`: _:p2_.",
         "schemastud-seam::messages.rjsf.files_info": "**:p1** (:p2, :p3 bytes)",
+        "schemastud-seam::messages.rjsf.expand_button": "Expand Cycle",
+        "schemastud-seam::messages.rjsf.cycle_detected": "Circular reference ($ref cycle) detected for field \":p1\". You may choose to expand to the next cycle break",
         "schemastud-seam::messages.submit": "Submit",
         "schemastud-seam::messages.validation.required": "must have required property :missingProperty",
         "schemastud-seam::messages.validation.type": "must be :type",

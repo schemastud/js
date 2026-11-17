@@ -73,10 +73,10 @@
     "frame:vocabulary": "tsup && node bin/frame-vocabulary.mjs --out vocabulary.default.json"
   },
   "peerDependencies": {
-    "@rjsf/core": "~6.6.2",
-    "@rjsf/shadcn": "~6.6.2",
-    "@rjsf/utils": "~6.6.2",
-    "@rjsf/validator-ajv8": "~6.6.2",
+    "@rjsf/core": "~6.6.2 || ~6.7.x",
+    "@rjsf/shadcn": "~6.6.2 || ~6.7.x",
+    "@rjsf/utils": "~6.6.2 || ~6.7.x",
+    "@rjsf/validator-ajv8": "~6.6.2 || ~6.7.x",
     "@tanstack/react-query": "^5.0.0",
     "lucide-react": ">=0.4.0",
     "react": ">=18",

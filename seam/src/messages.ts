@@ -44,6 +44,19 @@ const keys = {
     [TranslatableString.FilesInfo]: 'schemastud-seam::messages.rjsf.files_info',
 } satisfies Record<TranslatableString, keyof typeof catalog.messages>;
 
+/**
+ * The two members RJSF 6.7 added to `TranslatableString` (its `CyclicSchemaExpandTemplate` in core and shadcn). They are
+ * absent from the 6.6.2 enum seam builds against (its devDependencies stay `~6.6.2`), and RJSF hands `translateString`
+ * the member's VALUE, so they are keyed by value: under 6.6.2 nothing asks for them, under 6.7.x they localize like
+ * every other member. The values are 6.7.1's (`@rjsf/utils` lib/enums.js).
+ */
+export const rjsf67Keys = {
+    'Expand Cycle': 'schemastud-seam::messages.rjsf.expand_button',
+    'Circular reference ($ref cycle) detected for field "%1". You may choose to expand to the next cycle break':
+        'schemastud-seam::messages.rjsf.cycle_detected',
+} satisfies Record<string, keyof typeof catalog.messages>;
+const rjsf67Lookup = new Map<string, keyof typeof catalog.messages>(Object.entries(rjsf67Keys));
+
 // Only registered AJV keywords address catalog keys. Custom diagnostic text is
 // never treated as a key. Parameters are copied as scalars; RJSF owns its title
 // quoting and the originals are left intact for its subsequent projection.
@@ -88,7 +101,7 @@ const validationKeys = {
 export function useFormTranslation() {
     const messages = useMessages(catalog.messages);
     const translateString = useMemo<Registry['translateString']>(() => (string, parameters = []) => {
-        const key = keys[string];
+        const key = keys[string] ?? rjsf67Lookup.get(string);
         if (!key) return englishStringTranslator(string, parameters);
         const replacements: Record<string, string> = {};
         parameters.forEach((value, index) => { replacements['p' + (index + 1)] = value; });
