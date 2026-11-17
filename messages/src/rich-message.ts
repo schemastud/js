@@ -1,5 +1,6 @@
 import { createElement, Fragment, type ReactNode } from 'react';
 import type { Messages } from './index';
+import type { NoInfer_ } from './notice';
 
 const slot = (index: number) => `￼${index}￼`;
 const EMPHASIS_START = '￼0:￼';
@@ -45,8 +46,8 @@ export function RichMessage({ text, parts, wrapText, emphasis }: RichMessageProp
  */
 export function richMessage<K extends string>(
     messages: Messages<K>,
-    // The key must be one of the catalog's keys; NoInfer keeps a stray key from widening K (methods are bivariant).
-    key: NoInfer<K>,
+    // The key must be one of the catalog's keys; NoInfer_ keeps a stray key from widening K (methods are bivariant).
+    key: NoInfer_<K>,
     parts: Record<string, ReactNode>,
     options: { emphasis?: (children: ReactNode) => ReactNode } = {},
 ): ReactNode {

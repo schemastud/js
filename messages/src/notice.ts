@@ -1,6 +1,13 @@
 import type { MessageParameters, Messages } from './index';
 
 /**
+ * Blocks inference from a position, so a key outside the caller's catalog is a type error rather than widening `K`
+ * (Messages' methods are bivariant). The pre-TypeScript-5.4 spelling of `NoInfer`, which keeps the published
+ * declarations within the `typescript >=5` peer. Internal; not exported.
+ */
+export type NoInfer_<T> = [T][T extends unknown ? 0 : never];
+
+/**
  * A message kept in state or carried by a failure: a catalog line with its data, translated when it renders (so a live
  * locale switch re-renders it), a raw string a server or failure supplied (rendered as it arrived), or a sequence of
  * these. Plain data only (strings, `{key, parameters}` objects, arrays), so one runtime copy can render a notice another
@@ -15,7 +22,7 @@ export type Notice<K extends string = string> =
 export const notice = <K extends string>(key: K, parameters?: MessageParameters): Notice<K> => ({ key, parameters });
 
 /** Render a notice in the reader's current locale. */
-export function say<K extends string>(messages: Messages<K>, value: Notice<K>): string {
+export function say<K extends string>(messages: Messages<K>, value: Notice<NoInfer_<K>>): string {
     if (typeof value === 'string') return value;
     if (Array.isArray(value)) return value.map((part: Notice<K>) => say(messages, part)).join('');
     const line = value as { readonly key: K; readonly parameters?: MessageParameters };
@@ -31,7 +38,7 @@ const brand = Symbol.for('schemastud.messages.notice-error.v1');
 /** A thrown catalog message: callers render `notice` in the reader's locale; `message` is English, for logs. */
 export class NoticeError<K extends string = string> extends Error {
     readonly notice: Notice<K>;
-    constructor(notice: Notice<K>, messages: Messages<K>) {
+    constructor(notice: Notice<NoInfer_<K>>, messages: Messages<K>) {
         super(say(messages, notice));
         this.name = 'NoticeError';
         this.notice = notice;
@@ -65,7 +72,7 @@ function keysOf(value: Notice): string[] {
  * - any other `Error` (including another package's `NoticeError`): its English `message`;
  * - anything else: the fallback.
  */
-export function noticeOf<K extends string>(messages: Messages<K>, failure: unknown, fallback: Notice<NoInfer<K>>): Notice<K> {
+export function noticeOf<K extends string>(messages: Messages<K>, failure: unknown, fallback: Notice<NoInfer_<K>>): Notice<K> {
     if (isNoticeError(failure) && keysOf(failure.notice).every(key => messages.has(key))) return failure.notice as Notice<K>;
     if (failure instanceof Error) return failure.message;
     return fallback;

@@ -64,7 +64,7 @@ describe('noticeOf', () => {
         const shown = noticeOf(spanish, foreign, 'fallback');
         expect(shown).toBe('Other package failed');
         expect(() => say(spanish, shown)).not.toThrow();
-        const mixed = new NoticeError([notice('pkg::messages.failed'), notice('other::messages.boom')] as Notice<string>, createMessages({ ...defaults, 'other::messages.boom': 'Other package failed' }));
+        const mixed = new NoticeError([notice('pkg::messages.failed'), notice('other::messages.boom')], createMessages({ ...defaults, 'other::messages.boom': 'Other package failed' }));
         // One foreign key is enough to fall back: the whole English message, not a half-rendered notice.
         expect(noticeOf(spanish, mixed, 'fallback')).toBe('Could not saveOther package failed');
     });
@@ -81,5 +81,19 @@ describe('Messages.has', () => {
         expect(english.has('pkg::messages.saved')).toBe(true);
         expect(english.has('other::messages.boom')).toBe(false);
         expect(english.has('toString')).toBe(false);
+    });
+});
+
+describe('a misspelt key is a type error (REVIEW-66 M1)', () => {
+    it('in say, the NoticeError constructor and noticeOf\'s fallback', () => {
+        const typo = notice('pkg::messages.saevd');
+        // @ts-expect-error: a key outside the reader's catalog does not widen K.
+        expect(() => say(english, typo)).toThrow('Unknown message key');
+        // @ts-expect-error: the same for a thrown notice.
+        expect(() => new NoticeError(typo, english)).toThrow('Unknown message key');
+        // @ts-expect-error: and for the fallback a catch shows.
+        expect(noticeOf(english, undefined, typo)).toEqual(typo);
+        // A sequence that mixes a raw string and an own key still type-checks.
+        expect(say(english, ['· ', notice('pkg::messages.failed')])).toBe('· Could not save');
     });
 });
