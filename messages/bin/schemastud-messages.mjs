@@ -17,7 +17,7 @@ try {
         else throw new Error('Unknown, repeated or missing CLI argument: ' + flag);
     }
     if (!out) throw new Error('--out is required');
-    const bytes = collect(process.cwd(), hostCatalog, exclusions);
+    const bytes = collect(process.cwd(), hostCatalog, exclusions, warning => console.error('messages: warning: ' + warning));
     const target = resolve(out);
     if (write) {
         mkdirSync(dirname(target), { recursive: true });

@@ -60,13 +60,29 @@ function validItem(key) {
         && !['resources', 'data', 'enums', 'actions', 'nav', 'groups', 'realms'].includes(key.split('.')[0]);
 }
 
+/**
+ * The installed `@schemastud/messages` runtimes, checked once the whole tree is read. More than one copy is allowed when
+ * every copy declares the same `runtimeAbi` (one warning, the copy the host root resolves listed first); copies with
+ * different ABIs refuse, naming each copy and its ABI; a lone or shared ABI other than 1 refuses as before.
+ */
+function checkRuntimes(root, runtimes, warn) {
+    if (runtimes.size === 0) return;
+    const abis = new Set(runtimes.values());
+    const preferred = installed('@schemastud/messages', root);
+    const paths = [...runtimes.keys()].sort((a, b) => (a === preferred ? -1 : b === preferred ? 1 : a < b ? -1 : a > b ? 1 : 0));
+    const shown = path => relative(root, path) || '.';
+    if (abis.size > 1) fail('Mixed @schemastud/messages runtime ABIs: ' + paths.map(path => shown(path) + ' (runtimeAbi ' + runtimes.get(path) + ')').join(', '));
+    if (runtimes.values().next().value !== 1) fail('Incompatible messages runtime ABI');
+    if (runtimes.size > 1) warn('More than one installed @schemastud/messages runtime (' + runtimes.size + ', runtimeAbi 1 on each), collected once: ' + paths.map(shown).join(', '));
+}
+
 /** Read declared root dependencies (including dev), transitive production dependencies and public workspaces, never execute catalog JS. */
-export function collect(root, hostCatalog, exclusions = []) {
+export function collect(root, hostCatalog, exclusions = [], warn = () => {}) {
     root = realpathSync(root);
     const host = read(join(root, 'package.json'));
     const excluded = new Set(exclusions);
     const queue = [root, ...workspaces(root, host).filter(at => !read(join(at, 'package.json')).private)];
-    const visited = new Set(); const runtimes = new Set();
+    const visited = new Set(); const runtimes = new Map();
     const packages = new Map(); const namespaceOwners = new Map(); const messages = Object.create(null);
     for (let cursor = 0; cursor < queue.length; cursor++) {
         const at = realpathSync(queue[cursor]);
@@ -77,11 +93,7 @@ export function collect(root, hostCatalog, exclusions = []) {
             if (Object.hasOwn(manifest.schemastud ?? {}, 'messages')) fail('Excluded package carries a catalog: ' + manifest.name);
             continue;
         }
-        if (manifest.name === '@schemastud/messages') {
-            if (manifest.schemastud?.messages?.runtimeAbi !== 1) fail('Incompatible messages runtime ABI');
-            runtimes.add(at);
-            if (runtimes.size > 1) fail('More than one installed @schemastud/messages runtime');
-        }
+        if (manifest.name === '@schemastud/messages') runtimes.set(at, manifest.schemastud?.messages?.runtimeAbi);
         const path = catalogPath(at, manifest);
         if (path) {
             const catalog = read(path); packageCatalog(manifest, catalog);
@@ -106,6 +118,7 @@ export function collect(root, hostCatalog, exclusions = []) {
             else if (!excluded.has(name) && !Object.hasOwn(manifest.optionalDependencies ?? {}, name) && !manifest.peerDependenciesMeta?.[name]?.optional) fail('Missing installed production dependency: ' + name);
         }
     }
+    checkRuntimes(root, runtimes, warn);
     if (hostCatalog) {
         const catalog = read(resolve(root, hostCatalog));
         if (!object(catalog) || catalog.version !== 1 || catalog.sourceLocale !== 'en' || !object(catalog.messages)

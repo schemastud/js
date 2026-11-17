@@ -58,14 +58,57 @@ function addPeer(root: string, consumer: string) {
     const manifest = JSON.parse(readFileSync(path, 'utf8'));
     write(path, { ...manifest, peerDependencies: { '@schemastud/messages': '^0.1.0' } });
 }
-it('refuses multiple real runtime instances even when their versions are identical', () => {
-    const root = fixture();
-    addPeer(root, 'one'); addPeer(root, 'two');
-    runtime(join(root, 'node_modules/@schemastud/messages'));
-    runtime(join(root, 'node_modules/@fixtures/one/node_modules/@schemastud/messages'));
+// frame-foundation 64 (contract agreed with calcucrypt): a same-ABI duplicate runtime is allowed with one warning, the
+// copy the host root resolves listed first; mixed ABIs refuse naming each copy; a single copy is unchanged.
+const ROOT_COPY = 'node_modules/@schemastud/messages';
+const NESTED_COPY = 'node_modules/@fixtures/one/node_modules/@schemastud/messages';
+function oneRuntime() {
+    const root = fixture(); addPeer(root, 'one'); addPeer(root, 'two');
+    runtime(join(root, ROOT_COPY));
+    return root;
+}
+function twoRuntimes(rootAbi = 1, nestedAbi = 1) {
+    const root = fixture(); addPeer(root, 'one'); addPeer(root, 'two');
+    runtime(join(root, ROOT_COPY), rootAbi);
+    runtime(join(root, NESTED_COPY), nestedAbi);
+    return root;
+}
+
+it('allows two same-ABI runtimes with one warning, the root-resolved copy first, and collects the 1-copy output', () => {
+    const single = oneRuntime();
+    expect(run(single, '--write').status).toBe(0);
+    const root = twoRuntimes();
     const result = run(root, '--write');
-    expect(result.status).not.toBe(0);
-    expect(result.stderr).toContain('More than one');
+    expect(result.status).toBe(0);
+    const warnings = result.stderr.split('\n').filter(line => line.includes('More than one installed @schemastud/messages runtime'));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('(2,');
+    // The root-resolved copy is listed first, although the nested path sorts before it.
+    expect(warnings[0].indexOf(ROOT_COPY + ',')).toBeGreaterThan(-1);
+    expect(warnings[0].indexOf(ROOT_COPY + ',')).toBeLessThan(warnings[0].indexOf(NESTED_COPY));
+    expect(warnings[0]).not.toContain(root);
+    const collected = readFileSync(join(root, 'resources/beam/messages.json'), 'utf8');
+    expect(collected).toBe(readFileSync(join(single, 'resources/beam/messages.json'), 'utf8'));
+    // The comparison mode agrees and warns the same way.
+    const compare = run(root);
+    expect(compare.status).toBe(0);
+    expect(compare.stderr).toContain('More than one installed @schemastud/messages runtime');
+});
+
+it('refuses runtimes with different ABIs, naming each copy and its ABI, whichever copy is read first', () => {
+    for (const [rootAbi, nestedAbi] of [[1, 2], [2, 1]]) {
+        const result = run(twoRuntimes(rootAbi, nestedAbi), '--write');
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain('Mixed @schemastud/messages runtime ABIs');
+        expect(result.stderr).toContain(`${ROOT_COPY} (runtimeAbi ${rootAbi})`);
+        expect(result.stderr).toContain(`${NESTED_COPY} (runtimeAbi ${nestedAbi})`);
+    }
+});
+
+it('a single runtime collects as before, with no warning', () => {
+    const result = run(oneRuntime(), '--write');
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe('');
 });
 
 it('refuses a runtime with an incompatible declared ABI', () => {
