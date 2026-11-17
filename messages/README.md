@@ -68,20 +68,35 @@ counts to a committed baseline and never writes it. Comparison requires exact
 counts: a lower count refuses as a stale baseline until `--write` records the
 decrease, preventing removed copy from becoming a budget that can be spent again.
 `--write` initializes a
-missing baseline or lowers existing counts; an increase or package-set mismatch
-refuses. UI/frame budgets are zero. The optional TypeScript >=5 peer is needed
+missing baseline, lowers existing counts, or re-measures a baseline taken by another
+scanner; an increase under the same scanner, or a package-set mismatch, refuses. UI/frame budgets are zero. The optional TypeScript >=5 peer is needed
 only by this source scanner; the browser/core exports do not load it.
 
 Config v1: `{ "version": 1, "baseline": "./message-ratchet.baseline.json",
 "packages": { "package-name": ["src"] } }`. Roots resolve relative to the
 config file. Every named root must exist and must not itself be excluded. Counts are per
 package, including zero.
-The baseline is `{ "version": 1, "counts": { "package-name": 0 } }`.
+Optional `"notifiers"` (callee names; `x.*` is any method of `x`) replaces the default
+notifier list `toast`, `toast.{success,error,info,warning,message,loading}`, `notify`,
+`notifier.*`. Optional `"errorClasses"` lists error classes whose constructor's first
+argument is display copy (default none).
+
+The baseline is `{ "version": 1, "scanner": 2, "counts": { "package-name": 0 } }`. `scanner`
+names the census that measured it (a baseline without one was measured by scanner 1).
+A count rise under a different scanner fails with "scanner widened: re-measure with
+--write", never "display copy increased"; `--write` then records the new counts and
+scanner, and its PASS report lists each package's `remeasured` old → new count.
 
 The AST scan covers literal JSX text and display attributes (including accessible
 names), display object properties and parameter defaults, templates and logical
 fallbacks (including `&&`), local constants, returned formatting copy, DOM text and
-accessible-attribute writes, and window confirmation copy. Literal
+accessible-attribute writes, window confirmation copy, and (scanner 2) notifier
+calls' first argument and `description`, the returns of a helper called in a sink
+(declared in the same file or imported by relative path from the same package, one hop,
+whatever its name), constant lookups (`CONST[expr]`, `CONST.prop` on an unassigned const
+object or array literal), mapped literals (the tuple positions or properties an
+`ARR.map(cb)` callback renders, or all of `ARR` when the callback can't be traced; React
+keys never count), and opted-in error classes. Literal
 substitutions in message calls are also checked. Technical attributes, type
 syntax, tests/stories/fixtures, generated directories/declarations, dependencies and compiled
 output are excluded. Authored/server data and runtime-computed strings are not
@@ -95,6 +110,13 @@ repositories carry config/baseline data only: run this candidate's Node CLI
 against their config, with no install. Installing the released tool and wiring
 host commands is owed after release; its owning ticket is TBD by root. The
 workspace CI runs the read-only comparison as a required step.
+
+Every PASS and FAIL report carries `unscanned`, the shapes this census does not follow:
+(a) a field of an object returned by a helper that is not itself a sink (for example
+`deploySource().name`); (b) thrown `Error` text shown through `error.message`, unless its
+class is listed in `errorClasses`; (c) strings passed to another component's non-display
+prop that the component renders; (d) cross-package imports, and calls more than one hop
+from the sink.
 
 The ratchet is a conservative syntax scan, not exhaustive data-flow analysis. It
 does not follow a reassigned mutable local (for example `let error; error = COPY;

@@ -1,8 +1,9 @@
 {
   "version": 1,
+  "scanner": 2,
   "counts": {
     "@schemastud/ui": 0,
-    "@schemastud/blockdoc": 0,
+    "@schemastud/blockdoc": 1,
     "@schemastud/messages": 0,
     "@schemastud/facets": 0,
     "@schemastud/chat": 0,
