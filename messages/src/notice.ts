@@ -3,9 +3,11 @@ import type { MessageParameters, Messages } from './index';
 /**
  * Blocks inference from a position, so a key outside the caller's catalog is a type error rather than widening `K`
  * (Messages' methods are bivariant). The pre-TypeScript-5.4 spelling of `NoInfer`, which keeps the published
- * declarations within the `typescript >=5` peer. Internal; not exported.
+ * declarations within the `typescript >=5` peer. Internal: not exported, and rich-message.ts keeps its own copy, because a
+ * type shared between the root and `/react` makes the declaration bundler split a hashed chunk that a consumer's
+ * inferred types cannot name (TS2742).
  */
-export type NoInfer_<T> = [T][T extends unknown ? 0 : never];
+type NoInfer_<T> = [T][T extends unknown ? 0 : never];
 
 /**
  * A message kept in state or carried by a failure: a catalog line with its data, translated when it renders (so a live

@@ -1,6 +1,12 @@
 import { createElement, Fragment, type ReactNode } from 'react';
 import type { Messages } from './index';
-import type { NoInfer_ } from './notice';
+
+/**
+ * The pre-TypeScript-5.4 `NoInfer` (see notice.ts). A local copy on purpose: importing notice.ts from here would make
+ * it a module shared by both entries, and the declaration bundler would split a hashed chunk that consumers' inferred
+ * types cannot name (TS2742 in seam).
+ */
+type NoInfer_<T> = [T][T extends unknown ? 0 : never];
 
 const slot = (index: number) => `￼${index}￼`;
 const EMPHASIS_START = '￼0:￼';
