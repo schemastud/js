@@ -19,9 +19,10 @@ const contentExpression = text => /[*+?]/.test(text) && /^\s*(?:[a-z_][\w-]*[*+?
 /**
  * The census's version. A baseline records the scanner that measured it; a count rise under a different scanner is a
  * widening to re-measure, never "display copy increased". 2 adds notifier calls, helpers called in a sink, constant
- * lookups, mapped literals and opt-in error classes.
+ * lookups, mapped literals and opt-in error classes. 3 adds string defaults on parameters and destructured bindings
+ * that reach a sink, in their own function or one hop into a component of the same file (frame-foundation 68).
  */
-export const SCANNER = 2;
+export const SCANNER = 3;
 /** Notifier callees whose first argument (and an object argument's `description`) is display copy. `x.*` is any method of x. */
 export const DEFAULT_NOTIFIERS = ['toast', 'toast.success', 'toast.error', 'toast.info', 'toast.warning', 'toast.message', 'toast.loading', 'notify', 'notifier.*'];
 /** Shapes that reach the screen but this census does not follow. Printed on every PASS and FAIL; mirrored in the README. */
@@ -30,6 +31,7 @@ export const UNSCANNED = [
     'thrown Error text shown through `error.message`, unless its class is listed in the config\'s `errorClasses`',
     'strings passed to another component\'s non-display prop that the component renders',
     'cross-package imports, and calls more than one hop from the sink',
+    'a parameter default passed more than one hop, or passed to a component declared in another file',
 ];
 
 const unwrap = node => {
@@ -57,6 +59,8 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
     const imports = new Map();
     const mapCallbacks = new Map();
     const displayedFunctions = new Map();
+    /** 6: a same-file component's destructured props that reach a sink (component name → prop names). */
+    const displayedProps = new Map();
     const external = [];
     const errorClassSet = new Set(errorClasses);
     let following = true;
@@ -190,6 +194,7 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
             const bound = boundValues(node);
             if (bound) bound.forEach(value => display(value, visited));
             else if (constants.has(node.text) && !assigned.has(node.text) && !visited.has(node.text)) display(constants.get(node.text), new Set([...visited, node.text]));
+            else defaultReachesSink(node, visited);
         } else if (ts.isConditionalExpression(node)) { display(node.whenTrue, visited); display(node.whenFalse, visited); }
         // && renders only its right operand; the left is a condition (often an ID).
         else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken) display(node.right, visited);
@@ -206,6 +211,57 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
         else if (ts.isElementAccessExpression(node) || ts.isPropertyAccessExpression(node)) valuesOf(node).forEach(value => display(value, visited));
         else if (ts.isCallExpression(node) && following) sinkCall(node);
         else if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node) || ts.isSatisfiesExpression(node) || ts.isNonNullExpression(node)) display(node.expression, visited);
+    }
+    /**
+     * 6. A name that reaches a sink and is a parameter or destructured binding of an enclosing function: its string default
+     * is display copy (`navLabel = 'Account'` rendered as `label={navLabel}`). A component's destructured prop is recorded
+     * so the values passed to it in this file count too, one hop (see the pass after `visit`).
+     */
+    function defaultReachesSink(identifier, visited) {
+        const binding = bindingOf(identifier);
+        if (!binding) return;
+        if (binding.component && binding.prop) (displayedProps.get(binding.component) ?? displayedProps.set(binding.component, new Set()).get(binding.component)).add(binding.prop);
+        const key = 'default:' + binding.element.pos;
+        if (binding.element.initializer && !visited.has(key)) display(unwrap(binding.element.initializer), new Set([...visited, key]));
+    }
+    /** The parameter or destructured binding an identifier names, searching enclosing blocks and functions outward. */
+    function bindingOf(identifier) {
+        for (let parent = identifier.parent; parent; parent = parent.parent) {
+            if (ts.isBlock(parent)) {
+                for (const statement of parent.statements) {
+                    if (!ts.isVariableStatement(statement)) continue;
+                    for (const declaration of statement.declarationList.declarations) {
+                        const element = ts.isIdentifier(declaration.name) ? undefined : bindingIn(declaration.name, identifier.text);
+                        if (element) return { element };
+                    }
+                }
+            }
+            if (!ts.isFunctionLike(parent) || !parent.parameters) continue;
+            for (const [index, parameter] of parent.parameters.entries()) {
+                if (ts.isIdentifier(parameter.name)) { if (parameter.name.text === identifier.text) return { element: parameter }; continue; }
+                const element = bindingIn(parameter.name, identifier.text);
+                if (!element) continue;
+                const prop = index === 0 && ts.isObjectBindingPattern(parameter.name) && element.parent === parameter.name ? nameOf(element.propertyName ?? element.name) : undefined;
+                return { element, component: componentName(parent), prop };
+            }
+        }
+        return undefined;
+    }
+    function bindingIn(pattern, name) {
+        if (!ts.isObjectBindingPattern(pattern) && !ts.isArrayBindingPattern(pattern)) return undefined;
+        for (const element of pattern.elements) {
+            if (!ts.isBindingElement(element)) continue;
+            if (ts.isIdentifier(element.name) && element.name.text === name) return element;
+            const nested = bindingIn(element.name, name);
+            if (nested) return nested;
+        }
+        return undefined;
+    }
+    /** The file-level name a function is declared or bound under, when it is one (a component JSX can name). */
+    function componentName(fn) {
+        if (ts.isFunctionDeclaration(fn) && fn.name) return fn.name.text;
+        const holder = fn.parent && ts.isVariableDeclaration(fn.parent) ? fn.parent : fn.parent?.parent && ts.isCallExpression(fn.parent) && ts.isVariableDeclaration(fn.parent.parent) ? fn.parent.parent : undefined;
+        return holder && ts.isIdentifier(holder.name) ? holder.name.text : undefined;
     }
     /** A call used as a sink value: a local helper's returns count (2), an imported helper resolves one hop, `ARR.map` (4). */
     function sinkCall(node) {
@@ -282,7 +338,10 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
             translationParameters(constants.get(node.text), new Set([...visited, node.text]));
         }
     }
+    /** A `<style>` or `<script>` element's children are CSS or code, never display copy (68: a default reaching one). */
+    const technicalElement = node => ts.isJsxElement(node) && ts.isIdentifier(node.openingElement.tagName) && ['style', 'script'].includes(node.openingElement.tagName.text);
     function visit(node) {
+        if (technicalElement(node)) { node.openingElement.attributes.properties.forEach(visit); return; }
         if (ts.isJsxText(node)) add(node, node.getText(source));
         else if (ts.isJsxAttribute(node) && displayProps.has(node.name.text)) {
             const value = node.initializer;
@@ -325,6 +384,22 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
     }
     discoverMaps(source);
     visit(source);
+    // 6. one hop: a value passed to a same-file component's prop that reaches a sink counts (`brand={brand}` into a
+    // component rendering `{brand}`). The props recorded in this pass are not followed again.
+    const hop = new Map([...displayedProps].map(([name, props]) => [name, new Set(props)]));
+    (function attributes(node) {
+        if ((ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) && ts.isIdentifier(node.tagName) && hop.has(node.tagName.text)) {
+            const props = hop.get(node.tagName.text);
+            for (const attribute of node.attributes.properties) {
+                if (!ts.isJsxAttribute(attribute) || !ts.isIdentifier(attribute.name) || displayProps.has(attribute.name.text) || !props.has(attribute.name.text) || !attribute.initializer) continue;
+                // Only a passed binding (the default-passing shape). A literal passed to another component's prop stays
+                // unscanned shape (c), as agreed for 68.
+                const value = ts.isJsxExpression(attribute.initializer) ? unwrap(attribute.initializer.expression) : undefined;
+                if (value && ts.isIdentifier(value)) { const outer = sinkProp; sinkProp = attribute.name.text; try { defaultReachesSink(value, new Set()); } finally { sinkProp = outer; } }
+            }
+        }
+        ts.forEachChild(node, attributes);
+    })(source);
     // 2. helpers called in a sink (or by a sink in another file of the package): their returns count, one hop only.
     following = false;
     const called = new Map(displayedFunctions);

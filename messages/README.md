@@ -99,7 +99,11 @@ calls' first argument and `description`, the returns of a helper called in a sin
 whatever its name), constant lookups (`CONST[expr]`, `CONST.prop` on an unassigned const
 object or array literal), mapped literals (the tuple positions or properties an
 `ARR.map(cb)` callback renders, or all of `ARR` when the callback can't be traced; React
-keys never count), and opted-in error classes. In a `content` sink only, a ProseMirror
+keys never count), and opted-in error classes, and (scanner 3) the string default of a
+parameter or destructured binding whose name reaches a sink, in its own function or passed
+by name to a component of the same file that renders that prop (one hop: `navLabel =
+'Account'` rendered as `label={navLabel}` counts; a default that only reaches `className`
+or `variant` does not). In a `content` sink only, a ProseMirror
 content expression (lowercase node/group names with `|`, `()`, `{n,m}` and at least one
 `*`, `+` or `?`, such as `inline*`) is technical. Literal
 substitutions in message calls are also checked. Technical attributes, type
@@ -121,7 +125,8 @@ Every PASS and FAIL report carries `unscanned`, the shapes this census does not 
 `deploySource().name`); (b) thrown `Error` text shown through `error.message`, unless its
 class is listed in `errorClasses`; (c) strings passed to another component's non-display
 prop that the component renders; (d) cross-package imports, and calls more than one hop
-from the sink.
+from the sink; (e) a parameter default passed more than one hop, or passed to a component
+declared in another file.
 
 The ratchet is a conservative syntax scan, not exhaustive data-flow analysis. It
 does not follow a reassigned mutable local (for example `let error; error = COPY;

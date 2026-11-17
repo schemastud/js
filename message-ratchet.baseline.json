@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "scanner": 2,
+  "scanner": 3,
   "counts": {
     "@schemastud/ui": 0,
     "@schemastud/blockdoc": 0,

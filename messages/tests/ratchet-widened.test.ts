@@ -105,6 +105,38 @@ const sinks: { name: string; files: Record<string, string>; counts: string[]; mi
         counts: [],
         misses: ['Not opted in'],
     },
+    {
+        name: '6. a string default that reaches a display prop, aria-label or JSX text in its own function',
+        files: { 'shell.tsx': [
+            // frame-foundation 68's AccountShell shape: neither name is a display prop, but both values are rendered.
+            'export function Shell({ navLabel = "Account", menuLabel = "Open navigation", className = "min-w-0 space-y-4", variant = "inset", mode = "desk" }: P) {',
+            '  return <nav label={navLabel} className={className} data-variant={variant}><Trigger aria-label={menuLabel} />{mode === "desk" ? null : <i />}</nav>;',
+            '}',
+            'export const Banner = ({ greeting = "Welcome back", note, fallback = "Nothing yet" }: P) => <h1>{greeting}<small>{note ?? fallback}</small></h1>;',
+            'export function Body(props: P) { const { bodyText = "Body default", storagePrefix = "app:open" } = props; localStorage.setItem(storagePrefix, "1"); return <p>{bodyText}</p>; }',
+            'export function Toast({ who = "someone" }: P) { const m = useM(); return <p>{m.t("k", { who })}</p>; }',
+            // A default rendered into <style> (beam-ux Prose: css = PROSE_CSS) or <script> is CSS or code, not copy.
+            'const SHEET = "[data-prose] a { color: red }"; export function Prose({ css = SHEET, boot = "window.go()" }: P) { return <><style>{css}</style><script>{boot}</script><style>Inline sheet text</style></>; }',
+        ].join('\n') },
+        counts: ['Account', 'Open navigation', 'Welcome back', 'Nothing yet', 'Body default', 'someone'],
+        misses: ['min-w-0 space-y-4', 'inset', 'desk', 'app:open', '[data-prose] a { color: red }', 'window.go()', 'Inline sheet text'],
+    },
+    {
+        name: '6. one hop: a default passed to a same-file component that renders it; never into another file',
+        files: {
+            'remote.tsx': 'export function Remote({ tagline }: { tagline: string }) { return <p>{tagline}</p>; }',
+            'editor.tsx': [
+                'import { Remote } from "./remote";',
+                'function Bar({ brand, size }: { brand: string; size: string }) { return <span className={size}>{brand}</span>; }',
+                'export function Editor({ brand = "visual editor", size = "compact", tagline = "Imported copy" }: P) {',
+                '  return <><Bar brand={brand} size={size} /><Bar brand="Literal to a component" size="lg" /><Remote tagline={tagline} /></>;',
+                '}',
+            ].join('\n'),
+        },
+        counts: ['visual editor'],
+        // A literal passed to another component stays unscanned shape (c); only a passed default counts.
+        misses: ['compact', 'Imported copy', 'Literal to a component', 'lg'],
+    },
 ];
 
 describe('the widened census', () => {
@@ -119,7 +151,7 @@ describe('the widened census', () => {
         writeFileSync(join(root, 'src/view.tsx'), 'export const View = () => <p>Hello</p>;');
         const pass = run(root, '--write');
         expect(pass.status).toBe(0);
-        expect(JSON.parse(pass.stdout).unscanned).toHaveLength(4);
+        expect(JSON.parse(pass.stdout).unscanned).toHaveLength(5);
         writeFileSync(join(root, 'src/view.tsx'), 'export const View = () => <p>Hello <b>again</b></p>;');
         const fail = run(root);
         expect(fail.status).toBe(1);
@@ -138,7 +170,7 @@ describe('the widened census', () => {
         const remeasured = run(root, '--write');
         expect(remeasured.status, remeasured.stderr).toBe(0);
         expect(JSON.parse(remeasured.stdout).remeasured).toEqual({ fixture: { from: 1, to: 2 } });
-        expect(JSON.parse(readFileSync(join(root, 'baseline.json'), 'utf8'))).toEqual({ version: 1, scanner: 2, counts: { fixture: 2 } });
+        expect(JSON.parse(readFileSync(join(root, 'baseline.json'), 'utf8'))).toEqual({ version: 1, scanner: 3, counts: { fixture: 2 } });
         expect(run(root).status).toBe(0);
     });
 
@@ -148,9 +180,23 @@ describe('the widened census', () => {
         writeFileSync(join(root, 'baseline.json'), JSON.stringify({ version: 1, counts: { fixture: 1 } }));
         const unchanged = run(root);
         expect(unchanged.status).toBe(1);
-        expect(unchanged.stderr).toContain('scanner widened: re-measure with --write (baseline scanner 1, scanner 2)');
+        expect(unchanged.stderr).toContain('scanner widened: re-measure with --write (baseline scanner 1, scanner 3)');
         expect(run(root, '--write').status).toBe(0);
-        expect(JSON.parse(readFileSync(join(root, 'baseline.json'), 'utf8')).scanner).toBe(2);
+        expect(JSON.parse(readFileSync(join(root, 'baseline.json'), 'utf8')).scanner).toBe(3);
+        expect(run(root).status).toBe(0);
+    });
+
+    it('a scanner-2 baseline asks for a re-measure under scanner 3 (frame-foundation 68)', () => {
+        const root = fixture();
+        writeFileSync(join(root, 'src/view.tsx'), 'export const View = ({ heading2 = "Shown default" }) => <p>{heading2}</p>;');
+        writeFileSync(join(root, 'baseline.json'), JSON.stringify({ version: 1, scanner: 2, counts: { fixture: 0 } }));
+        const widened = run(root);
+        expect(widened.status).toBe(1);
+        expect(widened.stderr).toContain('scanner widened: re-measure with --write (baseline scanner 2, scanner 3)');
+        expect(widened.stderr).not.toContain('display copy increased');
+        const remeasured = run(root, '--write');
+        expect(remeasured.status, remeasured.stderr).toBe(0);
+        expect(JSON.parse(remeasured.stdout).remeasured).toEqual({ fixture: { from: 0, to: 1 } });
         expect(run(root).status).toBe(0);
     });
 
