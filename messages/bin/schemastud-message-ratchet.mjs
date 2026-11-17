@@ -8,6 +8,13 @@ const displayProps = new Set(['title', 'label', 'placeholder', 'description', 'a
 const excluded = /(^|\/)(?:tests?|testing|__tests__|__fixtures__|fixtures|stories|generated|node_modules|vendor|dist|build|coverage|\.git)(\/|$)|\.(?:test|spec|stories|story|d)\.[cm]?[jt]sx?$|(?:story-harness|fixtures)\.[jt]sx?$/;
 const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.mjs', '.cjs']);
 const hasCopy = text => /\p{L}/u.test(text);
+/**
+ * A ProseMirror content expression ('inline*', '(paragraph | heading)+', 'block+ inline*'): lowercase-initial node/group
+ * names, spaces, `|`, `()`, `{n,m}` and at least one `*+?` quantifier. Technical in a `content` sink only; a sentence
+ * ('Read more?') keeps its capital and still counts.
+ */
+const contentExpression = text => /[*+?]/.test(text) && /^\s*(?:[a-z_][\w-]*[*+?]?|\(|\)[*+?]?|\||\{\d+(?:,\d*)?\}|\s)+$/.test(text)
+    && /^(?:[^*+?]*?(?:[\w)}])[*+?])+[^*+?]*$/.test(text.replace(/\s+/g, ''));
 
 /**
  * The census's version. A baseline records the scanner that measured it; a count rise under a different scanner is a
@@ -38,7 +45,7 @@ const matchesCallee = (text, patterns) => patterns.some(pattern => pattern.endsW
  * calls, helpers and constant lookups that feed a sink, mapped literals, and opted-in error classes. `external` lists
  * sink calls to functions imported by relative path (the package scan resolves them one hop).
  */
-function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClasses = [], helpers = new Set() } = {}) {
+function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClasses = [], helpers = new Map() } = {}) {
     const source = ts.createSourceFile(filename, contents, ts.ScriptTarget.Latest, true,
         /\.[jt]sx$/.test(filename) ? ts.ScriptKind.TSX : /\.[cm]?js$/.test(filename) ? ts.ScriptKind.JS : ts.ScriptKind.TS);
     if (source.parseDiagnostics.length) throw new Error('Cannot parse source: ' + filename);
@@ -49,10 +56,13 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
     const functions = new Map();
     const imports = new Map();
     const mapCallbacks = new Map();
-    const displayedFunctions = new Set();
+    const displayedFunctions = new Map();
     const external = [];
     const errorClassSet = new Set(errorClasses);
     let following = true;
+    /** The display-prop name of the sink being evaluated; 'content' admits ProseMirror content expressions as technical. */
+    let sinkProp = null;
+    const inSink = (prop, node) => { const outer = sinkProp; sinkProp = prop; try { display(node); } finally { sinkProp = outer; } };
     function discover(node) {
         if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
             if (constants.has(node.name.text)) assigned.add(node.name.text);
@@ -90,6 +100,7 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
     }
     function add(node, text) {
         if (!hasCopy(text)) return;
+        if (sinkProp === 'content' && contentExpression(text)) return;
         const start = node.getStart(source);
         findings.set(start, { file: filename, start, end: node.end, kind: ts.SyntaxKind[node.kind], line: source.getLineAndCharacterOfPosition(start).line + 1, text: text.trim() });
     }
@@ -187,7 +198,7 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
         } else if (ts.isArrayLiteralExpression(node)) { for (const element of node.elements) display(element, visited); }
         else if (ts.isObjectLiteralExpression(node)) {
             for (const property of node.properties) {
-                if (ts.isPropertyAssignment(property) && isDisplayProperty(property)) display(property.initializer, visited);
+                if (ts.isPropertyAssignment(property) && isDisplayProperty(property)) { const outer = sinkProp; sinkProp = nameOf(property.name); try { display(property.initializer, visited); } finally { sinkProp = outer; } }
                 else if (ts.isShorthandPropertyAssignment(property) && displayProps.has(property.name.text)) display(property.name, visited);
             }
         }
@@ -200,8 +211,8 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
     function sinkCall(node) {
         const callee = unwrap(node.expression);
         if (ts.isIdentifier(callee)) {
-            if (functions.has(callee.text)) displayedFunctions.add(callee.text);
-            else if (imports.has(callee.text)) external.push(imports.get(callee.text));
+            if (functions.has(callee.text)) (displayedFunctions.get(callee.text) ?? displayedFunctions.set(callee.text, new Set()).get(callee.text)).add(sinkProp);
+            else if (imports.has(callee.text)) external.push({ ...imports.get(callee.text), sinkProp });
             return;
         }
         if (ts.isPropertyAccessExpression(callee) && callee.name.text === 'map') {
@@ -275,11 +286,11 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
         if (ts.isJsxText(node)) add(node, node.getText(source));
         else if (ts.isJsxAttribute(node) && displayProps.has(node.name.text)) {
             const value = node.initializer;
-            display(value && ts.isJsxExpression(value) ? value.expression : value);
+            inSink(node.name.text, value && ts.isJsxExpression(value) ? value.expression : value);
         } else if (ts.isJsxExpression(node) && node.parent && !ts.isJsxAttribute(node.parent)) display(node.expression);
         else if (ts.isBindingElement(node) && displayProps.has(nameOf(node.propertyName) ?? nameOf(node.name))) display(node.initializer);
         else if (ts.isParameter(node) && displayProps.has(nameOf(node.name))) display(node.initializer);
-        else if (ts.isPropertyAssignment(node) && isDisplayProperty(node)) display(node.initializer);
+        else if (ts.isPropertyAssignment(node) && isDisplayProperty(node)) inSink(nameOf(node.name), node.initializer);
         else if (ts.isShorthandPropertyAssignment(node) && displayProps.has(node.name.text)) {
             display(node.name); display(node.objectAssignmentInitializer);
         }
@@ -287,7 +298,7 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
         else if (ts.isArrowFunction(node) && !ts.isBlock(node.body) && presentationReturn(node.body)) display(node.body);
         else if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
             && ts.isPropertyAccessExpression(node.left)
-            && (displayProps.has(node.left.name.text) || ['textContent', 'innerText'].includes(node.left.name.text))) display(node.right);
+            && (displayProps.has(node.left.name.text) || ['textContent', 'innerText'].includes(node.left.name.text))) inSink(node.left.name.text, node.right);
         else if (ts.isCallExpression(node) && isMessageCall(node.expression)) {
             for (const argument of node.arguments.slice(1)) translationParameters(argument);
         }
@@ -316,11 +327,14 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
     visit(source);
     // 2. helpers called in a sink (or by a sink in another file of the package): their returns count, one hop only.
     following = false;
-    for (const name of new Set([...displayedFunctions, ...helpers])) {
+    const called = new Map(displayedFunctions);
+    for (const [name, props] of helpers) for (const prop of props) (called.get(name) ?? called.set(name, new Set()).get(name)).add(prop);
+    for (const [name, props] of called) {
         const fn = functions.get(name);
         if (!fn) continue;
-        if (fn.body && !ts.isBlock(fn.body)) display(fn.body);
-        else forEachReturn(fn, statement => display(statement.expression));
+        const prop = props.size === 1 && props.has('content') ? 'content' : null;
+        if (fn.body && !ts.isBlock(fn.body)) inSink(prop, fn.body);
+        else forEachReturn(fn, statement => inSink(prop, statement.expression));
     }
     return { findings: [...findings.values()].sort((a, b) => a.line - b.line), external };
 }
@@ -345,6 +359,7 @@ export function scanConfig(configPath) {
     for (const key of ['notifiers', 'errorClasses']) {
         if (config[key] !== undefined && (!Array.isArray(config[key]) || config[key].some(value => typeof value !== 'string' || !value))) throw new Error(`Invalid ratchet config v1: ${key} must be a list of names`);
     }
+    if (config.notifiers !== undefined && !config.notifiers.length) throw new Error('Invalid ratchet config v1: notifiers must name at least one callee (sink 1 has no off switch)');
     const options = { notifiers: config.notifiers ?? DEFAULT_NOTIFIERS, errorClasses: config.errorClasses ?? [] };
     const baseline = resolve(root, config.baseline);
     if (relative(root, baseline).startsWith('..') || relative(root, baseline) === '') throw new Error('Baseline must be a file within the config directory');
@@ -372,7 +387,9 @@ export function scanConfig(configPath) {
         const helpers = new Map();
         for (const [file, result] of first) for (const call of result.external) {
             const target = resolveImport(file, call.specifier, files);
-            if (target) (helpers.get(target) ?? helpers.set(target, new Set()).get(target)).add(call.name);
+            if (!target) continue;
+            const names = helpers.get(target) ?? helpers.set(target, new Map()).get(target);
+            (names.get(call.name) ?? names.set(call.name, new Set()).get(call.name)).add(call.sinkProp);
         }
         findings[name] = sorted.flatMap(file => (helpers.has(file) ? scanFile(file, readFileSync(file, 'utf8'), { ...options, helpers: helpers.get(file) }) : first.get(file)).findings)
             .map(item => ({ ...item, file: relative(root, item.file).replaceAll('\\', '/') }));
@@ -400,12 +417,12 @@ export function runRatchet(args) {
     const increases = previous ? Object.keys(result.counts).filter(name => result.counts[name] > previous.counts[name]) : [];
     const decreases = previous ? Object.keys(result.counts).filter(name => result.counts[name] < previous.counts[name]) : [];
     const report = { ...result, unscanned: UNSCANNED };
-    if (previous && !write && decreases.length && !increases.length) {
-        console.error(JSON.stringify({ error: 'stale baseline: run --write to lower counts', decreases, ...report }, null, 2));
+    if (widened && !write) {
+        console.error(JSON.stringify({ error: `scanner widened: re-measure with --write (baseline scanner ${previous.scanner ?? 1}, scanner ${SCANNER})`, increases, decreases, ...report }, null, 2));
         return 1;
     }
-    if (increases.length && widened && !write) {
-        console.error(JSON.stringify({ error: `scanner widened: re-measure with --write (baseline scanner ${previous.scanner ?? 1}, scanner ${SCANNER})`, increases, ...report }, null, 2));
+    if (previous && !write && decreases.length && !increases.length) {
+        console.error(JSON.stringify({ error: 'stale baseline: run --write to lower counts', decreases, ...report }, null, 2));
         return 1;
     }
     // --write lowers counts, initializes a missing baseline, or re-measures under a widened scanner; it never absorbs new copy.

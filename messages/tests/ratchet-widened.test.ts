@@ -142,6 +142,29 @@ describe('the widened census', () => {
         expect(run(root).status).toBe(0);
     });
 
+    it('any scanner mismatch asks for a re-measure, even when no count rose', () => {
+        const root = fixture();
+        writeFileSync(join(root, 'src/view.tsx'), 'export const View = () => <p>Hello</p>;');
+        writeFileSync(join(root, 'baseline.json'), JSON.stringify({ version: 1, counts: { fixture: 1 } }));
+        const unchanged = run(root);
+        expect(unchanged.status).toBe(1);
+        expect(unchanged.stderr).toContain('scanner widened: re-measure with --write (baseline scanner 1, scanner 2)');
+        expect(run(root, '--write').status).toBe(0);
+        expect(JSON.parse(readFileSync(join(root, 'baseline.json'), 'utf8')).scanner).toBe(2);
+        expect(run(root).status).toBe(0);
+    });
+
+    it('a ProseMirror content expression is technical in a content sink only', () => {
+        const found = texts(fixture(), { 'schema.ts': [
+            'const spec = { content: "inline*", group: "block" }; spec.content = "(paragraph | heading)+";',
+            'function contentFor(leaf: boolean) { return leaf ? "block+ inline*" : "text*" }',
+            'const node = { content: contentFor(true) };',
+            'const card = { content: "Read more?", title: "inline*" };',
+        ].join('\n') });
+        for (const text of ['inline*', '(paragraph | heading)+', 'block+ inline*', 'text*']) expect(found.filter((t) => t === text).length, text).toBe(text === 'inline*' ? 1 : 0);
+        expect(found).toContain('Read more?');
+    });
+
     it('a matched scanner behaves as before: a rise is new copy and --write refuses it', () => {
         const root = fixture();
         writeFileSync(join(root, 'src/view.tsx'), 'export const View = () => <p>Hello</p>;');
@@ -154,7 +177,7 @@ describe('the widened census', () => {
     });
 
     it('refuses a malformed notifier or error-class list', () => {
-        for (const extra of [{ notifiers: 'toast' }, { errorClasses: [1] }, { notifiers: [''] }]) {
+        for (const extra of [{ notifiers: 'toast' }, { errorClasses: [1] }, { notifiers: [''] }, { notifiers: [] }]) {
             const root = fixture(extra);
             writeFileSync(join(root, 'src/view.tsx'), 'export const View = () => <p>Hello</p>;');
             const result = run(root, '--write');

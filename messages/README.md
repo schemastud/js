@@ -78,14 +78,17 @@ config file. Every named root must exist and must not itself be excluded. Counts
 package, including zero.
 Optional `"notifiers"` (callee names; `x.*` is any method of `x`) replaces the default
 notifier list `toast`, `toast.{success,error,info,warning,message,loading}`, `notify`,
-`notifier.*`. Optional `"errorClasses"` lists error classes whose constructor's first
-argument is display copy (default none).
+`notifier.*`; the list must name at least one callee (sink 1 has no off switch). A bare
+name such as `notify` matches any function called `notify`, whatever it does. Optional
+`"errorClasses"` lists error classes whose constructor's first argument is display copy
+(default none).
 
 The baseline is `{ "version": 1, "scanner": 2, "counts": { "package-name": 0 } }`. `scanner`
 names the census that measured it (a baseline without one was measured by scanner 1).
-A count rise under a different scanner fails with "scanner widened: re-measure with
---write", never "display copy increased"; `--write` then records the new counts and
-scanner, and its PASS report lists each package's `remeasured` old → new count.
+A baseline from a different scanner fails the comparison with "scanner widened:
+re-measure with --write", whether or not a count rose, never "display copy increased";
+`--write` then records the new counts and scanner, and its PASS report lists each
+package's `remeasured` old → new count.
 
 The AST scan covers literal JSX text and display attributes (including accessible
 names), display object properties and parameter defaults, templates and logical
@@ -96,7 +99,9 @@ calls' first argument and `description`, the returns of a helper called in a sin
 whatever its name), constant lookups (`CONST[expr]`, `CONST.prop` on an unassigned const
 object or array literal), mapped literals (the tuple positions or properties an
 `ARR.map(cb)` callback renders, or all of `ARR` when the callback can't be traced; React
-keys never count), and opted-in error classes. Literal
+keys never count), and opted-in error classes. In a `content` sink only, a ProseMirror
+content expression (lowercase node/group names with `|`, `()`, `{n,m}` and at least one
+`*`, `+` or `?`, such as `inline*`) is technical. Literal
 substitutions in message calls are also checked. Technical attributes, type
 syntax, tests/stories/fixtures, generated directories/declarations, dependencies and compiled
 output are excluded. Authored/server data and runtime-computed strings are not
