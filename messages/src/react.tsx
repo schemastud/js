@@ -41,3 +41,5 @@ export function useMessages<const D extends Readonly<Record<string, string>>>(de
 export function useMessageLocale(): string {
     return useContext(shared.context)?.catalog?.locale ?? 'en-US';
 }
+
+export { RichMessage, richMessage, type RichMessageProps } from './rich-message';

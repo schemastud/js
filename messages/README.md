@@ -12,6 +12,20 @@ messages.t('messages.saved', { name: 'Ada' });
 
 `number`, `date`, `relativeTime`, and `list` use the requested catalog locale. Without a catalog, formatters use `en-US`, realm is null and direction is `ltr`. Scalar parameters are strings, finite numbers, booleans or null; replacement is one pass and supports Laravel's capitalization variants. `pseudo: true` marks and expands text before substitution, preserving parameter values.
 
+## Notices (root entry)
+
+A failure or a stored status message stays a `Notice`, translated when it renders, so a live locale switch re-renders it. Never store `m.t(...)`. These helpers are React-free and live at the root; `/react` does not re-export them.
+
+```ts
+import { notice, say, NoticeError, isNoticeError, noticeOf, type Notice } from '@schemastud/messages';
+const saved: Notice<Key> = notice('pkg::messages.saved', { name: 'Ada' }); // plain data: strings, {key, parameters}, arrays
+say(m, saved);                                              // in the reader's locale
+throw new NoticeError(notice('pkg::messages.failed'), englishMessages); // `.message` stays English for logs
+noticeOf(m, caught, notice('pkg::messages.failed'));       // what a catch shows
+```
+
+`isNoticeError` checks a brand (`Symbol.for('schemastud.messages.notice-error.v1')`) and the notice's shape, so it recognises an error from another installed copy of this runtime, where `instanceof` is false; catch with it, never `instanceof NoticeError`. `noticeOf(messages, failure, fallback)` returns a `NoticeError`'s notice only when `messages.has(key)` holds for every key in it; another package's `NoticeError` shows as its English `message`, and any other `Error` as its `message`. `Messages.has(key)` answers whether a key belongs to the catalog.
+
 ## React
 
 Import `MessageProvider`, `useMessages` and `useMessageLocale` from `@schemastud/messages/react`. Mount the provider beside the host's frame kit, outside its construction. Its `value` is a `ClientCatalog`:
@@ -21,6 +35,12 @@ Import `MessageProvider`, `useMessages` and `useMessageLocale` from `@schemastud
   messages: { 'messages.saved': { text: 'Guardado :name', sourceLocale: 'es' } } }}>
   <App />
 </MessageProvider>
+```
+
+`RichMessage` and `richMessage(messages, key, parts, { emphasis? })` render one complete translated sentence whose parameters are React nodes: each node travels as an opaque slot and is swapped back after translation, a slot used twice keeps distinct keys, and translated text is never parsed as markup. With `emphasis`, the line's `:emphasis_start` … `:emphasis_end` run is wrapped by it; `RichMessage` also takes `wrapText` for each plain-text run.
+
+```tsx
+richMessage(m, 'pkg::messages.invited', { email: <b>{email}</b>, team: <b>{team}</b> });
 ```
 
 Hooks work without a provider using English defaults. The context identity is shared through `Symbol.for('schemastud.messages.context.v1')`; catalogs remain scoped to each React render tree, including SSR. An incompatible ABI or React version refuses initialization. The installed dependency graph must contain one real messages runtime: the collector rejects duplicate copies even when versions match. Keep React and this package as peer dependencies in consuming packages.

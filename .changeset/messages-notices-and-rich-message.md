@@ -1,0 +1,5 @@
+---
+'@schemastud/messages': minor
+---
+
+The root entry exports the Notice primitives: `Notice`, `notice`, `say`, `NoticeError` (`new NoticeError(notice, englishMessages)`; `.message` stays English), `isNoticeError` (a brand that holds across installed copies of the runtime, where `instanceof` does not) and `noticeOf(messages, failure, fallback)`, which returns a notice only when the reader's catalog owns its keys. `Messages` gains `has(key)`. `@schemastud/messages/react` exports `RichMessage` and `richMessage(messages, key, parts, { emphasis? })` for sentences whose parameters are React nodes. These replace the per-package `message-descriptor`/`rich-message` copies, which consumers delete at their repin; nothing is re-exported from `/react`. Also recorded here: `schemastud-message-ratchet` scanner 2 (frame-foundation 65, shipped without a changeset) counts notifier arguments, the returns of helpers called in a sink, constant lookups, mapped literals and opted-in error classes, and a baseline from another scanner fails with "scanner widened: re-measure with --write".

@@ -122,6 +122,13 @@ const sinks: { name: string; files: Record<string, string>; counts: string[]; mi
         misses: ['min-w-0 space-y-4', 'inset', 'desk', 'app:open', '[data-prose] a { color: red }', 'window.go()', 'Inline sheet text'],
     },
     {
+        // frame-foundation 66: a richMessage key is catalog use; the shared helper adds no raw copy.
+        name: '66. a richMessage(m, key, parts) key is not raw copy',
+        files: { 'view.tsx': 'import { richMessage } from "@schemastud/messages/react"; export const View = ({ m }: P) => <p>{richMessage(m, "pkg::messages.invited", { name: <b>Ada</b> })}</p>;' },
+        counts: [],
+        misses: ['pkg::messages.invited'],
+    },
+    {
         name: '6. one hop: a default passed to a same-file component that renders it; never into another file',
         files: {
             'remote.tsx': 'export function Remote({ tagline }: { tagline: string }) { return <p>{tagline}</p>; }',

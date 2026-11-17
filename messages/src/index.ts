@@ -21,6 +21,8 @@ export interface Messages<K extends string> {
     date(value: Date | number, format?: Intl.DateTimeFormatOptions): string;
     relativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, format?: Intl.RelativeTimeFormatOptions): string;
     list(values: readonly string[], format?: Intl.ListFormatOptions): string;
+    /** Whether `key` is one of this catalog's keys (a notice from another package's catalog is not). */
+    has(key: string): key is K;
 }
 
 export function createMessages<const D extends Readonly<Record<string, string>>>(defaults: D, options: MessageOptions = {}): Messages<Extract<keyof D, string>> {
@@ -66,6 +68,7 @@ export function createMessages<const D extends Readonly<Record<string, string>>>
         date(value: Date | number, format?: Intl.DateTimeFormatOptions): string { return new Intl.DateTimeFormat(locale, format).format(value); },
         relativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, format?: Intl.RelativeTimeFormatOptions): string { return new Intl.RelativeTimeFormat(locale, format).format(value, unit); },
         list(values: readonly string[], format?: Intl.ListFormatOptions): string { return new Intl.ListFormat(locale, format).format(values); },
+        has(key: string): key is Key { return Object.hasOwn(defaults, key); },
         t(key: Key, parameters: MessageParameters = {}): string { return replace(lineFor(key).text, parameters); },
         choice(key: Key, count: number, parameters: MessageParameters = {}): string {
             const line = lineFor(key);
@@ -73,3 +76,5 @@ export function createMessages<const D extends Readonly<Record<string, string>>>
         },
     };
 }
+
+export { notice, say, NoticeError, isNoticeError, noticeOf, type Notice } from './notice';
