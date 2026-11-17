@@ -54,6 +54,20 @@ function packageCatalog(manifest, catalog) {
     for (const [key, text] of Object.entries(catalog.messages)) {
         if (!key.startsWith(catalog.namespace + '::') || !validItem(key.slice(catalog.namespace.length + 2)) || typeof text !== 'string') fail('Invalid catalog key/default: ' + key);
     }
+    catalogNotes(catalog);
+}
+/**
+ * A catalog's optional translator notes (frame-foundation 67): `{ key: note }` for keys in its `messages`, each a
+ * non-empty string of at most 500 characters. Translators see a note beside the default; the runtime never reads it.
+ */
+function catalogNotes(catalog) {
+    if (!Object.hasOwn(catalog, 'notes')) return {};
+    if (!object(catalog.notes)) fail('Invalid catalog notes: not an object');
+    for (const [key, note] of Object.entries(catalog.notes)) {
+        if (!Object.hasOwn(catalog.messages, key)) fail('Catalog note for an unknown key: ' + key);
+        if (typeof note !== 'string' || note.trim() === '' || note.length > 500) fail('Invalid catalog note (a non-empty string of at most 500 characters): ' + key);
+    }
+    return catalog.notes;
 }
 function validItem(key) {
     return /^[A-Za-z0-9_:/-]+(?:\.[A-Za-z0-9_:/-]+)+$/.test(key)
@@ -83,7 +97,11 @@ export function collect(root, hostCatalog, exclusions = [], warn = () => {}) {
     const excluded = new Set(exclusions);
     const queue = [root, ...workspaces(root, host).filter(at => !read(join(at, 'package.json')).private)];
     const visited = new Set(); const runtimes = new Map();
-    const packages = new Map(); const namespaceOwners = new Map(); const messages = Object.create(null);
+    const packages = new Map(); const namespaceOwners = new Map(); const messages = Object.create(null); const notes = Object.create(null);
+    const addNote = (key, note) => {
+        if (Object.hasOwn(notes, key) && notes[key] !== note) fail('Conflicting catalog note: ' + key);
+        notes[key] = note;
+    };
     for (let cursor = 0; cursor < queue.length; cursor++) {
         const at = realpathSync(queue[cursor]);
         if (visited.has(at)) continue;
@@ -110,6 +128,7 @@ export function collect(root, hostCatalog, exclusions = [], warn = () => {}) {
                 if (Object.hasOwn(messages, key) && canonicalize(messages[key]) !== canonicalize(entry)) fail('Conflicting catalog default/owner: ' + key);
                 messages[key] = entry;
             }
+            for (const [key, note] of Object.entries(catalogNotes(catalog))) addNote(key, note);
         }
         const dependencies = { ...(at === root ? manifest.devDependencies : {}), ...manifest.dependencies, ...manifest.optionalDependencies, ...manifest.peerDependencies };
         for (const name of Object.keys(dependencies)) {
@@ -128,8 +147,10 @@ export function collect(root, hostCatalog, exclusions = [], warn = () => {}) {
             if (Object.hasOwn(messages, key)) fail('Conflicting host key: ' + key);
             messages[key] = { default: text, owner: host.name ?? '@host' };
         }
+        for (const [key, note] of Object.entries(catalogNotes(catalog))) addNote(key, note);
     }
     const ordered = [...packages.values()].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.namespace < b.namespace ? -1 : a.namespace > b.namespace ? 1 : 0);
-    const payload = { version: 1, packages: ordered, messages };
+    // Notes sit beside `messages`, never inside a {default, owner} entry; with none, the payload is unchanged.
+    const payload = Object.keys(notes).length ? { version: 1, packages: ordered, messages, notes } : { version: 1, packages: ordered, messages };
     return canonicalize({ payload, digest: digest(payload) }) + '\n';
 }

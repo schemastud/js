@@ -212,3 +212,62 @@ it('keeps explicit messages.realms keys valid outside the reserved derived group
     write(join(root, 'messages.default.json'), { version: 1, sourceLocale: 'en', messages: { 'messages.realms': 'Realms' } });
     expect(run(root, '--host-catalog', 'messages.default.json', '--write').status).toBe(0);
 });
+
+// frame-foundation 67: translator notes. A catalog's optional `notes` ({ key: note }) are validated, carried to a sibling
+// `payload.notes` (never inside a {default, owner} entry), and omitted entirely when there are none.
+function withNotes(root: string, name: string, notes: unknown) {
+    const path = join(root, 'node_modules/@fixtures', name, 'messages.default.json');
+    write(path, { ...JSON.parse(readFileSync(path, 'utf8')), notes });
+}
+const collected = (root: string) => JSON.parse(readFileSync(join(root, 'resources/beam/messages.json'), 'utf8'));
+
+it('carries package and host notes to payload.notes, beside messages and never inside an entry', () => {
+    const root = fixture();
+    withNotes(root, 'one', { 'one::messages.label': 'A noun: the label of one field, beside its value.' });
+    write(join(root, 'messages.default.json'), { version: 1, sourceLocale: 'en', messages: { 'messages.remaining': 'remaining' },
+        notes: { 'messages.remaining': 'Shown after an amount drawn separately ("$12.00  remaining").' } });
+    expect(run(root, '--host-catalog', 'messages.default.json', '--write').status).toBe(0);
+    const { payload } = collected(root);
+    expect(payload.notes).toEqual({
+        'one::messages.label': 'A noun: the label of one field, beside its value.',
+        'messages.remaining': 'Shown after an amount drawn separately ("$12.00  remaining").',
+    });
+    expect(payload.messages['one::messages.label']).toEqual({ default: 'One', owner: '@fixtures/one' });
+    expect(Object.keys(payload)).toEqual(['messages', 'notes', 'packages', 'version']);
+});
+
+it('writes no notes member when no catalog has a note, and an empty notes map adds none', () => {
+    const root = fixture();
+    expect(run(root, '--write').status).toBe(0);
+    const plain = collected(root);
+    expect(plain.payload).not.toHaveProperty('notes');
+    // An empty map is still a change to that catalog's bytes (its catalogDigest moves), but adds no payload.notes.
+    withNotes(root, 'one', {});
+    expect(run(root, '--write').status).toBe(0);
+    expect(collected(root).payload).not.toHaveProperty('notes');
+    expect(collected(root).payload.messages).toEqual(plain.payload.messages);
+});
+
+it('refuses a note for an unknown key, a non-string note, an empty note, an over-long note and a non-object notes field', () => {
+    for (const [notes, error] of [
+        [{ 'one::messages.missing': 'x' }, 'Catalog note for an unknown key: one::messages.missing'],
+        [{ 'one::messages.label': 7 }, 'Invalid catalog note'],
+        [{ 'one::messages.label': '  ' }, 'Invalid catalog note'],
+        [{ 'one::messages.label': 'x'.repeat(501) }, 'Invalid catalog note'],
+        [['one::messages.label'], 'Invalid catalog notes: not an object'],
+    ] as const) {
+        const root = fixture();
+        withNotes(root, 'one', notes);
+        const result = run(root, '--write');
+        expect(result.status, JSON.stringify(notes).slice(0, 60)).not.toBe(0);
+        expect(result.stderr).toContain(error);
+    }
+});
+
+it('refuses a host note for a key the host catalog does not declare', () => {
+    const root = fixture();
+    write(join(root, 'messages.default.json'), { version: 1, sourceLocale: 'en', messages: { 'messages.saved': 'Saved' }, notes: { 'messages.other': 'x' } });
+    const result = run(root, '--host-catalog', 'messages.default.json', '--write');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Catalog note for an unknown key: messages.other');
+});
