@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync, statSync, existsSync, writeFileSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, existsSync, writeFileSync, realpathSync } from 'node:fs';
 import { resolve, dirname, relative, extname } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
 const displayProps = new Set(['title', 'label', 'placeholder', 'description', 'aria-label', 'aria-description', 'alt', 'emptyText', 'emptyMessage', 'loadingText', 'submitText', 'message', 'helperText', 'tooltip', 'header', 'triggerLabel', 'saveLabel', 'savingLabel', 'cancelLabel', 'confirmLabel', 'children', 'heading', 'subtitle', 'text', 'content', 'caption', 'hint', 'emptyState', 'aria-valuetext', 'aria-roledescription', 'aria-placeholder']);
@@ -510,7 +510,16 @@ export function runRatchet(args) {
     return 0;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+// Run as the entry point however it was reached: a direct path, a symlinked package (pnpm), or a .bin link. Real paths on both
+// sides, because node reports a symlinked main's import.meta.url at its real path while argv[1] keeps the link. Importing the
+// module (for scanDisplayStrings) leaves argv[1] naming the importer, so main() does not run.
+function isEntryPoint() {
+    if (!process.argv[1]) return false;
+    try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)); }
+    catch { return false; }
+}
+
+if (isEntryPoint()) {
     try { process.exitCode = runRatchet(process.argv.slice(2)); }
     catch (error) { console.error(error.message); process.exitCode = 1; }
 }
