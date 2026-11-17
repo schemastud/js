@@ -85,6 +85,9 @@ export const resolveColumns: ResolveColumns = (
         const header = host?.header ?? displayLabel({ title: cm.label }, field, { property: true });
         // FLAT, as `withEditableCells` reads it: `byNode` keys a dotted pointer whole.
         const declared = host?.cell ? undefined : declaredCell(field, cm, properties[field], root, registry, header);
+        // Only for the default cell: a column with a cell (host or declared) renders its own value. A host's own map
+        // wins over the schema's, as a caller's `ui:enumNames` wins over `enumNames` in the form.
+        const enumLabels = host?.cell || declared ? undefined : (host?.enumLabels ?? enumLabelsFor(properties[field], root));
         // Manifest supplies header/sortField defaults; a host FrameColumn overrides —
         // and its `cell` renderer wins (host-closure-wins-by-field).
         const column: FrameColumn = {
@@ -94,10 +97,62 @@ export const resolveColumns: ResolveColumns = (
             ...(host?.headerControl ? { headerControl: host.headerControl } : {}),
             ...(host?.cell ? { cell: host.cell, cellSource: 'host' as const } : {}),
             ...(declared ? { cell: declared, cellSource: 'declared' as const } : {}),
+            ...(enumLabels ? { enumLabels } : {}),
         };
         return column;
     });
 };
+
+/**
+ * A scalar enum node's value-to-label map, keyed by `String(value)`, for the default cell (frame-foundation 76).
+ * Ticket 44's rule, as seam's `liftEnumNames` applies it to the form: `enumNames` counts only when it is an array as
+ * long as `enum`, so a list and its form agree on when a value has a label. A pair whose value is not a scalar or
+ * whose name is not a string is left out, and that value renders raw.
+ *
+ * The enum is found where the form finds it (seam's private `enumCarrier`): the node itself after a local `$ref`,
+ * else a non-null branch of its nullable `anyOf`, each resolved too. That is the shape the PHP schema generator
+ * emits for every backed enum (`$ref: '#/$defs/X'`, `enumNames` on the definition; nullable as `anyOf`), so an
+ * inline-only read would leave every real host's list raw.
+ */
+function enumLabelsFor(property: SchemaNode | undefined, root: SchemaNode | undefined): Readonly<Record<string, string>> | undefined {
+    const carrier = property ? enumCarrier(property, root ?? property) : undefined;
+    const values = carrier?.enum;
+    const names = carrier?.enumNames;
+    if (!Array.isArray(values) || !Array.isArray(names) || names.length !== values.length) return undefined;
+    const labels: Record<string, string> = {};
+    values.forEach((value, index) => {
+        const name = names[index];
+        if (['string', 'number', 'boolean'].includes(typeof value) && typeof name === 'string') {
+            labels[String(value)] = name;
+        }
+    });
+    return Object.keys(labels).length > 0 ? labels : undefined;
+}
+
+/** The node that carries this field's enum, read as seam's form reads it; `undefined` when there is none. */
+function enumCarrier(node: SchemaNode, root: SchemaNode): SchemaNode | undefined {
+    const own = resolveLocalRef(node, root);
+    if (Array.isArray(own.enum)) return own;
+    if (!Array.isArray(own.anyOf)) return undefined;
+    for (const branch of own.anyOf as SchemaNode[]) {
+        if (!branch || typeof branch !== 'object' || branch.type === 'null') continue;
+        const resolved = resolveLocalRef(branch, root);
+        if (Array.isArray(resolved.enum)) return resolved;
+    }
+    return undefined;
+}
+
+/** A local `#/$defs/…` (or `#/definitions/…`) ref resolved against the root; any other node as it is. */
+function resolveLocalRef(node: SchemaNode, root: SchemaNode): SchemaNode {
+    const ref = node.$ref;
+    if (typeof ref !== 'string' || !ref.startsWith('#/')) return node;
+    let target: unknown = root;
+    for (const segment of ref.slice(2).split('/')) {
+        if (!target || typeof target !== 'object') return node;
+        target = (target as Record<string, unknown>)[segment];
+    }
+    return target && typeof target === 'object' ? (target as SchemaNode) : node;
+}
 
 /**
  * The cell a column's declared kind draws, or `undefined` for the default cell. Only a NAMED entry resolves: a

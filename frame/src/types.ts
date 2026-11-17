@@ -302,6 +302,16 @@ export interface FrameColumn<R = Row> {
      * and a host closure outranks both.
      */
     cellSource?: 'host' | 'declared';
+    /**
+     * The column's value-to-label map, keyed by `String(value)`: what the default cell shows in place of a raw
+     * enum value. `resolveColumns` sets it from a scalar enum node's `enumNames` (inline, behind a local `$ref`, or
+     * in a nullable `anyOf`, as the form reads it), under ticket 44's rule (an array as long as the node's `enum`;
+     * seam's `liftEnumNames`), so a list shows `Awaiting approval` where the form does, not `awaiting_approval`.
+     * It is set only on a column with no `cell` (host or declared); a host column's own `enumLabels` wins over the
+     * schema's. A value outside the map renders raw. A `cell` still wins: the map only feeds the default cell
+     * (plain and shadcn).
+     */
+    enumLabels?: Readonly<Record<string, string>>;
 }
 
 // `schema` is the resource's list/filter schema — unused by the v1 host-supplied

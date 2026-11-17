@@ -150,7 +150,11 @@ export function DefaultCell({ column, record }: CellSlotProps) {
     // Dotted-pointer aware: a column may name a node inside a folded sub-projection
     // (`commerce.plan`), which a flat index would miss.
     const value = getPath(record, column.field);
-    return <>{value === null || value === undefined ? '' : String(value)}</>;
+    if (value === null || value === undefined) return <></>;
+    // An enum value shows by its label (frame-foundation 76); a value outside the map shows raw.
+    const raw = String(value);
+    const label = column.enumLabels && Object.hasOwn(column.enumLabels, raw) ? column.enumLabels[raw] : undefined;
+    return <>{label ?? raw}</>;
 }
 
 export function DefaultEmpty() {

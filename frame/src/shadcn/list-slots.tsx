@@ -270,6 +270,12 @@ export function ShadcnCell(props: CellSlotProps) {
     if (props.column.cell) return <>{props.column.cell(props.record)}</>;
     // Dotted-pointer aware — see DefaultCell.
     const value = getPath(props.record, props.column.field);
+    // A labelled enum value shows its label first, as the plain cell and the form do: a boolean or empty-string
+    // enum member with a label is that label, not Yes/No or the dash (frame-foundation 76).
+    const labels = props.column.enumLabels;
+    if (labels && value !== null && value !== undefined && Object.hasOwn(labels, String(value))) {
+        return <DefaultCell {...props} />;
+    }
     if (value === null || value === undefined || value === '') {
         return <span className="text-muted-foreground">—</span>;
     }
