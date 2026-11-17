@@ -2,6 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'nod
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { afterEach, expect, it } from 'vitest';
 
 const rooms: string[] = [];
@@ -241,6 +242,11 @@ it('writes no notes member when no catalog has a note, and an empty notes map ad
     expect(run(root, '--write').status).toBe(0);
     const plain = collected(root);
     expect(plain.payload).not.toHaveProperty('notes');
+    // Golden (REVIEW-67 S1): the base collector (6854b29, before notes) writes exactly these bytes for this fixture.
+    const bytes = readFileSync(join(root, 'resources/beam/messages.json'));
+    expect(bytes.length).toBe(565);
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe('19b089063ecc2a8f2328c778caa782bdaad48ee354328a86a168f28f18b03cf8');
+    expect(plain.digest).toBe('sha256:acd0f9c55004d42e853f978b732c9d53135dfff6cdcaaf85f018d7c83f9193bc');
     // An empty map is still a change to that catalog's bytes (its catalogDigest moves), but adds no payload.notes.
     withNotes(root, 'one', {});
     expect(run(root, '--write').status).toBe(0);
@@ -270,4 +276,17 @@ it('refuses a host note for a key the host catalog does not declare', () => {
     const result = run(root, '--host-catalog', 'messages.default.json', '--write');
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain('Catalog note for an unknown key: messages.other');
+});
+
+it('refuses two copies of one catalog that note a key differently, as conflicting catalog copies (REVIEW-67)', () => {
+    const root = fixture();
+    withNotes(root, 'one', { 'one::messages.label': 'Note A' });
+    const copy = join(root, 'node_modules/@fixtures/two/node_modules/@fixtures/one');
+    const packagePath = join(root, 'node_modules/@fixtures/two/package.json');
+    write(packagePath, { ...JSON.parse(readFileSync(packagePath, 'utf8')), dependencies: { '@fixtures/one': '1' } });
+    write(join(copy, 'package.json'), JSON.parse(readFileSync(join(root, 'node_modules/@fixtures/one/package.json'), 'utf8')));
+    write(join(copy, 'messages.default.json'), { ...JSON.parse(readFileSync(join(root, 'node_modules/@fixtures/one/messages.default.json'), 'utf8')), notes: { 'one::messages.label': 'Note B' } });
+    const result = run(root, '--write');
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain('Conflicting catalog copies: @fixtures/one');
 });

@@ -98,10 +98,9 @@ export function collect(root, hostCatalog, exclusions = [], warn = () => {}) {
     const queue = [root, ...workspaces(root, host).filter(at => !read(join(at, 'package.json')).private)];
     const visited = new Set(); const runtimes = new Map();
     const packages = new Map(); const namespaceOwners = new Map(); const messages = Object.create(null); const notes = Object.create(null);
-    const addNote = (key, note) => {
-        if (Object.hasOwn(notes, key) && notes[key] !== note) fail('Conflicting catalog note: ' + key);
-        notes[key] = note;
-    };
+    // A key has one owner, so it has at most one note: two copies of a catalog that note it differently already refuse as
+    // "Conflicting catalog copies" (the catalog digest covers notes), and two packages cannot share a key.
+    const addNote = (key, note) => { notes[key] = note; };
     for (let cursor = 0; cursor < queue.length; cursor++) {
         const at = realpathSync(queue[cursor]);
         if (visited.has(at)) continue;
