@@ -45,6 +45,7 @@
     },
     "dependencies": {
         "@schemastud/frame-remote": "^0.1.0",
+        "@schemastud/registry": "^0.0.0",
         "react-rnd": "^10.5.2"
     },
     "devDependencies": {

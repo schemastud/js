@@ -7,6 +7,7 @@
  * frozen contract — that's what "any site can create their own mainframe components" means.
  */
 import type { ComponentType } from 'react';
+import { OnKeyDuplicate, createRegistry, type Registry, type RegistryKey } from '@schemastud/registry';
 
 import type { FillType, SlotName } from './contract';
 // Type-only (erased at build) → no runtime cycle with resolve.ts, which imports this module's types.
@@ -60,37 +61,99 @@ export interface MainframeRegistration<Slots = ResolvedSlots> {
     customSlots: readonly CustomSlotSpec[];
 }
 
-/** The Mainframe registry surface. */
+/**
+ * One registration a later `register` of the same mode displaced: the registration that was there, who
+ * registered it, and who registered the one that took its place. `null` where a registration named nobody.
+ * History only: a displaced registration is never returned by `get` or `all`.
+ */
+export interface SupersededMainframe {
+    readonly registration: MainframeRegistration;
+    readonly by: string | null;
+    readonly supersededBy: string | null;
+}
+
+/**
+ * The Mainframe registry surface.
+ *
+ * Registering a mode that is already registered REPLACES it (the kernel's `Supersede` policy, declared in
+ * `createMainframeRegistry`): the later registration wins, keeps the earlier one's place in `modes()` and
+ * `all()`, and the displaced one is recorded. It never throws and never warns; a caller that wants to warn
+ * on a re-registration reads `supersededModes(mode)` and calls `devWarn` itself.
+ *
+ * `modeRegistrant` and `supersededModes` are optional so a hand-written `MainframeRegistry` keeps
+ * compiling; every registry `createMainframeRegistry()` returns has both.
+ */
 export interface MainframeRegistry {
-    /** Register (or replace) the mainframe for a mode. Re-registering a mode dev-warns is deferred to caller. */
-    register(mode: string, component: Mainframe, options?: RegisterOptions): void;
+    /**
+     * Register (or replace) the mainframe for a mode. `by` names who is registering (a package name, say);
+     * left out, the registrant reads back as `null`.
+     */
+    register(mode: string, component: Mainframe, options?: RegisterOptions, by?: string): void;
     /** The mainframe registered for a mode, or `undefined`. */
     get(mode: string): MainframeRegistration | undefined;
-    /** Every registered mode name. */
+    /** Every registered mode name, in registration order. */
     modes(): readonly string[];
-    /** Every registration (used by the resolver to compute the known-slot universe). */
+    /** Every registration, in registration order (used by the resolver to compute the known-slot universe). */
     all(): readonly MainframeRegistration[];
+    /** Who registered the mainframe this mode resolves to, or `null` when nothing is registered or it named nobody. */
+    modeRegistrant?(mode: string): string | null;
+    /** What later registrations of this mode displaced, oldest first. Empty when it was registered at most once. */
+    supersededModes?(mode: string): SupersededMainframe[];
 }
 
 /**
  * Create an isolated Mainframe registry. Like the slot registry, a fresh instance per provider scope
  * keeps SSR request-safe. OTB modes are registered into it by the host at build time.
+ *
+ * Each call makes its own `@schemastud/registry` registry rooted at `mainframe.modes`, which answers
+ * names exactly as the `Map` it replaces did:
+ *
+ * - Any string is a mode name. One that is not a legal registry key (`Desk`, `a/b`, `''`) is carried as
+ *   one segment under the root and never throws; `keyFor` never reads a name as absolute.
+ * - A read is `has(key) ? resolve(key) : undefined`. A branch name (`os`, with `os.window` registered)
+ *   is not registered and answers `undefined`; the kernel's `tryResolve` would throw for it.
+ * - A read with a name that is not a string misses, as a `Map` lookup did.
  */
 export function createMainframeRegistry(): MainframeRegistry {
-    const byMode = new Map<string, MainframeRegistration>();
+    const registry: Registry<MainframeRegistration> = createRegistry<MainframeRegistration>({
+        root: 'mainframe.modes',
+        onKeyDuplicate: OnKeyDuplicate.Supersede,
+        description: 'Mode name to the Mainframe (slot layout) that places its resolved slots.',
+    });
+    const root = registry.declaration.root;
 
-    function register(mode: string, component: Mainframe, options?: RegisterOptions): void {
-        byMode.set(mode, {
-            mode,
-            component,
-            customSlots: options?.slots ?? [],
-        });
+    // A read handed something that is not a string misses, as it did in a `Map`. Null here is that miss.
+    const keyOf = (mode: string): RegistryKey | null => (typeof mode === 'string' ? registry.keyFor(mode) : null);
+
+    function register(mode: string, component: Mainframe, options?: RegisterOptions, by?: string): void {
+        // A mode that is not a string is registered under its string form; the registration keeps it as given.
+        registry.register(
+            registry.keyFor(String(mode)),
+            { mode, component, customSlots: options?.slots ?? [] },
+            typeof by === 'string' ? by : null,
+        );
     }
 
     return {
         register,
-        get: (mode) => byMode.get(mode),
-        modes: () => [...byMode.keys()],
-        all: () => [...byMode.values()],
+        get(mode) {
+            const key = keyOf(mode);
+
+            return key !== null && registry.has(key) ? registry.resolve(key) : undefined;
+        },
+        modes: () => registry.names(),
+        all: () => registry.matches(root),
+        modeRegistrant(mode) {
+            const key = keyOf(mode);
+
+            return key === null ? null : registry.registrantOf(key);
+        },
+        supersededModes(mode) {
+            const key = keyOf(mode);
+
+            return key === null
+                ? []
+                : registry.superseded(key).map(({ entry, by, supersededBy }) => ({ registration: entry, by, supersededBy }));
+        },
     };
 }
