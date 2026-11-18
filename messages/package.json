@@ -48,8 +48,7 @@
     "build": "tsup",
     "postbuild": "node scripts/check-declarations.mjs",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "prepack": "npm run build"
+    "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
     "react": ">=18",
