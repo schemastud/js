@@ -33,6 +33,7 @@ export default defineConfig({
         '@rjsf/validator-ajv8',
         '@schemastud/seam',
         '@schemastud/facets',
+        '@schemastud/registry',
         '@schemastud/ui',
         '@schemastud/messages',
         'zustand',

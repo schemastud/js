@@ -87,6 +87,7 @@
   },
   "dependencies": {
     "@schemastud/facets": "^0.2.2",
+    "@schemastud/registry": "^0.0.0",
     "@schemastud/seam": "^0.2.2",
     "@schemastud/ui": "^0.1.2"
   },

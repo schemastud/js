@@ -1,4 +1,5 @@
 import { createElement, type ComponentType, type ReactElement } from 'react';
+import { Key, OnKeyDuplicate, createRegistry, foreignKey, type Registry, type RegistryKey } from '@schemastud/registry';
 import type { RouteContextEntry } from './types';
 
 // =============================================================================
@@ -17,17 +18,45 @@ import type { RouteContextEntry } from './types';
 export type RouteComponent = ComponentType<Record<string, never>>;
 export type GuardComponent = ComponentType<{ children: React.ReactNode }>;
 
+/**
+ * One registration a later one displaced: the component that was bound to the name, who bound it, and
+ * who bound the one that took its place. `null` where the registration named nobody. History only: a
+ * displaced component is never resolved.
+ */
+export interface SupersededRegistration<TComponent> {
+    readonly component: TComponent;
+    readonly by: string | null;
+    readonly supersededBy: string | null;
+}
+
+/**
+ * Registering a name that is already bound REPLACES the binding (the kernel's `Supersede` policy, declared
+ * in `createRouteRegistry`): the later component wins, it keeps the earlier one's place in `routeNames()`,
+ * and the displaced one is recorded. It never throws. `by` names who is registering (a package name, say).
+ *
+ * `routeRegistrant` and `supersededRoutes` are optional so a hand-written `RouteRegistry` keeps compiling;
+ * every registry `createRouteRegistry()` returns has both.
+ */
 export interface RouteRegistry {
-    registerRoute(routeName: string, component: RouteComponent): void;
+    registerRoute(routeName: string, component: RouteComponent, by?: string): void;
     hasRoute(routeName: string): boolean;
     resolveRoute(routeName: string): RouteComponent | undefined;
     routeNames(): string[];
+    /** Who bound the component this name resolves to, or `null` when nothing is bound or it named nobody. */
+    routeRegistrant?(routeName: string): string | null;
+    /** What later registrations of this name displaced, oldest first. Empty when it was bound at most once. */
+    supersededRoutes?(routeName: string): SupersededRegistration<RouteComponent>[];
 }
 
+/** Duplicate policy and registrant as on `RouteRegistry`. A key nothing is bound to resolves `undefined`. */
 export interface GuardRegistry {
-    registerGuard(key: string, component: GuardComponent): void;
+    registerGuard(key: string, component: GuardComponent, by?: string): void;
     hasGuard(key: string): boolean;
     resolveGuard(key: string): GuardComponent | undefined;
+    /** Who bound the guard this key resolves to, or `null` when nothing is bound or it named nobody. */
+    guardRegistrant?(key: string): string | null;
+    /** What later registrations of this key displaced, oldest first. */
+    supersededGuards?(key: string): SupersededRegistration<GuardComponent>[];
 }
 
 /**
@@ -43,59 +72,117 @@ export type ShellComponent = ComponentType<Record<string, never>>;
  * under. `null`/`'app'` is the top-level (no-shell) case and is never looked up here.
  */
 export interface ShellRegistry {
-    registerShell(key: string, component: ShellComponent): void;
+    registerShell(key: string, component: ShellComponent, by?: string): void;
     hasShell(key: string): boolean;
     resolveShell(key: string): ShellComponent | undefined;
+    /** Who bound the layout this key resolves to, or `null` when nothing is bound or it named nobody. */
+    shellRegistrant?(key: string): string | null;
+    /** What later registrations of this key displaced, oldest first. */
+    supersededShells?(key: string): SupersededRegistration<ShellComponent>[];
+}
+
+/**
+ * The three registries below over one `@schemastud/registry` kernel registry each: names in and out,
+ * exactly as the `Map` they replace answered them.
+ *
+ * - Any string is a name. One that is not a legal registry key (`Admin/Users`, `DocsLayout`, `''`) is
+ *   carried as one segment under the root and never throws.
+ * - A read is `has(key) ? resolve(key) : undefined`. A branch name (`tenants`, with `tenants.index`
+ *   bound) is not bound and answers `undefined`; the kernel's `tryResolve` would throw for it.
+ * - A duplicate supersedes: the later component takes the name and the earlier one's place in `names()`.
+ */
+function createNamedRegistry<TComponent>(root: string, description: string) {
+    const registry: Registry<TComponent> = createRegistry<TComponent>({
+        root,
+        onKeyDuplicate: OnKeyDuplicate.Supersede,
+        description,
+    });
+
+    // `registry.keyFor`, except for a name that itself begins with this registry's root. The kernel
+    // reads `frame.routes.home` in `frame.routes` as the already-absolute spelling of `home`, which
+    // would make two names one binding; a `Map` kept them apart. Such a name is carried whole, as one
+    // segment under the root, so every name is its own key and `names()` returns it as it went in.
+    const keyOf = (name: string): RegistryKey => {
+        const declared = registry.declaration.root;
+        const parsed = Key.tryParse(name);
+
+        if (parsed !== null && (parsed.equals(declared) || parsed.isUnder(declared))) {
+            return foreignKey([...declared.segments, name], `${declared.display}.${name}`);
+        }
+
+        return registry.keyFor(name);
+    };
+
+    return {
+        register(name: string, component: TComponent, by?: string): void {
+            // `by` is read defensively: a caller that passes the method as a callback hands it an index.
+            registry.register(keyOf(name), component, typeof by === 'string' ? by : null);
+        },
+        has(name: string): boolean {
+            return registry.has(keyOf(name));
+        },
+        resolve(name: string): TComponent | undefined {
+            const key = keyOf(name);
+
+            return registry.has(key) ? registry.resolve(key) : undefined;
+        },
+        names(): string[] {
+            return registry.names();
+        },
+        registrant(name: string): string | null {
+            return registry.registrantOf(keyOf(name));
+        },
+        superseded(name: string): SupersededRegistration<TComponent>[] {
+            return registry
+                .superseded(keyOf(name))
+                .map(({ entry, by, supersededBy }) => ({ component: entry, by, supersededBy }));
+        },
+    };
 }
 
 export function createRouteRegistry(): RouteRegistry {
-    const routes = new Map<string, RouteComponent>();
+    const routes = createNamedRegistry<RouteComponent>(
+        'frame.routes',
+        'Route name to the component a RouteContext leaf mounts.',
+    );
 
     return {
-        registerRoute(routeName, component) {
-            routes.set(routeName, component);
-        },
-        hasRoute(routeName) {
-            return routes.has(routeName);
-        },
-        resolveRoute(routeName) {
-            return routes.get(routeName);
-        },
-        routeNames() {
-            return [...routes.keys()];
-        },
+        registerRoute: routes.register,
+        hasRoute: routes.has,
+        resolveRoute: routes.resolve,
+        routeNames: routes.names,
+        routeRegistrant: routes.registrant,
+        supersededRoutes: routes.superseded,
     };
 }
 
 export function createGuardRegistry(): GuardRegistry {
-    const guards = new Map<string, GuardComponent>();
+    const guards = createNamedRegistry<GuardComponent>(
+        'frame.guards',
+        'Guard key to the component that wraps a guarded leaf.',
+    );
 
     return {
-        registerGuard(key, component) {
-            guards.set(key, component);
-        },
-        hasGuard(key) {
-            return guards.has(key);
-        },
-        resolveGuard(key) {
-            return guards.get(key);
-        },
+        registerGuard: guards.register,
+        hasGuard: guards.has,
+        resolveGuard: guards.resolve,
+        guardRegistrant: guards.registrant,
+        supersededGuards: guards.superseded,
     };
 }
 
 export function createShellRegistry(): ShellRegistry {
-    const shells = new Map<string, ShellComponent>();
+    const shells = createNamedRegistry<ShellComponent>(
+        'frame.shells',
+        'Shell key to the layout a leaf nests under.',
+    );
 
     return {
-        registerShell(key, component) {
-            shells.set(key, component);
-        },
-        hasShell(key) {
-            return shells.has(key);
-        },
-        resolveShell(key) {
-            return shells.get(key);
-        },
+        registerShell: shells.register,
+        hasShell: shells.has,
+        resolveShell: shells.resolve,
+        shellRegistrant: shells.registrant,
+        supersededShells: shells.superseded,
     };
 }
 

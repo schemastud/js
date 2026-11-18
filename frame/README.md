@@ -53,6 +53,65 @@ mount dispatcher's `manifestFor` option and the injection's `manifestFor` are th
 a host wires one lookup and both the shells (whose `list-column` participation is the column set)
 and the cards (`RecentList`, `DashboardCard` resolving a target resource's manifest) read it.
 
+## Route, guard and shell registries
+
+`createRouteRegistry()`, `createGuardRegistry()` and `createShellRegistry()` (`src/routes.ts`) bind a name
+the server declares to the component a host mounts for it: a `routeName` to its page, a `guard` key to its
+guard, a `shell` key to its layout. Each call makes its own registry. Each is a
+[`@schemastud/registry`](../registry/README.md) registry, rooted at `frame.routes`, `frame.guards` and
+`frame.shells`.
+
+**Duplicate policy: `Supersede`, declared.** Registering a name that is already bound replaces the binding.
+The later component wins and keeps the earlier one's place in `routeNames()`. Nothing throws. That is what
+these registries did as plain maps; what is new is that the policy is declared and the displaced binding is
+recorded.
+
+```ts
+const routes = createRouteRegistry();
+
+routes.registerRoute('tenants.index', TenantsList, '@splicewire/tower-ux');
+routes.registerRoute('tenants.index', HostTenantsList, 'app/host'); // replaces, in place
+
+routes.resolveRoute('tenants.index');       // HostTenantsList
+routes.routeRegistrant?.('tenants.index');  // 'app/host'
+routes.supersededRoutes?.('tenants.index'); // [{ component: TenantsList, by: '@splicewire/tower-ux', supersededBy: 'app/host' }]
+```
+
+- **The registrant is optional.** The third argument of `registerRoute`, `registerGuard` and `registerShell`
+  names who is registering, such as a package name. Left out, the registrant reads back as `null`.
+- **Reading it back.** `routeRegistrant(name)` and `supersededRoutes(name)`, with `guardRegistrant` /
+  `supersededGuards` and `shellRegistrant` / `supersededShells` beside them. They are optional members of the
+  interface types, so a hand-written registry or a test double still satisfies the type. A registry from one
+  of the three factories always has them.
+- **A miss is `undefined`.** A name nothing is bound to resolves `undefined`, and so does a name that only
+  prefixes bound names (`tenants`, with `tenants.index` bound). `buildRealmRoutes` relies on both: an unbound
+  route falls to `fallback` and then `onUnbound`, and an unbound guard refuses the leaf.
+- **Any string is a name.** `Admin/Users`, `DocsLayout` and the empty string bind and resolve as they did in
+  a map. A name is compared exactly: no case folding, no trimming.
+- **A route the server sends twice still throws.** `assertRouteContext` refuses a `routeName` that appears
+  twice in a `RouteContext`. That is a duplicate in the manifest, which no host can override. A host binding
+  a name twice is an override, so it is allowed.
+
+**Who relied on replacing.** Before the policy was declared, callers were searched for a name bound twice
+in one registry (2026-11-18).
+
+- The search: `git grep -n -E '\.(registerRoute|registerGuard|registerShell)\('` over every tracked file of
+  this repository, and `grep -rn -E '(registerRoute|registerGuard|registerShell)\b'` over the `src` of the 18
+  `beam-*` packages of the beam JS workspace, of `splicewire/tower-ux` and of the flagship's `ui`. A second
+  search, for any file naming the factories or the three interface types under `~/Workspaces/js/packages`,
+  `~/Herd` and `~/Workspaces/laravel/starters`, found callers in those three repositories only.
+- No call site binds a literal name twice in one registry. The flagship binds `beam-ux-entry.index` on two
+  lines of `ui/src/app/routeRegistry.tsx`, in the two arms of one `if`.
+- One call site can bind a name twice at run time. beam-inertia's `src/frame/router.tsx` binds a list leaf's
+  create route and read-detail route by names taken from the manifest, once per list leaf. Two list leaves of
+  one resource in one shell would bind those names twice, with equivalent components. Under `Reject` that
+  would throw at mount.
+- The search found no test, here or in those three repositories, that binds a name twice.
+- What the zero means: no call site, as written, depends on replacement. It does not show that no host does.
+  The search reads calls spelled with the method's own name, so a binding made through an alias, and any host
+  outside the searched roots, is not covered. `Supersede` is declared because it is what the registries
+  already did and a host re-binding a package's name is an override, not because the search found nobody.
+
 ## Tailwind sources
 
 Cards and shells emit Tailwind utilities, and Tailwind v4 ignores symlinked `node_modules`, so a
