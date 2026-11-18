@@ -1,0 +1,34 @@
+{
+    "name": "@schemastud/registry",
+    "version": "0.0.0",
+    "private": true,
+    "description": "Registry keys for the client: parse a dot-separated key without repairing it, compare two keys, and answer parent and is-under segment-wise. Proved against the conformance corpus the PHP registry kernel ships, vendored here. No runtime dependency and no React.",
+    "license": "MIT",
+    "type": "module",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist",
+        "src",
+        "README.md"
+    ],
+    "scripts": {
+        "build": "tsup",
+        "dev": "tsup --watch",
+        "test": "vitest run",
+        "typecheck": "tsc --noEmit",
+        "corpus:sync": "node scripts/sync-corpus.mjs"
+    },
+    "devDependencies": {
+        "@types/node": "^26.1.1",
+        "tsup": "^8.5.1",
+        "typescript": "^5.7.0",
+        "vitest": "^4.1.10"
+    }
+}
