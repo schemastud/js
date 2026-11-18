@@ -32,7 +32,7 @@ const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
  * **A manifest also decides how a cell RENDERS.** `list-column` participation carries a
  * `widget` name, a column kind, and a column kind is a widget (ruling 01 §4): the name resolves
  * through `resolveWidgetFor` in the `list-column` context against `registry`, where frame registers
- * its kinds (`text` / `badge` / `badges` / `number` / `date`) scoped to `list-column`, and the
+ * its kinds (`text` / `badge` / `badges` / `number` / `date` / `link`) scoped to `list-column`, and the
  * resolved component mounts through seam's `widgetProps`. A name nothing binds draws the unbound
  * marker; a stock RJSF name, or no name, falls to the default cell. Only the column's own entry
  * resolves: the node's form binding (`x-widget`) never reaches a list cell. A host `cell` still

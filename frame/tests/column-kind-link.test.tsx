@@ -91,7 +91,7 @@ describe('the `link` column kind', () => {
         expect(anchor?.textContent).toBe('Weekly visitors');
     });
 
-    it.each([['https://example.com/report'], ['//example.com/report']])(
+    it.each([['https://example.com/report'], ['//example.com/report'], ['/\\example.com/report']])(
         'an absolute href (%s) draws a plain anchor, never the router link',
         async (href) => {
             const renderLink = routerLink();

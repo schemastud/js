@@ -3,7 +3,7 @@ import { useFrameMessages } from './messages';
 import { useId, useMemo, type ComponentType, type CSSProperties } from 'react';
 import type { WidgetProps } from '@rjsf/utils';
 import { useFrameInjection } from './context';
-import { displayLabel, useRjsfRegistry, widgetProps, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
+import { displayLabel, useRjsfRegistry, widgetFormContext, widgetProps, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { CardLink } from './cards/chrome';
 import type { CardLinkRenderer } from './cards/types';
 import type { Row } from './types';
@@ -25,6 +25,10 @@ import type { Row } from './types';
 // a muted secondary line" stack (2 occurrences) and a line-clamped description (1). The
 // stack additionally fails a structural test the threshold does not: it renders a SECOND
 // field, and a per-property declaration is the wrong place to name a companion property.
+//
+// One kind does read a second field, deliberately: `link` (frame-foundation 77) takes the href from a ROW field its
+// `hrefKey` names, because an href is navigation for the cell's own value, not a second value to display. The row
+// reaches every kind through the cell registry's `formContext` (`ColumnWidgetCell`); the text is still one field.
 //
 // ## Everything goes through injected `primitives`
 //
@@ -111,10 +115,15 @@ export interface DateCellOptions {
 export interface LinkCellOptions extends TextCellOptions {
     /** The ROW field holding the href (frame-foundation 77). Absent, or the row's value empty, the cell is `text`. */
     hrefKey?: string;
-    /**
-     * The host's router link: registry config, never declared. `createFrameRegistry` registers `link` with the kit's
-     * `renderLink`, the one the cards take. Absent (or not a function), a site-relative href draws a plain anchor.
-     */
+}
+
+/**
+ * What the `link` widget receives: the declared options over its registry config. `renderLink` is the host's router
+ * link, registry config and never declared: `createFrameRegistry` registers `link` with the kit's `renderLink`, the one
+ * the cards take. A declared option of that name merges over the config and is not a function, so it is ignored and
+ * the cell draws a plain anchor.
+ */
+interface LinkWidgetOptions extends LinkCellOptions {
     renderLink?: CardLinkRenderer;
 }
 
@@ -131,7 +140,7 @@ const BadgesKind = ({ value, options }: WidgetProps) => <BadgesCell value={value
 const NumberKind = ({ value, options }: WidgetProps) => <NumberCell value={value} options={options as NumberCellOptions} />;
 const DateKind = ({ value, options }: WidgetProps) => <DateCell value={value} options={options as DateCellOptions} />;
 const LinkKind = ({ value, options, registry }: WidgetProps) => (
-    <LinkCell value={value} options={options as LinkCellOptions} row={cellRow(registry.formContext)} />
+    <LinkCell value={value} options={options as LinkWidgetOptions} row={cellRow(widgetFormContext<{ row?: unknown }>({ registry }))} />
 );
 
 /**
@@ -139,8 +148,8 @@ const LinkKind = ({ value, options, registry }: WidgetProps) => (
  * `formContext: { row }`, RJSF's channel for what a widget reads beyond its own value, so every `list-column` kind,
  * frame's or a host's, reads the whole row as `props.registry.formContext.row`. Outside a list cell it is absent.
  */
-function cellRow(formContext: unknown): Row | undefined {
-    const row = (formContext as { row?: unknown } | undefined)?.row;
+function cellRow(formContext: { row?: unknown }): Row | undefined {
+    const row = formContext.row;
     return row !== null && typeof row === 'object' ? (row as Row) : undefined;
 }
 
@@ -273,16 +282,17 @@ function Placeholder({ text, italic }: { text: string; italic?: boolean }) {
 
 // ─── link ────────────────────────────────────────────────────────────────────
 // frame-foundation 77: the column's own value, drawn exactly as `text`, linked to the href a ROW field carries
-// (`hrefKey`). A site-relative href (one leading `/`) goes through the host's router link, as every card anchor
-// does; an absolute one (`//host` included) is a plain anchor. No href, or no value, is `text` and nothing else.
+// (`hrefKey`). A site-relative href (one leading `/`, not followed by `/` or `\`) goes through the host's router
+// link, as every card anchor does; anything else (an absolute URL, `//host`, `/\host`, a bare relative path) is a
+// plain anchor. No href, or no value, is `text` and nothing else.
 // The cell trusts the href: the server sends it only to a viewer whose page opens.
 
-function LinkCell({ value, options, row }: { value: unknown; options: LinkCellOptions; row: Row | undefined }) {
+function LinkCell({ value, options, row }: { value: unknown; options: LinkWidgetOptions; row: Row | undefined }) {
     const text = <TextCell value={value} options={options} />;
     const raw = options.hrefKey ? row?.[options.hrefKey] : undefined;
     if (isEmpty(value) || typeof raw !== 'string' || raw === '') return text;
 
-    const siteRelative = raw.startsWith('/') && !raw.startsWith('//');
+    const siteRelative = /^\/(?![/\\])/.test(raw);
     const renderLink = siteRelative && typeof options.renderLink === 'function' ? options.renderLink : undefined;
     return (
         <CardLink href={raw} options={renderLink ? { renderLink } : undefined} marker={{ 'data-frame-cell': 'link' }}>

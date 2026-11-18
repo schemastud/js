@@ -18,5 +18,6 @@ export type {
     BadgesCellOptions,
     NumberCellOptions,
     DateCellOptions,
+    LinkCellOptions,
 } from '../columnKinds';
 export type { RealmDefinition } from '../types';

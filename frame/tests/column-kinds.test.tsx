@@ -211,11 +211,11 @@ describe('resolveColumns — the declared kind becomes the cell', () => {
         expect([...drawn].map((b) => b.textContent)).toEqual(['Awaiting approval', 'Approved']);
     });
 
-    it('frame registers exactly the five derived kinds for list-column — a sixth is a decision, not a typo', () => {
+    it('frame registers exactly six kinds for list-column (the five derived, and `link` by frame-foundation 77) — a seventh is a decision, not a typo', () => {
         const listColumn = REGISTRY.names()
             .filter(({ registrations }) => registrations.some((r) => r.contexts?.includes('list-column')))
             .map(({ name }) => name);
-        expect(listColumn).toEqual(['badge', 'badges', 'date', 'number', 'text']);
+        expect(listColumn).toEqual(['badge', 'badges', 'date', 'link', 'number', 'text']);
     });
 });
 

@@ -145,13 +145,14 @@ describe('both registry populations (research 10-S1 ii)', () => {
         const spy = vi.spyOn(registry, 'registerWidget');
         registerFrameWidgets(registry);
         const installed = spy.mock.calls.length;
-        // One install is frame's built-ins: the resource-ref picker (a predicate) and, since ticket 27, the five column
-        // kinds, registered by name and scoped to list-column.
+        // One install is frame's built-ins: the resource-ref picker (a predicate) and the column kinds (ticket 27's
+        // five, and frame-foundation 77's `link`), registered by name and scoped to list-column.
         expect(spy.mock.calls.filter(([key]) => typeof key === 'function')).toHaveLength(1);
         expect(spy.mock.calls.flatMap(([key]) => (typeof key === 'string' ? [key] : [])).sort()).toEqual([
             'badge',
             'badges',
             'date',
+            'link',
             'number',
             'text',
         ]);

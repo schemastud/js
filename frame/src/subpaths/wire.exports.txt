@@ -6,6 +6,7 @@ type DateCellOptions
 value FRAME_CONTEXT_KEYWORD
 value INHERITS
 value KNOWN_ROW_ACTIONS
+type LinkCellOptions
 type NodeParticipation
 type NumberCellOptions
 type RealmDefinition
