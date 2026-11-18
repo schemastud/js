@@ -52,6 +52,83 @@ const doc = schema.nodeFromJSON(json);
 doc.check(); // containment enforcement — throws on category violations
 ```
 
+## Skin and node-view registries
+
+`createSkinRegistry()` (`src/react/skin-registry.ts`) binds a skin key (a node-type, or an authored `x-skin`
+name) to the skin that draws its resting look; `defaultSkinRegistry` is the module's shared instance.
+`createNodeViewRegistry()` (`src/react/node-views.tsx`) binds a manifest node name to the NodeView component
+that renders it. Each call makes its own registry. Both are [`@schemastud/registry`](../registry/README.md)
+registries over one implementation (`src/react/named-registry.ts`, not exported), rooted at `blockdoc.skins`
+and `blockdoc.node-views`. The manifest assembly's refusal of a redeclared node name is not one of these
+registries and is unchanged.
+
+**Duplicate policy: `Supersede`, declared.** Registering a key that is already registered replaces it. The
+later skin or component wins. Nothing throws and nothing warns. That is what both registries did as plain
+maps; what is new is that the policy is declared and the displaced entry is recorded with who registered it.
+
+```ts
+const nodeViews = createNodeViewRegistry();
+
+nodeViews.registerNodeView('ContentSection', ContentSectionNodeView, '@splicewire/beam-content');
+nodeViews.registerNodeView('ContentSection', HostSection, 'app/host'); // replaces
+
+nodeViews.resolveNodeView('ContentSection');        // HostSection
+nodeViews.nodeViewRegistrant?.('ContentSection');   // 'app/host'
+nodeViews.supersededNodeViews?.('ContentSection');  // [{ component: ContentSectionNodeView, by: '@splicewire/beam-content', supersededBy: 'app/host' }]
+
+const skins = createSkinRegistry();
+skins.registerSkin('product', ProductSkin, '@splicewire/beam-content');
+skins.skinRegistrant?.('product');                  // '@splicewire/beam-content'
+skins.supersededSkins?.('product');                 // []
+```
+
+- **The registrant is optional.** The third argument of `registerSkin` and `registerNodeView` names who is
+  registering, such as a package name. Left out, the registrant reads back as `null`.
+- **Reading it back.** `skinRegistrant` / `supersededSkins` and `nodeViewRegistrant` / `supersededNodeViews`
+  are optional members of `SkinRegistry` and `NodeViewRegistry`, so a hand-written registry or a test double
+  (beam-content's test passes a two-method object literal) still satisfies the type. A registry from either
+  factory always has them. `SupersededSkin` and `SupersededNodeView` are exported from their modules, not the
+  `/react` barrel.
+- **The misses are what they were.** A skin key nothing is registered under resolves to the registry's
+  fallback (`BlockChromeFallback` unless `createSkinRegistry(fallback)` was given another) and `hasSkin` is
+  false, so `resolveSkinFor` reports `fallback: true`. A node name nothing is registered under resolves
+  `undefined`, so `resolveNodeViewComponents` gives a non-base node the generic NodeView and a base prose node
+  none. A key that only prefixes registered keys (`callout`, with `callout.warning` registered) misses the
+  same way, and so does a key that is not a string.
+- **Any string is a key.** `ContentSection`, `contentSection`, `content_section`, `fancy-product`,
+  `My Fancy Skin!`, `/`, the empty string and a key beginning with the registry's root register and resolve as
+  they did in a map. Keys are compared exactly: no case folding, no trimming. A key that is not a string is
+  registered under its string form (`5` and `'5'` are one key, where a map kept two).
+- Neither registry enumerates, so there is no order to keep beyond which entry a key resolves to.
+
+**Who relied on replacing.** Before the policy was declared, callers were searched for a key registered
+twice in one registry (2026-11-18).
+
+- The search: `git grep -n -E 'registerSkin|registerNodeView|createSkinRegistry|createNodeViewRegistry|defaultSkinRegistry|SkinRegistry\b|NodeViewRegistry\b'`
+  over every tracked file of this repository, and `grep -rnE` for the same names plus `registerContentNodeViews`
+  over the `src` of the 18 `beam-*` packages of the beam JS workspace, of `splicewire/tower-ux`, of the
+  flagship's `ui/src` and of its `resources/js`. A second search, for the call names `registerNodeView`,
+  `registerSkin`, `resolveSkin`, `hasSkin` and `resolveNodeView` in any `.ts`/`.tsx`/`.js`/`.jsx` file under
+  `~/Workspaces/js/packages`, `~/Herd` and `~/Workspaces/laravel/starters` (skipping `node_modules`, `dist`,
+  `vendor` and hidden worktree folders), found two more source callers, named below, and built bundles.
+- No call site registers a key twice in one registry. beam-content's `registerContentNodeViews` registers four
+  distinct names once each (`ContentSection`, `ContentOutline` and the legacy `content_section`,
+  `content_outline`); the flagship calls it once, at module load, on the `nodeViewRegistry` it creates in
+  `ui/src/lib/form-widgets.ts`. The flagship's editor harness creates a registry and registers nothing. The
+  schemastud site's lab (`resources/js/components/home/core.tsx`) registers one name per key of an object, so
+  each once. This package's stories register nothing, and its tests each name once per registry.
+- `registerContentNodeViews` documents that "later registrations replace earlier ones, so a host can still
+  override a specific node afterward". No searched host does so today; `Supersede` keeps that promise.
+- No skin is registered anywhere outside this package's tests: the skin registry has no caller in the searched
+  roots.
+- No test, here or in those repositories, registered a key twice before `tests/registry-kernel.test.tsx` was
+  written to pin the policy.
+- What the zero means: no call site, as written, depends on replacement. It does not show that no host does.
+  The search reads calls spelled with the methods' own names, so a registration made through an alias or a
+  passed-in function, and any host outside the searched roots, is not covered. `Supersede` is declared because
+  it is what the registries already did and a host replacing a package's node view is an override, not because
+  the search found nobody.
+
 ## Manifest format (v1, frozen 2026-07-10)
 
 Both sides build against this exact JSON shape: the server export command

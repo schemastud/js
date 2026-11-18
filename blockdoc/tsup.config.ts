@@ -26,6 +26,8 @@ export default defineConfig({
         '@schemastud/seam',
         '@schemastud/messages',
         '@schemastud/messages/react',
+        // The skin and node-view registries' kernel: a real dependency, resolved at run time, never inlined.
+        '@schemastud/registry',
     ],
     noExternal: [/@tiptap\//, 'uuid'],
     esbuildOptions(options) {

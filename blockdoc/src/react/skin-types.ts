@@ -28,13 +28,36 @@ export interface SkinContext {
  */
 export type SkinComponent = (node: SkinNode, ctx?: SkinContext) => React.ReactNode;
 
+/**
+ * One skin a later `registerSkin` of the same key displaced: the skin that was registered, who registered
+ * it, and who registered the one that took its place. `null` where a registration named nobody. History
+ * only: a displaced skin is never resolved.
+ */
+export interface SupersededSkin {
+    readonly skin: SkinComponent;
+    readonly by: string | null;
+    readonly supersededBy: string | null;
+}
+
+/**
+ * `skinRegistrant` and `supersededSkins` are optional so a hand-written `SkinRegistry` keeps compiling;
+ * every registry `createSkinRegistry()` returns has both.
+ */
 export interface SkinRegistry {
-    /** Register a skin for a node-type. A later registration replaces an earlier one. */
-    registerSkin: (nodeType: string, skin: SkinComponent) => void;
+    /**
+     * Register a skin for a node-type. A later registration replaces an earlier one (the declared
+     * `Supersede` policy) and the displaced skin is recorded. `by` names who is registering (a package
+     * name, say); left out, the registrant reads back as `null`.
+     */
+    registerSkin: (nodeType: string, skin: SkinComponent, by?: string) => void;
     /** Resolve the skin for a node-type; falls back to the block-chrome skin. */
     resolveSkin: (nodeType: string) => SkinComponent;
     /** Whether a node-type has an explicitly registered skin (vs. the fallback). */
     hasSkin: (nodeType: string) => boolean;
     /** The fallback skin this registry resolves to when nothing is registered. */
     fallback: SkinComponent;
+    /** Who registered the skin this key resolves to, or `null` when nothing is registered or it named nobody. */
+    skinRegistrant?: (nodeType: string) => string | null;
+    /** What later registrations of this key displaced, oldest first. Empty when it was registered at most once. */
+    supersededSkins?: (nodeType: string) => SupersededSkin[];
 }

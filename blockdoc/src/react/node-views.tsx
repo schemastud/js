@@ -3,6 +3,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import { NodeViewWrapper, useReactNodeView } from '@tiptap/react';
 import type { ReactNodeViewProps } from '@tiptap/react';
 import { BlockChromeFallback } from './block-chrome';
+import { createNamedRegistry } from './named-registry';
 import { SelectionChrome } from './selection-chrome';
 import { defaultSkinRegistry } from './skin-registry';
 import type { SkinComponent, SkinContext, SkinNode, SkinRegistry } from './skin-types';
@@ -57,21 +58,60 @@ export const BASE_PROSE_NODE_NAMES: ReadonlySet<string> = new Set([
     'text',
 ]);
 
-export interface NodeViewRegistry {
-    registerNodeView(nodeTypeName: string, component: ComponentType<NodeViewComponentProps>): void;
-    resolveNodeView(nodeTypeName: string): ComponentType<NodeViewComponentProps> | undefined;
+/**
+ * One component a later `registerNodeView` of the same name displaced: the component that was
+ * registered, who registered it, and who registered the one that took its place. `null` where a
+ * registration named nobody. History only: a displaced component is never resolved.
+ */
+export interface SupersededNodeView {
+    readonly component: ComponentType<NodeViewComponentProps>;
+    readonly by: string | null;
+    readonly supersededBy: string | null;
 }
 
-/** A plain map-backed registry; later registrations replace earlier ones. */
+/**
+ * Registering a name that is already registered REPLACES the component (the kernel's `Supersede`
+ * policy, declared in `createNodeViewRegistry`), and the displaced one is recorded. It never throws.
+ * `by` names who is registering (a package name, say); left out, the registrant reads back as `null`.
+ *
+ * `nodeViewRegistrant` and `supersededNodeViews` are optional so a hand-written `NodeViewRegistry`
+ * keeps compiling; every registry `createNodeViewRegistry()` returns has both.
+ */
+export interface NodeViewRegistry {
+    registerNodeView(nodeTypeName: string, component: ComponentType<NodeViewComponentProps>, by?: string): void;
+    resolveNodeView(nodeTypeName: string): ComponentType<NodeViewComponentProps> | undefined;
+    /** Who registered the component this name resolves to, or `null` when nothing is registered or it named nobody. */
+    nodeViewRegistrant?(nodeTypeName: string): string | null;
+    /** What later registrations of this name displaced, oldest first. Empty when it was registered at most once. */
+    supersededNodeViews?(nodeTypeName: string): SupersededNodeView[];
+}
+
+/**
+ * A registry over an `@schemastud/registry` registry rooted at `blockdoc.node-views` that declares
+ * `Supersede`; later registrations replace earlier ones. Any string is a node name (`ContentSection`,
+ * `contentSection`, `content_section`, `p`); a name nothing is registered under, and a name that is
+ * not a string, resolves `undefined`, so `resolveNodeViewComponents` falls to the generic NodeView.
+ */
 export function createNodeViewRegistry(): NodeViewRegistry {
-    const components = new Map<string, ComponentType<NodeViewComponentProps>>();
+    const components = createNamedRegistry<ComponentType<NodeViewComponentProps>>(
+        'blockdoc.node-views',
+        'Manifest node name to the NodeView component that renders it in the editor.',
+    );
 
     return {
-        registerNodeView(nodeTypeName, component) {
-            components.set(nodeTypeName, component);
+        registerNodeView(nodeTypeName, component, by) {
+            components.register(nodeTypeName, component, by);
         },
         resolveNodeView(nodeTypeName) {
-            return components.get(nodeTypeName);
+            return components.resolve(nodeTypeName);
+        },
+        nodeViewRegistrant(nodeTypeName) {
+            return components.registrant(nodeTypeName);
+        },
+        supersededNodeViews(nodeTypeName) {
+            return components
+                .superseded(nodeTypeName)
+                .map(({ entry, by, supersededBy }) => ({ component: entry, by, supersededBy }));
         },
     };
 }

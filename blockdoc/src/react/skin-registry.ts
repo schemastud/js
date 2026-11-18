@@ -1,4 +1,5 @@
 import { BlockChromeFallback } from './block-chrome';
+import { createNamedRegistry } from './named-registry';
 import type { SkinComponent, SkinRegistry } from './skin-types';
 
 /**
@@ -11,12 +12,20 @@ import type { SkinComponent, SkinRegistry } from './skin-types';
  * The registry knows nothing of frame context or ProseMirror; a skin is just a
  * minimal `(node, ctx) => ReactNode`, so per-editor rich props thread through
  * `ctx` without the shared registry knowing them.
+ *
+ * Each call makes its own `@schemastud/registry` registry rooted at `blockdoc.skins`
+ * that declares `Supersede`: a later `registerSkin` of the same key replaces the
+ * earlier one, which is recorded with its registrant. Any string is a skin key (a
+ * node-type, or an authored `x-skin` name); a key that is not a string misses.
  */
 export function createSkinRegistry(fallback: SkinComponent = BlockChromeFallback): SkinRegistry {
-    const skins = new Map<string, SkinComponent>();
+    const skins = createNamedRegistry<SkinComponent>(
+        'blockdoc.skins',
+        'Node-type or x-skin name to the skin that draws its resting look.',
+    );
 
-    function registerSkin(nodeType: string, skin: SkinComponent): void {
-        skins.set(nodeType, skin);
+    function registerSkin(nodeType: string, skin: SkinComponent, by?: string): void {
+        skins.register(nodeType, skin, by);
     }
 
     function hasSkin(nodeType: string): boolean {
@@ -24,10 +33,19 @@ export function createSkinRegistry(fallback: SkinComponent = BlockChromeFallback
     }
 
     function resolveSkin(nodeType: string): SkinComponent {
-        return skins.get(nodeType) ?? fallback;
+        // `?? fallback` as the map's `get(…) ?? fallback` had it: a skin registered as undefined still falls back.
+        return skins.resolve(nodeType) ?? fallback;
     }
 
-    return { registerSkin, resolveSkin, hasSkin, fallback };
+    function skinRegistrant(nodeType: string): string | null {
+        return skins.registrant(nodeType);
+    }
+
+    function supersededSkins(nodeType: string) {
+        return skins.superseded(nodeType).map(({ entry, by, supersededBy }) => ({ skin: entry, by, supersededBy }));
+    }
+
+    return { registerSkin, resolveSkin, hasSkin, fallback, skinRegistrant, supersededSkins };
 }
 
 /**
