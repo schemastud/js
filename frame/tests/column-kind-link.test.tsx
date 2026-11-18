@@ -120,6 +120,66 @@ describe('the `link` column kind', () => {
         expect(td.innerHTML).toBe(expected);
     });
 
+    // frame-foundation 78: the cell draws as a link (the card links' treatment) on both paths.
+    it("the default anchor and the host's renderLink both receive the link class", async () => {
+        const renderLink = routerLink();
+        let td = await list({ name: 'Weekly visitors', href: '/analytics/figures/1' }, LINK, { renderLink });
+        expect(renderLink).toHaveBeenCalledWith(expect.objectContaining({ className: 'text-primary hover:underline' }));
+        expect(td.querySelector('a[data-router-link]')?.className).toBe('text-primary hover:underline');
+        cleanup();
+
+        td = await list({ name: 'Weekly visitors', href: 'https://example.com/report' }, LINK);
+        expect(td.querySelector('a[data-frame-cell="link"]')?.className).toBe('text-primary hover:underline');
+    });
+
+    it('a null href carries no link class', async () => {
+        const td = await list({ name: 'Weekly visitors', href: null }, LINK, { renderLink: routerLink() });
+        expect(td.querySelector('.text-primary')).toBeNull();
+        expect(td.innerHTML).not.toContain('hover:underline');
+    });
+
+    // frame-foundation 78: the scheme allowlist. Only a site-relative href, an http(s) URL, or `//host` / `/\host`
+    // links; anything else is `text`, judged as a browser's URL parser reads it.
+    it.each([
+        ['javascript:', 'javascript:alert(1)'],
+        ['mixed-case javascript:', 'JaVaScRiPt:alert(1)'],
+        ['tab-split javascript:', 'java\tscript:alert(1)'],
+        ['newline-split javascript:', 'javas\ncript:alert(1)'],
+        ['space- and control-prefixed javascript:', ' \u0001javascript:alert(1)'],
+        ['data:', 'data:text/html,<b>x</b>'],
+        ['vbscript:', 'VBScript:msgbox(1)'],
+        ['another scheme', 'mailto:someone@example.com'],
+        ['bare relative path', 'analytics/figures/1'],
+        ['backslash-led', '\\example.com/report'],
+        ['whitespace only', ' \t '],
+    ])('a %s href renders exactly as `text`: no link', async (_case, href) => {
+        const expected = await textCellHtml({ name: 'Weekly visitors' });
+        const renderLink = routerLink();
+        const td = await list({ name: 'Weekly visitors', href }, LINK, { renderLink });
+
+        expect(td.querySelector('a')).toBeNull();
+        expect(renderLink).not.toHaveBeenCalled();
+        expect(td.innerHTML).toBe(expected);
+    });
+
+    it.each([['https://example.com/report'], ['HTTP://example.com/report'], [' https://example.com/report ']])(
+        'an http(s) href (%s) is still a plain-anchor link',
+        async (href) => {
+            const td = await list({ name: 'Weekly visitors', href }, LINK, { renderLink: routerLink() });
+            const anchor = td.querySelector('a[data-frame-cell="link"]');
+            expect(anchor?.getAttribute('href')).toBe(href.trim());
+            expect(anchor?.className).toBe('text-primary hover:underline');
+        },
+    );
+
+    it('a tab-split `/\t/host` is read as the browser reads it, `//host`: a plain anchor, never the router link', async () => {
+        const renderLink = routerLink();
+        const td = await list({ name: 'Weekly visitors', href: '/\t/example.com/report' }, LINK, { renderLink });
+
+        expect(renderLink).not.toHaveBeenCalled();
+        expect(td.querySelector('a[data-frame-cell="link"]')?.getAttribute('href')).toBe('//example.com/report');
+    });
+
     it("a host-registered list-column `link` still replaces frame's, and reads the row as every kind can", async () => {
         const HostLink = ({ value, registry }: WidgetProps) => (
             <span data-host="link">{`${String(value)} -> ${String((registry.formContext.row as Record<string, unknown>).href)}`}</span>

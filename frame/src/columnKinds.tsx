@@ -283,19 +283,42 @@ function Placeholder({ text, italic }: { text: string; italic?: boolean }) {
 // ─── link ────────────────────────────────────────────────────────────────────
 // frame-foundation 77: the column's own value, drawn exactly as `text`, linked to the href a ROW field carries
 // (`hrefKey`). A site-relative href (one leading `/`, not followed by `/` or `\`) goes through the host's router
-// link, as every card anchor does; anything else (an absolute URL, `//host`, `/\host`, a bare relative path) is a
-// plain anchor. No href, or no value, is `text` and nothing else.
-// The cell trusts the href: the server sends it only to a viewer whose page opens.
+// link, as every card anchor does; an `http:` / `https:` URL, or a protocol-relative `//host` / `/\host`, is a plain
+// anchor. No href, or no value, is `text` and nothing else.
+// frame-foundation 78: the link draws as a link (the card links' treatment, on both paths), and only those three
+// shapes link at all. Any other href (`javascript:`, `data:`, `vbscript:`, any other scheme, a bare relative path)
+// is `text`: defence in depth, since the server's href is otherwise trusted.
+
+/** The card links' treatment (`ViewAllLink`, cards/chrome.tsx): the cell reads as a link under a host's anchor reset. */
+const LINK_CLASS = 'text-primary hover:underline';
+
+/**
+ * The href a link cell may draw, normalised as a browser's URL parser reads it, or undefined (frame-foundation 78).
+ * The parser drops leading and trailing C0 controls and spaces, and every tab, LF and CR anywhere, so
+ * `" jav\tascript:"` is `javascript:` to it; the allowlist judges that same string, and it is what the cell hands
+ * the anchor or the router link, so the two never read the href differently.
+ */
+function linkTarget(raw: string): { href: string; siteRelative: boolean } | undefined {
+    const href = raw.replace(/^[\u0000-\u0020]+|[\u0000-\u0020]+$/g, '').replace(/[\t\n\r]/g, '');
+    if (href.startsWith('/')) return { href, siteRelative: !/^\/[/\\]/.test(href) };
+    return /^https?:/i.test(href) ? { href, siteRelative: false } : undefined;
+}
 
 function LinkCell({ value, options, row }: { value: unknown; options: LinkWidgetOptions; row: Row | undefined }) {
     const text = <TextCell value={value} options={options} />;
     const raw = options.hrefKey ? row?.[options.hrefKey] : undefined;
-    if (isEmpty(value) || typeof raw !== 'string' || raw === '') return text;
+    if (isEmpty(value) || typeof raw !== 'string') return text;
+    const target = linkTarget(raw);
+    if (!target) return text;
 
-    const siteRelative = /^\/(?![/\\])/.test(raw);
-    const renderLink = siteRelative && typeof options.renderLink === 'function' ? options.renderLink : undefined;
+    const renderLink = target.siteRelative && typeof options.renderLink === 'function' ? options.renderLink : undefined;
     return (
-        <CardLink href={raw} options={renderLink ? { renderLink } : undefined} marker={{ 'data-frame-cell': 'link' }}>
+        <CardLink
+            href={target.href}
+            className={LINK_CLASS}
+            options={renderLink ? { renderLink } : undefined}
+            marker={{ 'data-frame-cell': 'link' }}
+        >
             {text}
         </CardLink>
     );
