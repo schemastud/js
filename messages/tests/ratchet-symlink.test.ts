@@ -49,10 +49,11 @@ it('runs through a symlinked package and a .bin link, so a planted display strin
     expect(run(root, direct).status).toBe(1);
 });
 
-it('importing the module has no side effect: main() does not run', () => {
+// frame-foundation 79: the library moved to bin/ratchet-lib.mjs (the bin now always runs, so it is not imported).
+it('importing the library has no side effect, through the symlinked package', () => {
     const root = host();
     const importer = join(root, 'importer.mjs');
-    const linked = join(root, 'node_modules/@schemastud/messages/bin/schemastud-message-ratchet.mjs');
+    const linked = join(root, 'node_modules/@schemastud/messages/bin/ratchet-lib.mjs');
     writeFileSync(importer, `const m = await import(${JSON.stringify(pathToFileURL(linked).href)});\nconsole.log(typeof m.scanDisplayStrings);\n`);
     const result = spawnSync(process.execPath, [importer, '--config', join(root, 'ratchet.json'), '--write'], { cwd: root, encoding: 'utf8' });
     expect(result.status).toBe(0);

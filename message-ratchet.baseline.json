@@ -14,7 +14,6 @@
     "@schemastud/big-calendar": 0,
     "@schemastud/nav": 0,
     "@schemastud/mainframe": 0,
-    "@schemastud/breadcrumb": 0,
-    "@schemastud/_resources": 0
+    "@schemastud/breadcrumb": 0
   }
 }

@@ -16,7 +16,7 @@
       "import": "./dist/react.js"
     },
     "./messages": "./messages.default.json",
-    "./ratchet": "./bin/schemastud-message-ratchet.mjs"
+    "./ratchet": "./bin/ratchet-lib.mjs"
   },
   "bin": {
     "schemastud-messages": "./bin/schemastud-messages.mjs",

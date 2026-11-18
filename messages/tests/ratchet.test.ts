@@ -129,6 +129,9 @@ it('generated descendants are excluded while configured excluded roots refuse', 
     const root = fixture();
     mkdirSync(join(root, 'src/generated'));
     writeFileSync(join(root, 'src/generated/client.tsx'), 'const Generated = <p>Generated copy</p>');
+    // A measured source file with no copy (frame-foundation 79: a package whose roots hold no source file fails as
+    // unmeasured, so the exclusion is shown on a measured package).
+    writeFileSync(join(root, 'src/ids.ts'), 'export const id = 1;');
     const result = run(root, '--write');
     expect(result.status, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout).counts.fixture).toBe(0);

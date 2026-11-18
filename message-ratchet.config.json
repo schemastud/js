@@ -40,9 +40,6 @@
     ],
     "@schemastud/breadcrumb": [
       "breadcrumb/src"
-    ],
-    "@schemastud/_resources": [
-      "_resources/types"
     ]
   }
 }

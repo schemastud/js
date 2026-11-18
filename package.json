@@ -35,8 +35,8 @@
     "export-list": "npm run export-list --workspaces --if-present",
     "census": "node scripts/import-census.mjs",
     "build:big-calendar": "npm --prefix big-calendar install && npm --prefix big-calendar run build",
-    "lint:messages": "node messages/bin/schemastud-message-ratchet.mjs --config message-ratchet.config.json",
-    "lint:messages:write": "node messages/bin/schemastud-message-ratchet.mjs --config message-ratchet.config.json --write"
+    "lint:messages": "schemastud-message-ratchet --config message-ratchet.config.json",
+    "lint:messages:write": "schemastud-message-ratchet --config message-ratchet.config.json --write"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.9",
