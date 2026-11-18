@@ -17,6 +17,10 @@ export class InvalidRegistryKey extends Error {
     override readonly name = 'InvalidRegistryKey';
 }
 
+// Marks a canonical key so that one built by another copy of this package is still recognised.
+// `instanceof` fails across two copies in one bundle; a registered symbol is the same in both.
+const CANONICAL = Symbol.for('@schemastud/registry/canonical-key');
+
 /**
  * The canonical key: dot-separated lowercase segments, `beam.realm.overlays`.
  *
@@ -63,6 +67,11 @@ export class Key implements RegistryKey {
     /** A key passes through untouched, whatever its type; a string is parsed. */
     static of(key: RegistryKey | string): RegistryKey {
         return typeof key === 'string' ? Key.parse(key) : key;
+    }
+
+    /** True on every canonical key, from this copy of the package or another. Not part of the interface. */
+    get [CANONICAL](): true {
+        return true;
     }
 
     /** The dotted rendering. Empty for the root. */
@@ -114,6 +123,23 @@ export class Key implements RegistryKey {
     toString(): string {
         return this.display;
     }
+}
+
+/**
+ * The key as this copy's `Key` when it is canonical, or null when it is a carried key. A canonical
+ * key from another copy of the package is rebuilt from its segments. Internal: not exported from
+ * the package.
+ */
+export function canonicalKey(key: RegistryKey): Key | null {
+    if (key instanceof Key) {
+        return key;
+    }
+
+    if ((key as { [CANONICAL]?: unknown })[CANONICAL] !== true) {
+        return null;
+    }
+
+    return key.segments.length === 0 ? Key.root() : Key.parse(key.segments.join(SEPARATOR));
 }
 
 /** Whether two keys have the same segments. The display strings are not compared. */

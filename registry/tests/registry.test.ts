@@ -126,6 +126,18 @@ describe('a carried key', () => {
         expect(registry.matches('frame.routes')).toEqual([]);
     });
 
+    it('is under the root when its segments begin with the root\'s, and matches(root) returns it', () => {
+        const registry = createRegistry<string>({ root: 'beam.ux.chrome.layouts' });
+        const key = foreignKey(['beam', 'ux', 'chrome', 'layouts', 'DocsLayout'], 'beam.ux.chrome.layouts.DocsLayout');
+
+        registry.register(key, 'the docs layout', 'pkg/beam-ux');
+
+        expect(registry.matches('beam.ux.chrome.layouts')).toEqual(['the docs layout']);
+        expect(registry.has(key)).toBe(true);
+        expect(registry.resolve(key)).toBe('the docs layout');
+        expect(displays(registry.keys())).toEqual(['beam.ux.chrome.layouts.DocsLayout']);
+    });
+
     it('is told apart from another key that displays the same', () => {
         const registry = createRegistry<string>({ root: 'frame.routes', onKeyDuplicate: OnKeyDuplicate.Reject });
 

@@ -75,6 +75,8 @@ Everything the package exports. `tests/exports.test.ts` fails when the exported 
 | `registry.keys()` | Every key that holds an entry, absolute, in registration order, each once. |
 | `registry.registrantOf(key)` | Who registered the entry at exactly this key, or `null`. |
 | `registry.superseded(key)` | What was displaced at exactly this key, oldest first: `{ key, entry, by, supersededBy, sequence }` each. |
+| `registry.keyFor(name)` | The key for a name, for any string, without throwing. A legal key is joined to the root; any other string is carried as one segment under the root. |
+| `registry.names()` | The names the registry holds, relative to its root, in registration order, each once. The inverse of `keyFor`. |
 | `Registry<T>`, `RegistryDeclaration`, `RegistryDeclarationInput`, `Superseded<T>` (types) | The shapes above. |
 
 Every `key` argument is a `RegistryKey` or a string. A string is parsed, so an illegal one throws
@@ -113,7 +115,7 @@ case names and the values are its backed values.
 | `index.registrantOf(root)` | Who described the registry at exactly this root, or `null`. |
 | `index.keys()` | Every described root, the index's own first. |
 | `index.superseded(root)` | The registries a later `describe` of the same root displaced, each with both registrants. |
-| `RegistryIndex` (type) | The index. It extends `Registry<Registry<unknown>>`, so it also has `declaration`, `has`, `resolve`, `tryResolve`, `matches` and `register`, all reading or writing roots. Use `describe` to add a registry; `register` writes one at a key without checking it is the registry's root. |
+| `RegistryIndex` (type) | The index. It extends `Registry<Registry<unknown>>`, so it also has `declaration`, `has`, `resolve`, `tryResolve`, `matches`, `keyFor`, `names` and `register`, all reading or writing roots. Use `describe` to add a registry; `register` writes one at a key without checking it is the registry's root. |
 
 ## What a registry does
 
@@ -121,10 +123,10 @@ case names and the values are its backed values.
   `beam.resources.invoices`. A key already at or under the root is left as it is. Reads take either spelling, and
   `keys()` returns absolute keys. A key that sits under some other root is read as relative and joined: the registry
   cannot tell that from a typo.
-- **Only a canonical key is joined to the root.** A key made with `foreignKey` is stored exactly as given, outside the
-  root. `keys()` lists it and `resolve` finds it by its segments, but `matches(root)` does not return it and an index
-  does not route to it. A name that is not a legal key (uppercase, a slash) can be registered this way:
-  `foreignKey([name], name)`.
+- **Only a canonical key is joined to the root.** A key made with `foreignKey` is stored with exactly the segments it
+  was given. It is under the root only when those segments begin with the root's. One that does not is outside the
+  root: `keys()` lists it and `resolve` finds it, but `matches(root)` does not return it, an index does not route to
+  it, and the same name in two registries is the same key. Do not build these by hand for names: use `keyFor`, below.
 - **A duplicate does what the registry declared.**
   - `Supersede` (the default): the later write takes the key. It keeps the displaced entry's place in the order, so
     overriding one entry does not reorder a list. The displaced entry is recorded with who registered it and who
@@ -142,6 +144,59 @@ case names and the values are its backed values.
 - **Order is registration order**, and it is the only order: there is no rank or priority.
 - **A registrant is on every write.** `by` has no default. Pass `null` only when there is nobody to name; a miss or a
   duplicate message is then less useful.
+
+## Wrapping a registry that is keyed by names
+
+A package that keeps its own `registerX(name, entry)` and `resolveX(name)` over a registry has names, not keys, and
+most real names are not legal keys: `DocsLayout`, `contentSection`, `Admin/Users`, a string an author typed. Two
+methods carry a name in and out, and neither throws for any string.
+
+- `registry.keyFor(name)` is the key for a name. A legal key (`home`, `tenants.index`) is parsed and joined to the
+  root, as `register('home', …)` would do. Any other string becomes **one segment under the root**, carried as it
+  is: in a registry rooted at `beam.ux.chrome.layouts`, `DocsLayout` is the key that displays
+  `beam.ux.chrome.layouts.DocsLayout`. So `matches(root)` returns it, an index routes to it, and `DocsLayout` in a
+  sibling registry rooted at `beam.ux.chrome.templates` is a different key.
+- `registry.names()` is the names the registry holds, in registration order, each once. It is what `routeNames()`
+  or a list of registered modes returns.
+
+```ts
+const layouts = createRegistry<Layout>({ root: 'beam.ux.chrome.layouts' });
+
+function registerLayout(name: string, layout: Layout): void {
+    layouts.register(layouts.keyFor(name), layout, '@splicewire/beam-ux');
+}
+
+function resolveLayout(name: string): Layout | undefined {
+    const key = layouts.keyFor(name);
+
+    return layouts.has(key) ? layouts.resolve(key) : undefined;
+}
+
+const registeredLayoutNames = (): string[] => layouts.names();
+```
+
+**`tryResolve` is not a drop-in for `Map.get`.** It returns `null` for a name nothing is registered under, but it
+throws `AmbiguousRegistryMatch` for a name that is a branch of registered names. With `tenants.index` and
+`tenants.edit` registered, a `Map` answered `undefined` for `tenants`; `tryResolve('tenants')` throws. `has` is exact
+and never ambiguous (`has('tenants')` is false), so a wrapper that must answer its own miss value for any string
+writes `has(key) ? resolve(key) : missValue`, as above. Under `Admit` a name registered twice still throws from
+`resolve`; read it with `matches(key)`.
+
+Passing a bare string to `has`, `resolve` or `register` parses it, and throws `InvalidRegistryKey` for a name that
+is not a legal key. Pass `keyFor(name)` wherever the string is a name.
+
+A name comes back from `names()` as it went in to `keyFor`, with these exceptions:
+
+- A legal key that begins with the registry's own root is read as already absolute. In a registry rooted at
+  `frame.routes`, the name `frame.routes.home` is the same key as `home` and comes back as `home`, and the name
+  `frame.routes` is the root itself and comes back as `''`.
+- The empty string is carried as an empty segment under the root and comes back as `''`. That is the same name an
+  entry at the root itself has, though the two are different keys.
+- A key registered by other means than `keyFor` is named by taking the root off and joining what is left with dots,
+  or by its display string when it is not under the root.
+
+A canonical key is recognised by a registered symbol, not by `instanceof`, so a `Key` built by a second copy of this
+package in the same bundle is still joined to the root.
 
 `Filtered` is a fourth miss reason in the PHP kernel, for an entry an authorizer hid from the caller. Nothing in this
 package authorizes, so it is not a miss reason here. A browser is to receive a tree the server already filtered.

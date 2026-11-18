@@ -1,11 +1,15 @@
 import { AmbiguousRegistryMatch, DuplicateRegistryKey, RegistryMiss, absentMiss, ambiguousMiss, unpopulatedMiss } from './errors';
-import { InvalidRegistryKey, Key, keysEqual, type RegistryKey } from './key';
+import { InvalidRegistryKey, Key, canonicalKey, foreignKey, keysEqual, type RegistryKey } from './key';
 import { OnKeyDuplicate, PopulationRequirement } from './policy';
 import { identityOf, isBelow } from './segments';
 
 /** What a registry declares about itself. Fixed when the registry is created. */
 export interface RegistryDeclaration {
-    /** The branch of the keyspace the registry owns. Every key it stores is at or under it. */
+    /**
+     * The branch of the keyspace the registry owns. Every canonical key it stores is at or under it.
+     * A carried key (`foreignKey`) is stored as given, so it is under the root only when its
+     * segments begin with the root's, which is how `keyFor` builds one.
+     */
     readonly root: Key;
     readonly onKeyDuplicate: OnKeyDuplicate;
     readonly populationRequirement: PopulationRequirement;
@@ -44,10 +48,11 @@ export interface Superseded<TEntry> {
  * Keys go in relative and come out absolute: `register('invoices', …)` on a registry rooted at
  * `beam.resources` stores `beam.resources.invoices`, and a key already at or under the root is left
  * as it is. Only a `Key` (or a string, which is parsed to one) is joined to the root. A key made
- * with `foreignKey` is stored exactly as given.
+ * with `foreignKey` is stored with exactly the segments it was given: it is under the root only
+ * when those segments begin with the root's.
  *
  * Every method that takes a string parses it, so an illegal key string throws `InvalidRegistryKey`
- * before anything is looked up.
+ * before anything is looked up. For a name that may not be a legal key, pass `keyFor(name)`.
  */
 export interface Registry<TEntry> {
     readonly declaration: RegistryDeclaration;
@@ -87,6 +92,23 @@ export interface Registry<TEntry> {
 
     /** What was displaced at exactly this key, oldest first. Always empty unless the registry supersedes. */
     superseded(key: RegistryKey | string): Superseded<TEntry>[];
+
+    /**
+     * The key this registry uses for a name. It never throws, whatever the string. A name that is a
+     * legal key is parsed and joined to the root, exactly as `register(name, …)` would. Any other
+     * string (uppercase, a slash, a space, the empty string) becomes one segment under the root,
+     * carried as it is: `DocsLayout` in a registry rooted at `beam.ux.chrome.layouts` is the key
+     * with segments `[beam, ux, chrome, layouts, DocsLayout]`.
+     */
+    keyFor(name: string): RegistryKey;
+
+    /**
+     * The names this registry holds, in registration order, each once: every key with the root
+     * taken off the front and the rest joined with dots. The inverse of `keyFor`. An entry at the
+     * root itself has the name `''`, and a carried key that is not under the root is named by its
+     * display string.
+     */
+    names(): string[];
 }
 
 /**
@@ -239,11 +261,30 @@ export class RegistryStore<TEntry> implements Registry<TEntry> {
         return [...(this.displaced.get(identityOf(this.door(key))) ?? [])];
     }
 
+    keyFor(name: string): RegistryKey {
+        const root = this.declaration.root;
+        const parsed = Key.tryParse(name);
+
+        if (parsed !== null) {
+            return parsed.underRoot(root);
+        }
+
+        return foreignKey([...root.segments, name], root.segments.length === 0 ? name : `${root.display}.${name}`);
+    }
+
+    names(): string[] {
+        const root = this.declaration.root;
+        const depth = root.segments.length;
+
+        return this.keys().map((key) => (keysEqual(key, root) || isBelow(key, root) ? key.segments.slice(depth).join('.') : key.display));
+    }
+
     /** Every key argument's one way in: parse a string, then join a canonical key to the declared root. */
     private door(key: RegistryKey | string): RegistryKey {
         const parsed = Key.of(key);
 
-        return parsed instanceof Key ? parsed.underRoot(this.declaration.root) : parsed;
+        // Not `instanceof Key`: a key built by a second copy of this package must still be joined.
+        return canonicalKey(parsed)?.underRoot(this.declaration.root) ?? parsed;
     }
 }
 

@@ -159,4 +159,12 @@ class Index implements RegistryIndex {
     superseded(key: RegistryKey | string): Superseded<Registry<unknown>>[] {
         return this.registries.superseded(key);
     }
+
+    keyFor(name: string): RegistryKey {
+        return this.registries.keyFor(name);
+    }
+
+    names(): string[] {
+        return this.registries.names();
+    }
 }
