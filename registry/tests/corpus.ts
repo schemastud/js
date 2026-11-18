@@ -26,10 +26,24 @@ export interface HierarchyCase {
     why?: string;
 }
 
+/** `key` null is the zero-segment root, which has no string spelling. `owner` '' is the index itself; null is no owner. */
+export interface RoutingCase {
+    roots: string[];
+    key: string | null;
+    owner: string | null;
+    why?: string;
+}
+
+/** The routing section opens with an entry that is a note to the reader, not a case. */
+export interface CorpusComment {
+    $comment: string;
+}
+
 interface Corpus {
     grammar: GrammarCase[];
     equality: EqualityCase[];
     hierarchy: HierarchyCase[];
+    routing: (RoutingCase | CorpusComment)[];
 }
 
 const corpus = JSON.parse(readFileSync(vendoredCorpusPath, 'utf8')) as Corpus;
@@ -40,6 +54,20 @@ export function section<S extends keyof Corpus>(name: S): Corpus[S] {
 
     if (!Array.isArray(cases) || cases.length === 0) {
         throw new Error(`The corpus has no \`${name}\` cases.`);
+    }
+
+    return cases;
+}
+
+/**
+ * The routing cases, without the section's `$comment` entries. The PHP driver drops the same entries.
+ * Throws when nothing is left, so a section of comments cannot pass as zero cases.
+ */
+export function routingCases(): RoutingCase[] {
+    const cases = section('routing').filter((entry): entry is RoutingCase => !('$comment' in entry));
+
+    if (cases.length === 0) {
+        throw new Error('The corpus has no `routing` cases besides its comments.');
     }
 
     return cases;

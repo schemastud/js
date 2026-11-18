@@ -1,2 +1,9 @@
 export { InvalidRegistryKey, Key, foreignKey, keysEqual } from './key';
 export type { RegistryKey } from './key';
+export { MissReason, OnKeyDuplicate, PopulationRequirement } from './policy';
+export { AmbiguousRegistryMatch, DuplicateRegistryKey, RegistryMiss, UnregisteredRegistry } from './errors';
+export type { MissCandidate } from './errors';
+export { createRegistry } from './registry';
+export type { Registry, RegistryDeclaration, RegistryDeclarationInput, Superseded } from './registry';
+export { createRegistryIndex } from './registry-index';
+export type { RegistryIndex } from './registry-index';

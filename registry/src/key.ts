@@ -94,6 +94,23 @@ export class Key implements RegistryKey {
         return prefix.every((segment, index) => segment === this.segments[index]);
     }
 
+    /**
+     * This key as a registry rooted at `root` stores it. A key equal to the root or under it is
+     * already absolute and comes back untouched; any other key is relative and gets the root's
+     * segments joined onto its front. So it is idempotent, and under the zero-segment root every key
+     * comes back untouched.
+     *
+     * A key that only looks absolute, because it sits under some other root, is read as relative
+     * and joined: nothing here can tell that from a typo.
+     */
+    underRoot(root: Key): Key {
+        if (this.equals(root) || this.isUnder(root)) {
+            return this;
+        }
+
+        return new Key([...root.segments, ...this.segments]);
+    }
+
     toString(): string {
         return this.display;
     }

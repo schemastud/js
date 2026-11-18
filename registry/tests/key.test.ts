@@ -86,3 +86,28 @@ describe('Key', () => {
         expect(key.display).toBe('beam.realm');
     });
 });
+
+describe('underRoot', () => {
+    const root = Key.parse('beam.realm');
+
+    it('joins the root onto a key that is not at or under it', () => {
+        expect(Key.parse('overlays').underRoot(root).segments).toEqual(['beam', 'realm', 'overlays']);
+        expect(Key.parse('beam.realms').underRoot(root).display).toBe('beam.realm.beam.realms');
+        expect(Key.parse('beam').underRoot(root).display).toBe('beam.realm.beam');
+    });
+
+    it('leaves a key at or under the root untouched, so it is idempotent', () => {
+        const under = Key.parse('beam.realm.overlays');
+
+        expect(under.underRoot(root)).toBe(under);
+        expect(root.underRoot(root)).toBe(root);
+        expect(Key.parse('overlays').underRoot(root).underRoot(root).display).toBe('beam.realm.overlays');
+    });
+
+    it('is a no-op under the zero-segment root, and turns the zero-segment key into the root', () => {
+        const key = Key.parse('beam');
+
+        expect(key.underRoot(Key.root())).toBe(key);
+        expect(Key.root().underRoot(root).display).toBe('beam.realm');
+    });
+});
