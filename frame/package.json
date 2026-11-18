@@ -86,16 +86,16 @@
     "@schemastud/messages": ">=0.1.0 <1"
   },
   "dependencies": {
-    "@schemastud/facets": "^0.2.2",
-    "@schemastud/seam": "^0.2.2",
-    "@schemastud/ui": "^0.1.2"
+    "@schemastud/facets": "github:schemastud/js#fd10b0e677e5c3c8e19300e9876d9ea876b78fda&path:/facets",
+    "@schemastud/seam": "github:schemastud/js#c64c71230c3f813a50dc2ebd0c4f14eaa03dabdd&path:/seam",
+    "@schemastud/ui": "github:schemastud/js#868f3be704f6af5b4954562edba7533c7a8c5999&path:/ui"
   },
   "devDependencies": {
     "@rjsf/core": "~6.6.2",
     "@rjsf/shadcn": "~6.6.2",
     "@rjsf/utils": "~6.6.2",
     "@rjsf/validator-ajv8": "~6.6.2",
-    "@schemastud/combobox": "*",
+    "@schemastud/combobox": "github:schemastud/js#23d6f448bc981db6d6b86baecbc0f3902cb342eb&path:/combobox",
     "@tanstack/react-query": "^5.62.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.2",
@@ -110,7 +110,7 @@
     "typescript": "^5.7.0",
     "vitest": "^4.1.10",
     "zustand": "^5.0.14",
-    "@schemastud/messages": "^0.1.0"
+    "@schemastud/messages": "github:schemastud/js#91d2a7fdd508dbb2b60e6fcbed71bcbd7d00c2d1&path:/messages"
   },
   "bin": {
     "frame-vocabulary": "bin/frame-vocabulary.mjs"
