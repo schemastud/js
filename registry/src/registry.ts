@@ -95,10 +95,14 @@ export interface Registry<TEntry> {
 
     /**
      * The key this registry uses for a name. It never throws, whatever the string. A name that is a
-     * legal key is parsed and joined to the root, exactly as `register(name, …)` would. Any other
-     * string (uppercase, a slash, a space, the empty string) becomes one segment under the root,
-     * carried as it is: `DocsLayout` in a registry rooted at `beam.ux.chrome.layouts` is the key
-     * with segments `[beam, ux, chrome, layouts, DocsLayout]`.
+     * legal key is parsed and joined to the root. Any other string (uppercase, a slash, a space, the
+     * empty string) becomes one segment under the root, carried as it is: `DocsLayout` in a registry
+     * rooted at `beam.ux.chrome.layouts` is the key with segments `[beam, ux, chrome, layouts, DocsLayout]`.
+     *
+     * A name is never read as absolute. A legal key that is the root or begins with it
+     * (`frame.routes.home` in a registry rooted at `frame.routes`) is carried whole as one segment
+     * under the root too, so it is a different key from `home`. To address an entry by its absolute
+     * key, pass the string or the `Key` itself to `register`, `has` or `resolve`.
      */
     keyFor(name: string): RegistryKey;
 
@@ -264,6 +268,14 @@ export class RegistryStore<TEntry> implements Registry<TEntry> {
     keyFor(name: string): RegistryKey {
         const root = this.declaration.root;
         const parsed = Key.tryParse(name);
+
+        // A name that spells this registry's own root (`frame.routes.home`, or `frame.routes` itself, in
+        // a registry rooted at `frame.routes`) is still a name, not the absolute spelling of `home` or of
+        // the root: it is carried whole, so it stays its own key and `names()` gives it back as written.
+        // The zero-segment root is exempt: under it every key is absolute, and a name is the key.
+        if (parsed !== null && root.segments.length > 0 && (parsed.equals(root) || parsed.isUnder(root))) {
+            return foreignKey([...root.segments, name], `${root.display}.${name}`);
+        }
 
         if (parsed !== null) {
             return parsed.underRoot(root);

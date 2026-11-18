@@ -75,7 +75,7 @@ Everything the package exports. `tests/exports.test.ts` fails when the exported 
 | `registry.keys()` | Every key that holds an entry, absolute, in registration order, each once. |
 | `registry.registrantOf(key)` | Who registered the entry at exactly this key, or `null`. |
 | `registry.superseded(key)` | What was displaced at exactly this key, oldest first: `{ key, entry, by, supersededBy, sequence }` each. |
-| `registry.keyFor(name)` | The key for a name, for any string, without throwing. A legal key is joined to the root; any other string is carried as one segment under the root. |
+| `registry.keyFor(name)` | The key for a name, for any string, without throwing. A legal key is joined to the root; any other string, and a legal key that itself begins with the root, is carried as one segment under the root. |
 | `registry.names()` | The names the registry holds, relative to its root, in registration order, each once. The inverse of `keyFor`. |
 | `Registry<T>`, `RegistryDeclaration`, `RegistryDeclarationInput`, `Superseded<T>` (types) | The shapes above. |
 
@@ -185,11 +185,13 @@ writes `has(key) ? resolve(key) : missValue`, as above. Under `Admit` a name reg
 Passing a bare string to `has`, `resolve` or `register` parses it, and throws `InvalidRegistryKey` for a name that
 is not a legal key. Pass `keyFor(name)` wherever the string is a name.
 
+`keyFor` never reads a name as absolute. In a registry rooted at `frame.routes`, the names `home` and
+`frame.routes.home` are two keys, and the name `frame.routes` is a key under the root, not the root. Each is
+carried whole as one segment under the root. To address an entry by its absolute key, pass the string or the `Key`
+to `register`, `has` or `resolve`, which do read a key at or under the root as absolute.
+
 A name comes back from `names()` as it went in to `keyFor`, with these exceptions:
 
-- A legal key that begins with the registry's own root is read as already absolute. In a registry rooted at
-  `frame.routes`, the name `frame.routes.home` is the same key as `home` and comes back as `home`, and the name
-  `frame.routes` is the root itself and comes back as `''`.
 - The empty string is carried as an empty segment under the root and comes back as `''`. That is the same name an
   entry at the root itself has, though the two are different keys.
 - A key registered by other means than `keyFor` is named by taking the root off and joining what is left with dots,

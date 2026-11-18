@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createGuardRegistry, createRouteRegistry, createShellRegistry } from '../src/routes';
+import { assertRouteContext, createGuardRegistry, createRouteRegistry, createShellRegistry } from '../src/routes';
+import type { RouteContextEntry } from '../src/types';
 
 /**
  * The route, guard and shell registries sit on `@schemastud/registry` and keep the interface they had as
@@ -229,5 +230,60 @@ describe('each factory call', () => {
 
         expect(resolveRoute('tenants.index')).toBe(First);
         expect(routeNames()).toEqual(['tenants.index']);
+    });
+});
+
+describe('a name that is not a string', () => {
+    // A manifest is server data: a malformed entry reaches these registries untyped.
+    const notStrings = [undefined, null, 5, {}] as unknown as string[];
+
+    it.each(notStrings)('misses on every read of %j, in an empty registry and a populated one', (name) => {
+        const routes = createRouteRegistry();
+        const guards = createGuardRegistry();
+        const shells = createShellRegistry();
+
+        for (const populated of [false, true]) {
+            if (populated) {
+                routes.registerRoute('tenants.index', First);
+                guards.registerGuard('root', Wrap);
+                shells.registerShell('knowledge', First);
+            }
+
+            expect(routes.hasRoute(name)).toBe(false);
+            expect(routes.resolveRoute(name)).toBeUndefined();
+            expect(routes.routeRegistrant?.(name)).toBeNull();
+            expect(routes.supersededRoutes?.(name)).toEqual([]);
+            expect(guards.hasGuard(name)).toBe(false);
+            expect(guards.resolveGuard(name)).toBeUndefined();
+            expect(guards.guardRegistrant?.(name)).toBeNull();
+            expect(guards.supersededGuards?.(name)).toEqual([]);
+            expect(shells.hasShell(name)).toBe(false);
+            expect(shells.resolveShell(name)).toBeUndefined();
+            expect(shells.shellRegistrant?.(name)).toBeNull();
+            expect(shells.supersededShells?.(name)).toEqual([]);
+        }
+    });
+
+    it('is reported and skipped by assertRouteContext under unbound: report, as an entry with no routeName was', () => {
+        const routes = createRouteRegistry();
+        routes.registerRoute('tenants.index', First);
+
+        const malformed = { path: 'broken', shell: 'app', lazy: false, guard: null, mounts: 'list', widget: null, resource: null } as unknown as RouteContextEntry;
+        const bound = { ...malformed, routeName: 'tenants.index', path: 'tenants' } as RouteContextEntry;
+        const reported: RouteContextEntry[] = [];
+
+        expect(() =>
+            assertRouteContext([malformed, bound], routes, { unbound: 'report', onUnbound: (entry) => reported.push(entry) }),
+        ).not.toThrow();
+        expect(reported).toEqual([malformed]);
+    });
+
+    it('is bound under its string form when registered', () => {
+        const routes = createRouteRegistry();
+
+        expect(() => routes.registerRoute(5 as unknown as string, First)).not.toThrow();
+
+        expect(routes.resolveRoute('5')).toBe(First);
+        expect(routes.routeNames()).toEqual(['5']);
     });
 });

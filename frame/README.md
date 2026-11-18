@@ -87,7 +87,9 @@ routes.supersededRoutes?.('tenants.index'); // [{ component: TenantsList, by: '@
   prefixes bound names (`tenants`, with `tenants.index` bound). `buildRealmRoutes` relies on both: an unbound
   route falls to `fallback` and then `onUnbound`, and an unbound guard refuses the leaf.
 - **Any string is a name.** `Admin/Users`, `DocsLayout` and the empty string bind and resolve as they did in
-  a map. A name is compared exactly: no case folding, no trimming.
+  a map. A name is compared exactly: no case folding, no trimming. A read handed something that is not a
+  string (a manifest entry with no `routeName`) misses and does not throw. A registration handed one binds it
+  under its string form, so `registerRoute(5, C)` is found by `'5'` and not by `5`; a map found it by `5`.
 - **A route the server sends twice still throws.** `assertRouteContext` refuses a `routeName` that appears
   twice in a `RouteContext`. That is a duplicate in the manifest, which no host can override. A host binding
   a name twice is an override, so it is allowed.
@@ -104,8 +106,9 @@ in one registry (2026-11-18).
   lines of `ui/src/app/routeRegistry.tsx`, in the two arms of one `if`.
 - One call site can bind a name twice at run time. beam-inertia's `src/frame/router.tsx` binds a list leaf's
   create route and read-detail route by names taken from the manifest, once per list leaf. Two list leaves of
-  one resource in one shell would bind those names twice, with equivalent components. Under `Reject` that
-  would throw at mount.
+  one resource in one shell that share a route-name stem would bind those names twice. The read-detail
+  bindings are equivalent. The create bindings are not: each one's `onSaved` returns to its own list leaf's
+  path, so the later leaf's return path wins, as it did in a map. Under `Reject` that would throw at mount.
 - The search found no test, here or in those three repositories, that binds a name twice.
 - What the zero means: no call site, as written, depends on replacement. It does not show that no host does.
   The search reads calls spelled with the method's own name, so a binding made through an alias, and any host

@@ -1,5 +1,5 @@
 import { createElement, type ComponentType, type ReactElement } from 'react';
-import { Key, OnKeyDuplicate, createRegistry, foreignKey, type Registry, type RegistryKey } from '@schemastud/registry';
+import { OnKeyDuplicate, createRegistry, type Registry, type RegistryKey } from '@schemastud/registry';
 import type { RouteContextEntry } from './types';
 
 // =============================================================================
@@ -98,44 +98,40 @@ function createNamedRegistry<TComponent>(root: string, description: string) {
         description,
     });
 
-    // `registry.keyFor`, except for a name that itself begins with this registry's root. The kernel
-    // reads `frame.routes.home` in `frame.routes` as the already-absolute spelling of `home`, which
-    // would make two names one binding; a `Map` kept them apart. Such a name is carried whole, as one
-    // segment under the root, so every name is its own key and `names()` returns it as it went in.
-    const keyOf = (name: string): RegistryKey => {
-        const declared = registry.declaration.root;
-        const parsed = Key.tryParse(name);
-
-        if (parsed !== null && (parsed.equals(declared) || parsed.isUnder(declared))) {
-            return foreignKey([...declared.segments, name], `${declared.display}.${name}`);
-        }
-
-        return registry.keyFor(name);
-    };
+    // A read handed something that is not a string (a manifest entry with no `routeName`, say) misses,
+    // as it did in a `Map`: nothing is bound to it. Null here is that miss.
+    const keyOf = (name: string): RegistryKey | null => (typeof name === 'string' ? registry.keyFor(name) : null);
 
     return {
         register(name: string, component: TComponent, by?: string): void {
-            // `by` is read defensively: a caller that passes the method as a callback hands it an index.
-            registry.register(keyOf(name), component, typeof by === 'string' ? by : null);
+            // A name that is not a string is bound under its string form. `by` is read defensively too: a
+            // caller that passes the method as a callback hands it an index.
+            registry.register(registry.keyFor(String(name)), component, typeof by === 'string' ? by : null);
         },
         has(name: string): boolean {
-            return registry.has(keyOf(name));
+            const key = keyOf(name);
+
+            return key !== null && registry.has(key);
         },
         resolve(name: string): TComponent | undefined {
             const key = keyOf(name);
 
-            return registry.has(key) ? registry.resolve(key) : undefined;
+            return key !== null && registry.has(key) ? registry.resolve(key) : undefined;
         },
         names(): string[] {
             return registry.names();
         },
         registrant(name: string): string | null {
-            return registry.registrantOf(keyOf(name));
+            const key = keyOf(name);
+
+            return key === null ? null : registry.registrantOf(key);
         },
         superseded(name: string): SupersededRegistration<TComponent>[] {
-            return registry
-                .superseded(keyOf(name))
-                .map(({ entry, by, supersededBy }) => ({ component: entry, by, supersededBy }));
+            const key = keyOf(name);
+
+            return key === null
+                ? []
+                : registry.superseded(key).map(({ entry, by, supersededBy }) => ({ component: entry, by, supersededBy }));
         },
     };
 }

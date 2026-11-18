@@ -17,7 +17,15 @@ describe('keyFor', () => {
         expect(registry.keyFor('docs')).toBeInstanceOf(Key);
         expect(registry.keyFor('docs').segments).toEqual(['beam', 'ux', 'chrome', 'layouts', 'docs']);
         expect(registry.keyFor('tenants.index').segments).toEqual(['beam', 'ux', 'chrome', 'layouts', 'tenants', 'index']);
-        expect(registry.keyFor('beam.ux.chrome.layouts.docs').display).toBe('beam.ux.chrome.layouts.docs');
+    });
+
+    it('never reads a name as absolute: a legal key that begins with the root is carried whole under it', () => {
+        expect(registry.keyFor('beam.ux.chrome.layouts.docs')).not.toBeInstanceOf(Key);
+        expect(registry.keyFor('beam.ux.chrome.layouts.docs').segments).toEqual(['beam', 'ux', 'chrome', 'layouts', 'beam.ux.chrome.layouts.docs']);
+        expect(registry.keyFor('beam.ux.chrome.layouts').segments).toEqual(['beam', 'ux', 'chrome', 'layouts', 'beam.ux.chrome.layouts']);
+        // Compared by segment: `beam.ux.chrome.layoutsx` only looks like the root, so it is joined as any legal key is.
+        expect(registry.keyFor('beam.ux.chrome.layoutsx.docs')).toBeInstanceOf(Key);
+        expect(registry.keyFor('beam.ux.chrome.layoutsx.docs').segments).toEqual(['beam', 'ux', 'chrome', 'layouts', 'beam', 'ux', 'chrome', 'layoutsx', 'docs']);
     });
 
     it.each(['DocsLayout', 'contentSection', 'Admin/Users', 'Admin.Users', 'two words', ' docs', 'a..b', '.', ''])(
@@ -53,12 +61,33 @@ describe('names', () => {
         expect(registry.names()).toEqual(['Home', 'tenants.index', 'about']);
     });
 
-    it('does not round-trip a legal name that spells the root: it is read as already absolute', () => {
+    it('keeps `home` and `<root>.home` as two keys, and gives both back as written', () => {
         const registry = createRegistry<string>({ root: 'frame.routes' });
 
-        registry.register(registry.keyFor('frame.routes.home'), 'a', 'pkg/a').register(registry.keyFor('frame.routes'), 'b', 'pkg/a');
+        registry.register(registry.keyFor('home'), 'a', 'pkg/a').register(registry.keyFor('frame.routes.home'), 'b', 'pkg/b');
 
-        expect(registry.names()).toEqual(['home', '']);
+        expect(registry.names()).toEqual(['home', 'frame.routes.home']);
+        expect(get(registry, 'home')).toBe('a');
+        expect(get(registry, 'frame.routes.home')).toBe('b');
+        expect(registry.superseded(registry.keyFor('home'))).toEqual([]);
+        // The absolute spelling is still read by the door: a bare string is a key, not a name.
+        expect(registry.resolve('frame.routes.home')).toBe('a');
+    });
+
+    it('carries the root itself, used as a name, as a key distinct from the root, and gives it back as written', () => {
+        const registry = createRegistry<string>({ root: 'frame.routes' });
+
+        registry.register(registry.keyFor('frame.routes'), 'named', 'pkg/a');
+
+        expect(registry.names()).toEqual(['frame.routes']);
+        expect(registry.keyFor('frame.routes').segments).toEqual(['frame', 'routes', 'frame.routes']);
+        expect(get(registry, 'frame.routes')).toBe('named');
+        expect(registry.has(registry.declaration.root)).toBe(false);
+
+        registry.register(registry.declaration.root, 'at the root', 'pkg/a');
+
+        expect(registry.names()).toEqual(['frame.routes', '']);
+        expect(registry.resolve(registry.declaration.root)).toBe('at the root');
     });
 
     it('names a carried key outside the root by its display string', () => {
