@@ -1,62 +1,62 @@
 {
-    "name": "@schemastud/breadcrumb",
-    "version": "0.1.2",
-    "description": "A host-agnostic breadcrumb renderer. Renders a crumb array where any crumb can be a plain link or a searchable sibling-switcher (backed by @schemastud/combobox) \u2014 so record breadcrumbs scale to large dynamic lists instead of dumping every sibling into a static menu. Navigation and UI atoms are injected as props; the crumb data derivation stays with the host.",
-    "license": "MIT",
-    "type": "module",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
-        },
-        "./messages": "./messages.default.json"
+  "name": "@schemastud/breadcrumb",
+  "version": "0.1.2",
+  "description": "A host-agnostic breadcrumb renderer. Renders a crumb array where any crumb can be a plain link or a searchable sibling-switcher (backed by @schemastud/combobox) — so record breadcrumbs scale to large dynamic lists instead of dumping every sibling into a static menu. Navigation and UI atoms are injected as props; the crumb data derivation stays with the host.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
-    "files": [
-        "dist",
-        "src",
-        "README.md",
-        "messages.default.json"
-    ],
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org",
-        "access": "public"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/schemastud/breadcrumb.git"
-    },
-    "scripts": {
-        "build": "tsup",
-        "dev": "tsup --watch",
-        "typecheck": "tsc --noEmit",
-        "prepublishOnly": "npm run build",
-        "test": "vitest run"
-    },
-    "peerDependencies": {
-        "@schemastud/combobox": "^0.1.0 || ^0.2.0",
-        "react": ">=18",
-        "@schemastud/messages": ">=0.1.0 <1"
-    },
-    "devDependencies": {
-        "@schemastud/combobox": "*",
-        "@schemastud/ui": "*",
-        "@types/react": "^19.0.0",
-        "react": "^19.0.0",
-        "tsup": "^8.5.1",
-        "typescript": "^5.7.0",
-        "@schemastud/messages": "^0.1.0",
-        "@testing-library/dom": "^10.4.1",
-        "@testing-library/react": "^16.3.2",
-        "jsdom": "^26.0.0",
-        "react-dom": "^19.2.7",
-        "vitest": "^4.1.10"
-    },
-    "schemastud": {
-        "messages": {
-            "version": 1,
-            "catalog": "./messages"
-        }
+    "./messages": "./messages.default.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "messages.default.json"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemastud/breadcrumb.git"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@schemastud/combobox": "^0.1.0 || ^0.2.0",
+    "react": ">=18",
+    "@schemastud/messages": ">=0.1.0 <1"
+  },
+  "devDependencies": {
+    "@schemastud/combobox": "github:schemastud/js#23d6f448bc981db6d6b86baecbc0f3902cb342eb&path:/combobox",
+    "@schemastud/ui": "github:schemastud/js#868f3be704f6af5b4954562edba7533c7a8c5999&path:/ui",
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.0",
+    "@schemastud/messages": "github:schemastud/js#91d2a7fdd508dbb2b60e6fcbed71bcbd7d00c2d1&path:/messages",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^26.0.0",
+    "react-dom": "^19.2.7",
+    "vitest": "^4.1.10"
+  },
+  "schemastud": {
+    "messages": {
+      "version": 1,
+      "catalog": "./messages"
     }
+  }
 }
