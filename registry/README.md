@@ -117,6 +117,18 @@ case names and the values are its backed values.
 | `index.superseded(root)` | The registries a later `describe` of the same root displaced, each with both registrants. |
 | `RegistryIndex` (type) | The index. It extends `Registry<Registry<unknown>>`, so it also has `declaration`, `has`, `resolve`, `tryResolve`, `matches`, `keyFor`, `names` and `register`, all reading or writing roots. Use `describe` to add a registry; `register` writes one at a key without checking it is the registry's root. |
 
+### A snapshot
+
+| Export | What it is |
+|---|---|
+| `snapshotRegistryIndex(index)` | What the index holds, as plain JSON-ready data: `{ version: 1, registries }`, one entry per described registry in describe order, each `{ root, describedBy, declaration: { onKeyDuplicate, populationRequirement, description }, keys }`, and each key `{ key, name, registrant }`. Never an entry. The index's own entry at the zero-segment root is left out. |
+| `KeySnapshot`, `RegistryKeySnapshot`, `RegistrySnapshot`, `RegistryIndexSnapshot` (types) | The shapes above. A key is `{ segments, display }`, a plain copy. |
+
+A snapshot is what another runtime reads to see what the client registered, such as a PHP doctor audit. A key in it
+is `{ segments, display }`: a reader compares segments and never parses the display, because a name carried under a
+root (`beam.ux.chrome.layouts.DocsLayout`) is not a legal key in either grammar. `name` is the key relative to its
+registry's root, as `names()` gives it. Under `Admit` a key appears once, with its first registrant.
+
 ## What a registry does
 
 - **Relative in, absolute out.** A registry rooted at `beam.resources` stores `register('invoices', …)` as

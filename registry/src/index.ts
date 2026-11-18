@@ -7,3 +7,5 @@ export { createRegistry } from './registry';
 export type { Registry, RegistryDeclaration, RegistryDeclarationInput, Superseded } from './registry';
 export { createRegistryIndex } from './registry-index';
 export type { RegistryIndex } from './registry-index';
+export { snapshotRegistryIndex } from './snapshot';
+export type { KeySnapshot, RegistryIndexSnapshot, RegistryKeySnapshot, RegistrySnapshot } from './snapshot';

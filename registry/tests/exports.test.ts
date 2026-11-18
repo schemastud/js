@@ -18,5 +18,6 @@ it('exports what the README lists and nothing else', () => {
         'createRegistryIndex',
         'foreignKey',
         'keysEqual',
+        'snapshotRegistryIndex',
     ]);
 });
