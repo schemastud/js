@@ -14,7 +14,7 @@ const FrameContext = createContext<FrameInjection | null>(null);
 const installedRegistries = new WeakSet<WidgetRegistry>();
 
 /**
- * Install frame's built-in widgets (the ResourcePicker field widget and the five column kinds) into a registry exactly once.
+ * Install frame's built-in widgets (the ResourcePicker field widget and the six column kinds) into a registry exactly once.
  * Idempotent per registry. A host that resolves forms through a registry no FrameProvider is handed
  * calls this itself; FrameProvider calls it for its own registry AND seam's `defaultRegistry`.
  */

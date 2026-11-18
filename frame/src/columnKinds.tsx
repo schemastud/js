@@ -1,9 +1,12 @@
 import { useMessageLocale } from '@schemastud/messages/react';
 import { useFrameMessages } from './messages';
-import { useId, type ComponentType, type CSSProperties } from 'react';
+import { useId, useMemo, type ComponentType, type CSSProperties } from 'react';
 import type { WidgetProps } from '@rjsf/utils';
 import { useFrameInjection } from './context';
 import { displayLabel, useRjsfRegistry, widgetProps, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
+import { CardLink } from './cards/chrome';
+import type { CardLinkRenderer } from './cards/types';
+import type { Row } from './types';
 
 // =============================================================================
 // Declared column kinds — how a cell RENDERS, said once on the server.
@@ -105,6 +108,16 @@ export interface DateCellOptions {
     placeholder?: string;
 }
 
+export interface LinkCellOptions extends TextCellOptions {
+    /** The ROW field holding the href (frame-foundation 77). Absent, or the row's value empty, the cell is `text`. */
+    hrefKey?: string;
+    /**
+     * The host's router link: registry config, never declared. `createFrameRegistry` registers `link` with the kit's
+     * `renderLink`, the one the cards take. Absent (or not a function), a site-relative href draws a plain anchor.
+     */
+    renderLink?: CardLinkRenderer;
+}
+
 const MUTED = 'var(--muted-foreground, inherit)';
 const MONO = 'var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace)';
 const SIZES: Record<string, string> = { xs: '0.75rem', sm: '0.875rem', base: '1rem' };
@@ -117,21 +130,43 @@ const BadgeKind = ({ value, options }: WidgetProps) => <BadgeCell value={value} 
 const BadgesKind = ({ value, options }: WidgetProps) => <BadgesCell value={value} options={options as BadgesCellOptions} />;
 const NumberKind = ({ value, options }: WidgetProps) => <NumberCell value={value} options={options as NumberCellOptions} />;
 const DateKind = ({ value, options }: WidgetProps) => <DateCell value={value} options={options as DateCellOptions} />;
+const LinkKind = ({ value, options, registry }: WidgetProps) => (
+    <LinkCell value={value} options={options as LinkCellOptions} row={cellRow(registry.formContext)} />
+);
 
-/** The five kinds, by name. Internal: a host reaches a kind by its name through the registry. */
+/**
+ * The row a list cell draws from (frame-foundation 77). `ColumnWidgetCell` builds each cell's RJSF registry with
+ * `formContext: { row }`, RJSF's channel for what a widget reads beyond its own value, so every `list-column` kind,
+ * frame's or a host's, reads the whole row as `props.registry.formContext.row`. Outside a list cell it is absent.
+ */
+function cellRow(formContext: unknown): Row | undefined {
+    const row = (formContext as { row?: unknown } | undefined)?.row;
+    return row !== null && typeof row === 'object' ? (row as Row) : undefined;
+}
+
+/** The six kinds, by name. Internal: a host reaches a kind by its name through the registry. */
 const COLUMN_KIND_WIDGETS: Record<string, ComponentType<WidgetProps>> = {
     text: TextKind,
     badge: BadgeKind,
     badges: BadgesKind,
     number: NumberKind,
     date: DateKind,
+    link: LinkKind,
 };
 
-/** Register the five kinds by name, scoped to `list-column` (`registerFrameWidgets` calls it). */
+/** Register the six kinds by name, scoped to `list-column` (`registerFrameWidgets` calls it). */
 export function registerColumnKinds(registry: WidgetRegistry): void {
     for (const [name, widget] of Object.entries(COLUMN_KIND_WIDGETS)) {
         registry.registerWidget(name, widget, undefined, { contexts: ['list-column'] });
     }
+}
+
+/**
+ * Register `link` again with the host's router link as its registry config, the same config the cards carry
+ * (`createFrameRegistry` calls it after the built-ins and before the host's `widgets`, so a host's `link` still wins).
+ */
+export function registerColumnLinkKind(registry: WidgetRegistry, renderLink: CardLinkRenderer): void {
+    registry.registerWidget('link', LinkKind, { renderLink }, { contexts: ['list-column'] });
 }
 
 const EMPTY_ROOT: SchemaNode = { type: 'object' };
@@ -150,6 +185,7 @@ export function ColumnWidgetCell({
     field,
     header,
     value,
+    row,
     options,
 }: {
     widget: ComponentType<WidgetProps>;
@@ -159,9 +195,12 @@ export function ColumnWidgetCell({
     field: string;
     header: string;
     value: unknown;
+    /** The whole row, which every kind reads as `registry.formContext.row` (frame-foundation 77). */
+    row: Row;
     options: Record<string, unknown> | undefined;
 }) {
-    const registry = useRjsfRegistry(rootSchema ?? EMPTY_ROOT);
+    const formContext = useMemo(() => ({ row }), [row]);
+    const registry = useRjsfRegistry(rootSchema ?? EMPTY_ROOT, formContext);
     const id = useId();
     return (
         <Widget
@@ -229,6 +268,26 @@ function Placeholder({ text, italic }: { text: string; italic?: boolean }) {
         >
             {text}
         </span>
+    );
+}
+
+// ─── link ────────────────────────────────────────────────────────────────────
+// frame-foundation 77: the column's own value, drawn exactly as `text`, linked to the href a ROW field carries
+// (`hrefKey`). A site-relative href (one leading `/`) goes through the host's router link, as every card anchor
+// does; an absolute one (`//host` included) is a plain anchor. No href, or no value, is `text` and nothing else.
+// The cell trusts the href: the server sends it only to a viewer whose page opens.
+
+function LinkCell({ value, options, row }: { value: unknown; options: LinkCellOptions; row: Row | undefined }) {
+    const text = <TextCell value={value} options={options} />;
+    const raw = options.hrefKey ? row?.[options.hrefKey] : undefined;
+    if (isEmpty(value) || typeof raw !== 'string' || raw === '') return text;
+
+    const siteRelative = raw.startsWith('/') && !raw.startsWith('//');
+    const renderLink = siteRelative && typeof options.renderLink === 'function' ? options.renderLink : undefined;
+    return (
+        <CardLink href={raw} options={renderLink ? { renderLink } : undefined} marker={{ 'data-frame-cell': 'link' }}>
+            {text}
+        </CardLink>
     );
 }
 

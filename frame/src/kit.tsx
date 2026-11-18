@@ -5,6 +5,7 @@ import { RjsfThemeContext, createWidgetRegistry, type SchemaFetcher, type Schema
 import { createContext, useContext, useMemo, type ComponentType, type ReactNode } from 'react';
 import { FrameActionError } from './actions';
 import { registerCardWidgets, type CardLinkRenderer, type IconResolver } from './cards';
+import { registerColumnLinkKind } from './columnKinds';
 import { FrameProvider, registerFrameWidgets } from './context';
 import { createHttpTransport } from './httpTransport';
 import { createMemoryUrlState } from './memoryUrlState';
@@ -26,7 +27,7 @@ import type {
 export interface FrameRegistryOptions {
     /** The host's own registrations; run once, last, on the seeded registry, so a name registered again wins. */
     widgets?: (registry: WidgetRegistry) => void;
-    /** The card set's link renderer (a router link). Absent, a card draws a plain anchor. */
+    /** The card set's and the `link` column kind's link renderer (a router link). Absent, each draws a plain anchor. */
     renderLink?: CardLinkRenderer;
     /** The card set's icon resolver. Absent, cards draw no icons. */
     iconFor?: IconResolver;
@@ -41,6 +42,8 @@ export function createFrameRegistry(options: FrameRegistryOptions = {}): WidgetR
     const registry = createWidgetRegistry();
     registerFrameWidgets(registry);
     registerCardWidgets(registry, { renderLink: options.renderLink, iconFor: options.iconFor });
+    // The `link` column kind draws a site-relative href through the same router link (frame-foundation 77).
+    if (options.renderLink) registerColumnLinkKind(registry, options.renderLink);
     options.widgets?.(registry);
     return registry;
 }

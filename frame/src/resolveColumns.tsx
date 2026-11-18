@@ -182,6 +182,7 @@ function declaredCell(
                 field={field}
                 header={header}
                 value={getPath(record, field)}
+                row={record}
                 options={resolved.options}
             />
         );
