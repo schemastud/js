@@ -99,7 +99,15 @@ only by this source scanner; the browser/core exports do not load it.
 Config v1: `{ "version": 1, "baseline": "./message-ratchet.baseline.json",
 "packages": { "package-name": ["src"] } }`. Roots resolve relative to the
 config file. Every named root must exist and must not itself be excluded. Counts are per
-package, including zero.
+package, including zero. A run never passes without measuring (frame-foundation 79): no packages, or a package whose
+roots hold no source file the census reads (only excluded, `.d.ts` or non-source files), fails with `Nothing measured`,
+naming the config and the packages. Point such a package at its real sources, or remove it from the config and the
+baseline together.
+
+The bin always runs: it has no entry-point guard, so a pnpm shell shim, an npm `.bin` link, a wrapper or a loader all
+reach the gate. The census functions (`scanDisplayStrings`, `scanConfig`, `runRatchet`, `SCANNER`, `DEFAULT_NOTIFIERS`,
+`UNSCANNED`) are exported from `@schemastud/messages/ratchet`, a module whose import runs nothing; import that, never the
+bin file.
 Optional `"notifiers"` (callee names; `x.*` is any method of `x`) replaces the default
 notifier list `toast`, `toast.{success,error,info,warning,message,loading}`, `notify`,
 `notifier.*`; the list must name at least one callee (sink 1 has no off switch). A bare

@@ -56,12 +56,21 @@ it('templates, fallbacks, local constants and display defaults count while techn
 
 it('missing roots, invalid config and unknown package baselines refuse instead of reporting zero', () => {
     const root = fixture();
+    // A measured package (frame-foundation 79: an unmeasured one fails earlier, as "Nothing measured"), so the run reaches
+    // the baseline's package-set check.
+    writeFileSync(join(root, 'src/view.tsx'), 'export const View = () => <p>Hello</p>');
     writeFileSync(join(root, 'baseline.json'), JSON.stringify({ version: 1, counts: { stale: 0 } }));
-    expect(run(root).status).toBe(1);
+    const mismatch = run(root);
+    expect(mismatch.status).toBe(1);
+    expect(mismatch.stderr).toContain('package set differs');
     writeFileSync(join(root, 'ratchet.json'), JSON.stringify({ version: 1, baseline: './baseline.json', packages: { fixture: ['./missing'] } }));
-    expect(run(root, '--write').status).toBe(1);
+    const missing = run(root, '--write');
+    expect(missing.status).toBe(1);
+    expect(missing.stderr).toContain('Missing source root');
     writeFileSync(join(root, 'ratchet.json'), JSON.stringify({ version: 2, baseline: './baseline.json', packages: { fixture: ['./src'] } }));
-    expect(run(root).status).toBe(1);
+    const invalid = run(root);
+    expect(invalid.status).toBe(1);
+    expect(invalid.stderr).toContain('Invalid ratchet config v1');
 });
 
 
@@ -129,6 +138,9 @@ it('generated descendants are excluded while configured excluded roots refuse', 
     const root = fixture();
     mkdirSync(join(root, 'src/generated'));
     writeFileSync(join(root, 'src/generated/client.tsx'), 'const Generated = <p>Generated copy</p>');
+    // A measured source file with no copy (frame-foundation 79: a package whose roots hold no source file fails as
+    // unmeasured, so the exclusion is shown on a measured package).
+    writeFileSync(join(root, 'src/ids.ts'), 'export const id = 1;');
     const result = run(root, '--write');
     expect(result.status, result.stderr).toBe(0);
     expect(JSON.parse(result.stdout).counts.fixture).toBe(0);
