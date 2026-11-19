@@ -1,58 +1,58 @@
 {
-    "name": "@schemastud/nav",
-    "version": "0.1.3",
-    "description": "A host-agnostic suite of navigation primitives for content/doc sites (a deliberate umbrella, meant to grow: pager/top-nav/tabs later). Today: a compose-many nav-source registry, a pure tree builder (group + one-level nest + order), a collapsible <ExpandableNav> whose links, classNames, and motion are all injected, a navTrail() breadcrumb-trail derivation, and an <OnThisPage> in-page TOC with scroll-spy. Ships no CSS and no router \u2014 the host injects link rendering, class names, and the current path. Composes @schemastud/breadcrumb + @schemastud/combobox rather than re-implementing them.",
-    "license": "MIT",
-    "type": "module",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
-        },
-        "./messages": "./messages.default.json"
+  "name": "@schemastud/nav",
+  "version": "0.1.3",
+  "description": "A host-agnostic suite of navigation primitives for content/doc sites (a deliberate umbrella, meant to grow: pager/top-nav/tabs later). Today: a compose-many nav-source registry, a pure tree builder (group + one-level nest + order), a collapsible <ExpandableNav> whose links, classNames, and motion are all injected, a navTrail() breadcrumb-trail derivation, and an <OnThisPage> in-page TOC with scroll-spy. Ships no CSS and no router — the host injects link rendering, class names, and the current path. Composes @schemastud/breadcrumb + @schemastud/combobox rather than re-implementing them.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
-    "files": [
-        "dist",
-        "src",
-        "README.md",
-        "messages.default.json"
-    ],
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org",
-        "access": "public"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/schemastud/nav.git"
-    },
-    "scripts": {
-        "build": "tsup",
-        "dev": "tsup --watch",
-        "test": "vitest run",
-        "typecheck": "tsc --noEmit"
-    },
-    "peerDependencies": {
-        "react": ">=18",
-        "@schemastud/messages": ">=0.1.0 <1"
-    },
-    "devDependencies": {
-        "@types/react": "^19.0.0",
-        "react": "^19.0.0",
-        "tsup": "^8.5.1",
-        "typescript": "^5.7.0",
-        "vitest": "^4.1.10",
-        "@schemastud/messages": "^0.1.0",
-        "@testing-library/dom": "^10.4.1",
-        "@testing-library/react": "^16.3.2",
-        "jsdom": "^26.0.0",
-        "react-dom": "^19.2.7"
-    },
-    "schemastud": {
-        "messages": {
-            "version": 1,
-            "catalog": "./messages"
-        }
+    "./messages": "./messages.default.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "messages.default.json"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemastud/nav.git"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "@schemastud/messages": ">=0.1.0 <1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "react": "^19.0.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.10",
+    "@schemastud/messages": "github:schemastud/js#dce5c5713186802da28624b6db069b4b3f31ea07&path:/messages",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "jsdom": "^26.0.0",
+    "react-dom": "^19.2.7"
+  },
+  "schemastud": {
+    "messages": {
+      "version": 1,
+      "catalog": "./messages"
     }
+  }
 }
