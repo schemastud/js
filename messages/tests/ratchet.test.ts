@@ -116,6 +116,19 @@ it.each(missedShapes)('counts %s through the public CLI', (_name, source, text) 
     expect(run(root).status).toBe(0);
 });
 
+it('a registry declaration description is technical; the same description elsewhere still counts', () => {
+    const root = fixture();
+    writeFileSync(join(root, 'src/view.tsx'), [
+        'const modes = createRegistry({root: "mainframe.modes", description: "Declaration metadata."});',
+        'const card = {root: "cards", description: "Shown under the card title."};',
+        'const other = build({root: "cards", description: "Shown in the picker."});',
+        'const loose = createRegistry({description: "No root: not a registry declaration."});',
+    ].join('\n'));
+    const result = run(root, '--write');
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).counts.fixture).toBe(3);
+});
+
 it('technical identifiers and protocol returns are outside display contexts', () => {
     const root = fixture();
     writeFileSync(join(root, 'src/view.tsx'), [
@@ -123,6 +136,8 @@ it('technical identifiers and protocol returns are outside display contexts', ()
         'function getStatus() { return "pending" }',
         'function runCommand() { return {exitCode: 1, message: "Command diagnostic"} }',
         'const refConfig = {resource: "users", value: "id", label: "name", multiple: false, select: "single"};',
+        'const modes = createRegistry<Mode>({root: "mainframe.modes", description: "Mode name to the Mainframe that places its slots."});',
+        'const routes = kernel.createRegistry({root: "frame.routes", onKeyDuplicate: "supersede", description: "Route name to its page."});',
         'function classNames() { return "flex gap-2" }',
         'button.setAttribute("data-state", "loading"); button.setAttribute("role", "button");',
         'const View = () => <div className="hello world" data-state="ready" role="status" />;',

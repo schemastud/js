@@ -43,6 +43,8 @@ const unwrap = node => {
     return node;
 };
 const nameOf = node => node && (ts.isIdentifier(node) || ts.isStringLiteral(node) || ts.isNumericLiteral(node)) ? node.text : undefined;
+/** The called name: `f` for `f(...)` and `x.f(...)`. */
+const calleeName = node => ts.isPropertyAccessExpression(node) ? node.name : node;
 const calleeText = (callee, source) => callee.getText(source).replace(/\?\./g, '.').replace(/\s+/g, '');
 const matchesCallee = (text, patterns) => patterns.some(pattern => pattern.endsWith('.*') ? text.startsWith(pattern.slice(0, -1)) && text.length > pattern.length - 1 : text === pattern);
 
@@ -306,6 +308,11 @@ function scanFile(filename, contents, { notifiers = DEFAULT_NOTIFIERS, errorClas
             // Resource reference configuration names the record's label field; it is
             // not a label default. Keep actual option/column labels in the census.
             if (name === 'label' && ['resource', 'value', 'multiple', 'select'].every(key => siblings.has(key))) return false;
+            // A `@schemastud/registry` declaration's description is metadata carried into registry
+            // snapshots for tooling, never rendered. Only the declaration shape (a `root` handed to
+            // `createRegistry`) is exempt; a description anywhere else still counts.
+            if (name === 'description' && siblings.has('root') && ts.isCallExpression(object.parent)
+                && object.parent.arguments[0] === object && nameOf(calleeName(object.parent.expression)) === 'createRegistry') return false;
         }
         return true;
     }
