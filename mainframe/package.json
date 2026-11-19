@@ -1,69 +1,69 @@
 {
-    "name": "@schemastud/mainframe",
-    "version": "0.2.0",
-    "description": "The generic Mainframe engine (React-only, host-agnostic): the frozen slot contract, an SSR-safe named-slot registry, a mode registry, a `can`-gated resolver, and the host\u2192Mainframe React delegation seam. Relocated out of @splicewire/beam-mainframe (Frame OS ADR-0011) so any host composes the frame without a CMS or beam dependency. Carries react-rnd as the window-frame geometry atom for the Frame OS `os` mode.",
-    "license": "MIT",
-    "type": "module",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
-    "exports": {
-        ".": {
-            "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
-        },
-        "./os": {
-            "types": "./dist/os.d.ts",
-            "import": "./dist/os.js"
-        },
-        "./os/shell.css": "./src/os/shell.css",
-        "./messages": "./messages.default.json"
+  "name": "@schemastud/mainframe",
+  "version": "0.2.0",
+  "description": "The generic Mainframe engine (React-only, host-agnostic): the frozen slot contract, an SSR-safe named-slot registry, a mode registry, a `can`-gated resolver, and the host→Mainframe React delegation seam. Relocated out of @splicewire/beam-mainframe (Frame OS ADR-0011) so any host composes the frame without a CMS or beam dependency. Carries react-rnd as the window-frame geometry atom for the Frame OS `os` mode.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
-    "sideEffects": false,
-    "files": [
-        "dist",
-        "src",
-        "README.md",
-        "messages.default.json"
-    ],
-    "publishConfig": {
-        "registry": "https://registry.npmjs.org",
-        "access": "public"
+    "./os": {
+      "types": "./dist/os.d.ts",
+      "import": "./dist/os.js"
     },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/schemastud/mainframe.git"
-    },
-    "scripts": {
-        "build": "tsup",
-        "dev": "tsup --watch",
-        "test": "vitest run --passWithNoTests",
-        "typecheck": "tsc --noEmit"
-    },
-    "peerDependencies": {
-        "react": ">=18",
-        "@schemastud/messages": ">=0.1.0 <1"
-    },
-    "dependencies": {
-        "@schemastud/frame-remote": "^0.1.0",
-        "@schemastud/registry": "^0.0.0",
-        "react-rnd": "^10.5.2"
-    },
-    "devDependencies": {
-        "@testing-library/react": "^16.1.0",
-        "@types/node": "^22.20.1",
-        "@types/react": "^19.0.0",
-        "jsdom": "^25.0.1",
-        "react": "^19.2.0",
-        "react-dom": "^19.2.0",
-        "tsup": "^8.5.1",
-        "typescript": "^5.7.2",
-        "vitest": "^4.1.10",
-        "@schemastud/messages": "^0.1.0"
-    },
-    "schemastud": {
-        "messages": {
-            "version": 1,
-            "catalog": "./messages"
-        }
+    "./os/shell.css": "./src/os/shell.css",
+    "./messages": "./messages.default.json"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "messages.default.json"
+  ],
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/schemastud/mainframe.git"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "@schemastud/messages": ">=0.1.0 <1"
+  },
+  "dependencies": {
+    "@schemastud/frame-remote": "github:schemastud/js#ba915f21b56c4aa4adfb90d8a18ad8417742a115&path:/frame-remote",
+    "@schemastud/registry": "github:schemastud/js#a50cd2805f696b59cbe4882e22df40c7149666e2&path:/registry",
+    "react-rnd": "^10.5.2"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.20.1",
+    "@types/react": "^19.0.0",
+    "jsdom": "^25.0.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10",
+    "@schemastud/messages": "github:schemastud/js#dce5c5713186802da28624b6db069b4b3f31ea07&path:/messages"
+  },
+  "schemastud": {
+    "messages": {
+      "version": 1,
+      "catalog": "./messages"
     }
+  }
 }
