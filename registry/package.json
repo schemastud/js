@@ -1,6 +1,6 @@
 {
     "name": "@schemastud/registry",
-    "version": "0.0.0",
+    "version": "0.1.0",
     "description": "A registry kernel for the client: dot-separated keys parsed without repair, a registry with a declared duplicate policy, a declared miss and a registrant on every write, and an index that routes a key to its registry by longest segment prefix. Proved against the conformance corpus the PHP registry kernel ships, vendored here. No runtime dependency and no React.",
     "license": "MIT",
     "type": "module",
