@@ -1,0 +1,43 @@
+name: Release commit check
+
+# frame-foundation 80, the belt: a release commit is a detached commit tagged `<package>@<version>` by the ecosystem's
+# tools/js-release/release-package, which itself runs `npm run lint:peers -- --release` on the VERSION COMMIT (the release
+# commit's parent, the source it attests) before it cuts one. A tag pushed any other way still gets the same two checks
+# here, at that version commit:
+#   - every workspace sibling range, all fields, against the manifest versions it carries (the whole workspace: it must
+#     install at every release commit, not only around the released package);
+#   - the workspace's own install from its lock (c64c712's `npm ci` failed ERESOLVE / 404).
+# Not at the tagged commit itself: release-package rewrites the released package's first-party specs there to exact
+# `github:` release refs without touching the workspace lock, so `npm ci` at the tag would always be out of sync.
+
+on:
+  push:
+    tags: ['*@*']
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Move to the version commit (the tag's parent)
+        run: git checkout --quiet --detach HEAD^
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Sibling ranges at the version commit (release mode, whole workspace)
+        # Before the install on purpose: it needs only node and semver (fetched alone, pinned) and names the offending ranges
+        # even when npm ci would fail on them.
+        run: |
+          npm install --no-save --no-package-lock --ignore-scripts --prefix "$RUNNER_TEMP/semver" semver@7.8.5
+          SEMVER_MODULE="$RUNNER_TEMP/semver/node_modules/semver/index.js" node scripts/lint-peers.mjs --release
+
+      - name: The version commit installs from its own lock
+        run: npm ci

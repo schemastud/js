@@ -37,15 +37,20 @@
     "census": "node scripts/import-census.mjs",
     "build:big-calendar": "npm --prefix big-calendar install && npm --prefix big-calendar run build",
     "lint:messages": "schemastud-message-ratchet --config message-ratchet.config.json",
-    "lint:messages:write": "schemastud-message-ratchet --config message-ratchet.config.json --write"
+    "lint:messages:write": "schemastud-message-ratchet --config message-ratchet.config.json --write",
+    "lint:peers": "node scripts/lint-peers.mjs",
+    "test:scripts": "node --test scripts/lint-peers.test.mjs",
+    "check": "npm run lint:peers && npm run test:scripts"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.9",
+    "@changesets/get-release-plan": "^4.0.16",
     "@storybook/react-vite": "^10.5.4",
     "@storybook/test-runner": "^0.24.4",
     "@tailwindcss/vite": "^4.3.3",
     "jest-image-snapshot": "^6.5.2",
     "playwright": "^1.61.1",
+    "semver": "^7.8.5",
     "storybook": "^10.5.4",
     "tailwindcss": "^4.3.3"
   }
