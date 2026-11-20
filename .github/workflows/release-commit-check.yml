@@ -4,8 +4,8 @@ name: Release commit check
 # tools/js-release/release-package, which itself runs `npm run lint:peers -- --release` on the VERSION COMMIT (the release
 # commit's parent, the source it attests) before it cuts one. A tag pushed any other way still gets the same two checks
 # here, at that version commit:
-#   - every workspace sibling range, all fields, against the manifest versions it carries (the whole workspace: it must
-#     install at every release commit, not only around the released package);
+#   - every workspace sibling range, all fields, against the manifest versions it carries, a peer against the later of
+#     the manifest and the sibling's latest release tag (the whole workspace: it must install at every release commit);
 #   - the workspace's own install from its lock (c64c712's `npm ci` failed ERESOLVE / 404).
 # Not at the tagged commit itself: release-package rewrites the released package's first-party specs there to exact
 # `github:` release refs without touching the workspace lock, so `npm ci` at the tag would always be out of sync.
@@ -23,7 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          # every tag: lint:peers --release reads each sibling's release line, and fails closed without tags
+          # (frame-foundation 81, ruling (3))
+          fetch-depth: 0
 
       - name: Move to the version commit (the tag's parent)
         run: git checkout --quiet --detach HEAD^

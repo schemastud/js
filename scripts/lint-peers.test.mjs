@@ -1,7 +1,7 @@
 // frame-foundation 80: scripts/lint-peers.mjs, the sibling peer range check. Fixture trees are written to a temp dir per case.
 // Run: node --test scripts/lint-peers.test.mjs (npm run test:scripts).
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -9,6 +9,10 @@ import { fileURLToPath } from 'node:url';
 import { after, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { lintPeers } from './lint-peers.mjs';
+
+// Release-mode unit tests about manifest semantics: tags were read, and none matter here (ruling (3) has its own tests).
+const NO_TAGS = new Map();
+
 
 const made = [];
 after(() => {
@@ -91,7 +95,7 @@ describe('lint:peers', () => {
             files,
         });
         assert.deepEqual((await lintPeers(root)).failures, []);
-        const current = await lintPeers(root, { release: true });
+        const current = await lintPeers(root, { release: true, tags: NO_TAGS });
         assert.equal(current.failures.length, 1);
         assert.match(current.failures[0], /excludes the workspace's @schemastud\/seam 0\.2\.2/);
     });
@@ -130,7 +134,10 @@ describe('lint:peers', () => {
             workspaces: ['chat'],
             packages: { chat: pkg('@schemastud/chat', '0.1.0', { '@schemastud/big-calendar': '^9.0.0' }), 'big-calendar': pkg('@schemastud/big-calendar', '0.1.0') },
         });
-        const { failures, notes, checked } = await lintPeers(root);
+        const { failures, notes: all, checked } = await lintPeers(root);
+        // this tree is not a git checkout: planned mode also notes that its release-mode warnings read manifests only
+        const notes = all.filter((n) => !n.startsWith('release-mode warnings read manifest versions only'));
+        assert.equal(all.length - notes.length, 1);
         assert.deepEqual(failures, []);
         assert.equal(checked.length, 0);
         assert.equal(notes.length, 1);
@@ -158,7 +165,7 @@ describe('lint:peers', () => {
                 ui: pkg('@schemastud/ui', '0.1.2', { '@schemastud/messages': '>=0.1.0 <1' }, [], { devDependencies: { '@schemastud/messages': '^0.1.0' } }),
             },
         });
-        const release = await lintPeers(root, { release: true });
+        const release = await lintPeers(root, { release: true, tags: NO_TAGS });
         assert.equal(release.failures.length, 2);
         assert.ok(release.failures.some((f) => /ui devDependencies\["@schemastud\/messages"\] "\^0\.1\.0" excludes the workspace's @schemastud\/messages 0\.0\.0/.test(f)));
         assert.ok(release.failures.some((f) => /ui peerDependencies\["@schemastud\/messages"\] ">=0\.1\.0 <1" excludes/.test(f)));
@@ -177,7 +184,7 @@ describe('lint:peers', () => {
                 }),
             },
         });
-        const { failures, notes, checked } = await lintPeers(root, { release: true });
+        const { failures, notes, checked } = await lintPeers(root, { release: true, tags: NO_TAGS });
         assert.deepEqual(failures, []);
         assert.equal(checked.length, 1, 'the npm: alias of seam is checked');
         assert.equal(checked[0].range, '^0.2.0');
@@ -191,14 +198,14 @@ describe('lint:peers', () => {
                 ui: pkg('@schemastud/ui', '0.1.0', {}, [], { dependencies: { 'seam-old': 'npm:@schemastud/seam@^0.2.0' } }),
             },
         });
-        const { failures } = await lintPeers(root, { release: true });
+        const { failures } = await lintPeers(root, { release: true, tags: NO_TAGS });
         assert.equal(failures.length, 1);
         assert.match(failures[0], /dependencies\["seam-old"\] "npm:@schemastud\/seam@\^0\.2\.0" excludes the workspace's @schemastud\/seam 0\.5\.2/);
     });
 
     it('a workspace: spec fails on a key that is NOT a sibling too (review L3)', async () => {
         const root = tree({ packages: { ui: pkg('@schemastud/ui', '0.1.0', {}, [], { dependencies: { '@schemastud/gone': 'workspace:*' } }) } });
-        const { failures } = await lintPeers(root, { release: true });
+        const { failures } = await lintPeers(root, { release: true, tags: NO_TAGS });
         assert.equal(failures.length, 1);
         assert.match(failures[0], /"@schemastud\/gone"\] "workspace:\*": a workspace: spec is not a range/);
     });
@@ -225,14 +232,14 @@ describe('lint:peers', () => {
                 facets: pkg('@schemastud/facets', '0.2.2', { '@schemastud/combobox': '^0.2.0' }),
             },
         });
-        const seam = await lintPeers(root, { release: true, only: '@schemastud/seam' });
+        const seam = await lintPeers(root, { release: true, tags: NO_TAGS, only: '@schemastud/seam' });
         assert.equal(seam.failures.length, 1);
         assert.match(seam.failures[0], /chat peerDependencies\["@schemastud\/seam"\]/);
-        const chat = await lintPeers(root, { release: true, only: '@schemastud/chat' });
+        const chat = await lintPeers(root, { release: true, tags: NO_TAGS, only: '@schemastud/chat' });
         assert.equal(chat.failures.length, 1);
-        assert.deepEqual((await lintPeers(root, { release: true, only: '@schemastud/facets' })).failures.length, 1);
+        assert.deepEqual((await lintPeers(root, { release: true, tags: NO_TAGS, only: '@schemastud/facets' })).failures.length, 1);
         // a --package that is not a workspace (big-calendar's case) checks nothing and passes, with a note (review H2)
-        const outside = await lintPeers(root, { release: true, only: '@schemastud/nope' });
+        const outside = await lintPeers(root, { release: true, tags: NO_TAGS, only: '@schemastud/nope' });
         assert.deepEqual(outside.failures, []);
         assert.match(outside.notes[0], /is not a workspace package/);
     });
@@ -243,7 +250,7 @@ describe('lint:peers', () => {
         });
         const script = join(dirname(fileURLToPath(import.meta.url)), 'lint-peers.mjs');
         const semverEntry = createRequire(import.meta.url).resolve('semver');
-        const run = spawnSync(process.execPath, [script, '--root', root, '--release', '--package', '@schemastud/seam'], {
+        const run = spawnSync(process.execPath, [script, '--root', root, '--release', '--manifest-only', '--package', '@schemastud/seam'], {
             cwd: root,
             encoding: 'utf8',
             env: { ...process.env, SEMVER_MODULE: semverEntry },
@@ -257,5 +264,81 @@ describe('lint:peers', () => {
         const { failures, checked } = await lintPeers(root);
         assert.deepEqual(failures, []);
         assert.ok(checked.length > 0);
+    });
+});
+
+describe('ruling (3): --release checks a PEER against the later of the manifest version and the latest release tag', () => {
+    const tags = (o) => new Map(Object.entries(o));
+    const script = join(dirname(fileURLToPath(import.meta.url)), 'lint-peers.mjs');
+    const semverEntry = createRequire(import.meta.url).resolve('semver');
+
+    it('a peer the release line satisfies passes, and names the tag (main\'s combobox peers)', async () => {
+        const root = tree({ packages: { combobox: pkg('@schemastud/combobox', '0.1.0'), facets: pkg('@schemastud/facets', '0.2.2', { '@schemastud/combobox': '^0.2.0' }) } });
+        const r = await lintPeers(root, { release: true, tags: tags({ 'combobox@': ['0.1.0', '0.2.0', '0.2.2'] }) });
+        assert.deepEqual(r.failures, []);
+        assert.equal(r.checked.find((c) => c.dep === '@schemastud/combobox').version, '0.2.2');
+        assert.equal(r.tags, 'release tags (peers)');
+    });
+
+    it('c64c712 STAYS RED: messages 0.0.0 under siblings\' ^0.1.0 dev range (dependency fields keep the manifest), chat\'s seam peer excludes even the latest tag', async () => {
+        const root = tree({
+            packages: {
+                messages: pkg('@schemastud/messages', '0.0.0'),
+                seam: pkg('@schemastud/seam', '0.5.2'),
+                ui: pkg('@schemastud/ui', '0.1.2', {}, [], { devDependencies: { '@schemastud/messages': '^0.1.0' } }),
+                chat: pkg('@schemastud/chat', '0.1.0', { '@schemastud/seam': '^0.2.0 || ^0.3.0' }),
+            },
+        });
+        // messages@0.1.0 was tagged BEFORE c64c712; it must not lift the devDependency
+        const r = await lintPeers(root, { release: true, tags: tags({ 'messages@': ['0.1.0'], 'seam@': ['0.5.2', '0.5.3'] }) });
+        assert.equal(r.failures.length, 2, r.failures.join('\n'));
+        assert.match(r.failures.join('\n'), /@schemastud\/ui devDependencies\["@schemastud\/messages"\] "\^0\.1\.0" excludes the workspace's @schemastud\/messages 0\.0\.0$/m);
+        assert.match(r.failures.join('\n'), /@schemastud\/chat peerDependencies\["@schemastud\/seam"\] "\^0\.2\.0 \|\| \^0\.3\.0" excludes the workspace's @schemastud\/seam 0\.5\.3 \(its latest release, tag seam@0\.5\.3; 0\.5\.2 in the manifest\)/);
+    });
+
+    it('a manifest AHEAD of the release line is used as is (the later of the two)', async () => {
+        const root = tree({ packages: { seam: pkg('@schemastud/seam', '0.6.0'), chat: pkg('@schemastud/chat', '0.1.0', { '@schemastud/seam': '^0.5.0' }) } });
+        const r = await lintPeers(root, { release: true, tags: tags({ 'seam@': ['0.5.3'] }) });
+        assert.match(r.failures[0], /excludes the workspace's @schemastud\/seam 0\.6\.0$/);
+    });
+
+    it('only the sibling\'s OWN <dir>@ prefix counts', async () => {
+        const root = tree({ packages: { seam: pkg('@schemastud/seam', '0.2.2'), chat: pkg('@schemastud/chat', '0.1.0', { '@schemastud/seam': '^0.5.0' }) } });
+        const r = await lintPeers(root, { release: true, tags: tags({ 'seam-legacy@': ['0.5.9'], 'chat@': ['0.5.0'], 'frame@': ['0.5.1'] }) });
+        assert.equal(r.failures.length, 1);
+        assert.match(r.failures[0], /excludes the workspace's @schemastud\/seam 0\.2\.2$/);
+    });
+
+    it('compares by semver, not by text or date: 0.10.0 is later than 0.9.0', async () => {
+        const root = tree({ packages: { seam: pkg('@schemastud/seam', '0.2.2'), chat: pkg('@schemastud/chat', '0.1.0', { '@schemastud/seam': '^0.10.0' }) } });
+        const r = await lintPeers(root, { release: true, tags: tags({ 'seam@': ['0.9.0', '0.10.0', '0.2.2'] }) });
+        assert.deepEqual(r.failures, []);
+    });
+
+    it('ignores a prerelease tag unless the manifest is itself a prerelease', async () => {
+        const stable = tree({ packages: { seam: pkg('@schemastud/seam', '0.2.2'), chat: pkg('@schemastud/chat', '0.1.0', { '@schemastud/seam': '^0.3.0-beta.0' }) } });
+        assert.equal((await lintPeers(stable, { release: true, tags: tags({ 'seam@': ['0.3.0-beta.1'] }) })).failures.length, 1, 'a stable manifest ignores 0.3.0-beta.1');
+        const pre = tree({ packages: { seam: pkg('@schemastud/seam', '0.3.0-beta.0'), chat: pkg('@schemastud/chat', '0.1.0', { '@schemastud/seam': '^0.3.0-beta.1' }) } });
+        assert.deepEqual((await lintPeers(pre, { release: true, tags: tags({ 'seam@': ['0.3.0-beta.1'] }) })).failures, [], 'a prerelease manifest reads 0.3.0-beta.1');
+    });
+
+    it('fails CLOSED: no git, or a git checkout with zero tags, exits 2; with tags it reads them; --manifest-only is the only way to skip them', () => {
+        const root = tree({ packages: { combobox: pkg('@schemastud/combobox', '0.1.0'), facets: pkg('@schemastud/facets', '0.2.2', { '@schemastud/combobox': '^0.2.0' }) } });
+        const cli = (...args) => spawnSync(process.execPath, [script, '--root', root, '--release', ...args], { encoding: 'utf8', env: { ...process.env, SEMVER_MODULE: semverEntry } });
+        const noGit = cli();
+        assert.equal(noGit.status, 2, noGit.stdout + noGit.stderr);
+        assert.match(noGit.stderr, /release tags cannot be read/);
+        const git = (...a) => execFileSync('git', ['-C', root, ...a], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+        git('init', '-q'); git('config', 'user.email', 'fixture@example.test'); git('config', 'user.name', 'Fixture');
+        git('add', '-A'); git('commit', '-qm', 'tree');
+        const noTags = cli();
+        assert.equal(noTags.status, 2, noTags.stdout + noTags.stderr);
+        assert.match(noTags.stderr, /has no tags: fetch them/);
+        git('tag', 'combobox@0.2.2');
+        const tagged = cli();
+        assert.equal(tagged.status, 0, tagged.stdout + tagged.stderr);
+        const manifestOnly = cli('--manifest-only');
+        assert.equal(manifestOnly.status, 1, 'explicitly manifest-only: the lagging peer fails');
+        assert.match(manifestOnly.stderr, /excludes the workspace's @schemastud\/combobox 0\.1\.0/);
     });
 });

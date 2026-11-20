@@ -47,7 +47,8 @@
  * exit: 0 every sibling range covered; 1 a range misses (listed); 2 the check could not run.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { dirname, join, resolve, relative, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /** The manifest fields each mode reads. */
@@ -56,6 +57,37 @@ export const RELEASE_FIELDS = ['dependencies', 'optionalDependencies', 'devDepen
 const KNOWN_FIELDS = RELEASE_FIELDS;
 /** A spec npm resolves by itself, not against the sibling's version. */
 const NOT_A_RANGE = /^(?:file:|link:|git(?:\+[a-z]+)?:|github:|gitlab:|bitbucket:|https?:|npm:)|^[\w.-]+\/[\w.-]+(?:#.*)?$/;
+
+/**
+ * frame-foundation 81 (ruling (3)): the release tags, as Map<`<dir>@` prefix, versions[]>. Read with git from `root`; a root
+ * git cannot read, or one with no tags at all, fails closed: a missing tag set must never mean "manifest only".
+ */
+export function releaseTags(root) {
+    let out;
+    try {
+        out = execFileSync('git', ['-C', root, 'tag', '--list'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    } catch (error) {
+        throw new Error(`release tags cannot be read in ${root} (${String(error.stderr ?? error.message).trim().split('\n')[0]}): run it in a git checkout with its tags, or pass --manifest-only to check against manifest versions alone`);
+    }
+    const tags = out.split('\n').filter(Boolean);
+    if (!tags.length) throw new Error(`${root} has no tags: fetch them (git fetch --tags; in CI, fetch-depth: 0), or pass --manifest-only to check against manifest versions alone`);
+    const byPrefix = new Map();
+    for (const tag of tags) {
+        const at = tag.lastIndexOf('@');
+        if (at <= 0) continue;
+        const prefix = tag.slice(0, at + 1);
+        if (!byPrefix.has(prefix)) byPrefix.set(prefix, []);
+        byPrefix.get(prefix).push(tag.slice(at + 1));
+    }
+    return byPrefix;
+}
+
+/** The latest release under `prefix` by semver; prereleases count only when the manifest version is itself one. */
+function latestRelease(semver, tags, prefix, manifestVersion) {
+    const allowPre = Boolean(semver.valid(manifestVersion) && semver.prerelease(manifestVersion));
+    const versions = (tags.get(prefix) ?? []).filter((v) => semver.valid(v) === v && (allowPre || !semver.prerelease(v)));
+    return versions.sort(semver.rcompare)[0] ?? null;
+}
 
 function readJson(path) {
     return JSON.parse(readFileSync(path, 'utf8'));
@@ -119,13 +151,18 @@ async function plannedVersions(root) {
     return { versions: new Map(plan.releases.filter((r) => r.type !== 'none').map((r) => [r.name, r.newVersion])), said };
 }
 
-export async function lintPeers(root, { release = false, fields = release ? RELEASE_FIELDS : PLANNED_FIELDS, only = null } = {}) {
+export async function lintPeers(root, { release = false, fields = release ? RELEASE_FIELDS : PLANNED_FIELDS, only = null, tags } = {}) {
     const unknown = fields.filter((f) => !KNOWN_FIELDS.includes(f));
     if (unknown.length) throw new Error(`unknown field(s) ${unknown.join(', ')} (known: ${KNOWN_FIELDS.join(', ')})`);
     const semver = await loadSemver();
     const dirs = workspaceDirs(root);
     const packages = dirs.map((dir) => ({ dir, manifest: readJson(join(dir, 'package.json')) }));
     const version = new Map(packages.map(({ manifest }) => [manifest.name, manifest.version]));
+    const prefixOf = new Map(packages.map(({ dir, manifest }) => [manifest.name, `${relative(root, dir).split(sep).join('/')}@`]));
+    // --release: a sibling's peer is checked against the later of its manifest version and its latest release tag
+    // (ruling (3): consumers resolve a peer from the release line). Every other field keeps the manifest version: inside
+    // the workspace npm resolves those against it, or fetches from the registry (c64c712's 404), never from tags.
+    const releaseLine = release && tags !== 'manifest-only' ? (tags instanceof Map ? tags : releaseTags(root)) : null;
     if (only && !version.has(only)) {
         return { root, mode: release ? 'release' : 'planned', package: only, fields, checked: [], failures: [], warnings: [],
             notes: [`--package ${only} is not a workspace package (npm does not link it; it installs and releases on its own): nothing to check`] };
@@ -154,8 +191,10 @@ export async function lintPeers(root, { release = false, fields = release ? RELE
                     continue;
                 }
                 const now = version.get(dep);
-                const carried = plan.versions.get(dep) ?? now;
-                const at = carried === now ? `${carried}` : `${carried} (planned by the pending changesets; ${now} in the manifest)`;
+                const tagged = releaseLine && field === 'peerDependencies' && semver.valid(now) ? latestRelease(semver, releaseLine, prefixOf.get(dep), now) : null;
+                const carried = plan.versions.get(dep) ?? (tagged && semver.gt(tagged, now) ? tagged : now);
+                const at = carried === now ? `${carried}` : plan.versions.has(dep) ? `${carried} (planned by the pending changesets; ${now} in the manifest)`
+                    : `${carried} (its latest release, tag ${prefixOf.get(dep)}${carried}; ${now} in the manifest)`;
                 if (typeof range !== 'string') {
                     failures.push(`${what}: not a string range`);
                     continue;
@@ -175,8 +214,14 @@ export async function lintPeers(root, { release = false, fields = release ? RELE
             }
         }
     }
-    const warnings = release ? [] : (await lintPeers(root, { release: true, only })).failures.map((f) => `release mode would refuse: ${f}`);
-    return { root, mode: release ? 'release' : 'planned', package: only, fields, checked, failures, warnings, notes };
+    // CI's planned mode only WARNS about release-mode gaps (ruling (3) is not extended to its failures): it reads the
+    // release tags when the checkout has them, and says so plainly when it cannot.
+    let warnTags = tags;
+    if (!release && warnTags === undefined) {
+        try { warnTags = releaseTags(root); } catch (error) { warnTags = 'manifest-only'; notes.push(`release-mode warnings read manifest versions only: ${error.message}`); }
+    }
+    const warnings = release ? [] : (await lintPeers(root, { release: true, only, tags: warnTags })).failures.map((f) => `release mode would refuse: ${f}`);
+    return { root, mode: release ? 'release' : 'planned', package: only, fields, checked, failures, warnings, notes, tags: releaseLine ? 'release tags (peers)' : 'manifest only' };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -198,7 +243,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     }
     let result;
     try {
-        result = await lintPeers(root, { release, fields, only: opt('--package') ?? null });
+        result = await lintPeers(root, { release, fields, only: opt('--package') ?? null, ...(argv.includes('--manifest-only') ? { tags: 'manifest-only' } : {}) });
     } catch (error) {
         console.error(`lint:peers could not run: ${error instanceof Error ? error.message : error}`);
         process.exit(2);
