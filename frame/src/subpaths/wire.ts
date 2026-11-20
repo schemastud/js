@@ -7,6 +7,7 @@
 // =============================================================================
 
 export { resolveWidgetFor, FRAME_CONTEXT_KEYWORD, type ResolvedForContext } from '../resolveWidgetFor';
+export { lenderFor, type FrameContextLender } from '../contextRegistry';
 export { INHERITS } from '../contexts';
 export type { NodeParticipation } from '../contexts';
 export { STUD_RESOURCE_REF_KEYWORD } from '../ResourceRefWidget';

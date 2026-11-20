@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 afterEach(cleanup);
 import { FrameProvider } from '../src/context';
+import { createFrameContexts } from '../src/contextRegistry';
 import { defaultPrimitives } from '../src/primitives';
 import { ListShell } from '../src/ListShell';
 import { DefaultLoading } from '../src/slots/defaults';
@@ -431,6 +432,39 @@ describe('ListShell — editable row-cell wiring (FC-23)', () => {
             'title',
             'Alpha!',
         );
+    });
+
+    it('a kit whose row-cell falls back to detail lends the detail binding in the list shell (frame-foundation 91, review MED-2)', async () => {
+        // The field binds its widget under `detail` only: frame's own edge (row-cell ← edit) lends nothing, a kit's
+        // row-cell { fallback: ['detail'] } lends it. Through the real list shell, which hands the cell the pointer's map.
+        const detailOnly = {
+            byNode: {
+                title: {
+                    detail: { participates: true, widget: 'email-input' },
+                    'row-cell': { participates: true, inheritsBinding: true },
+                    'list-column': { participates: true, label: 'Title' },
+                },
+            },
+            inherits: {},
+            known: ['detail', 'row-cell', 'list-column'],
+        } as any;
+        const draw = (injection: FrameInjection) =>
+            render(
+                <ListShell resource="widgets" columns={[{ field: 'title', header: 'Title' }]} manifest={detailOnly} onCellCommit={vi.fn()} />,
+                { wrapper: wrap(injection) },
+            );
+
+        draw(injectionWithWidget(makeTransport()));
+        await waitFor(() => expect(screen.getAllByText('Alpha')[0]).toBeTruthy());
+        fireEvent.click(screen.getAllByText('Alpha')[0]);
+        expect(screen.queryByTestId('cell-input')).toBeNull();
+        cleanup();
+
+        const contexts = createFrameContexts((c) => c.register('row-cell', { fallback: ['detail'] }, 'host/app'));
+        draw({ ...injectionWithWidget(makeTransport()), contexts });
+        await waitFor(() => expect(screen.getAllByText('Alpha')[0]).toBeTruthy());
+        fireEvent.click(screen.getAllByText('Alpha')[0]);
+        expect(screen.getByTestId('cell-input')).toBeTruthy();
     });
 
     it('a host FrameColumn.cell override still wins — EditableCell is not used', async () => {

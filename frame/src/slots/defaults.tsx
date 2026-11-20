@@ -349,8 +349,8 @@ export function DefaultTable(props: {
  * resolver the card will use.
  */
 export function DefaultCards({ rows, onOpen, Card }: CardsSlotProps) {
-    const { manifestFor, registry } = useFrameInjection();
-    const visible = rows.filter((row) => dashboardRowRenders(row, manifestFor, registry));
+    const { manifestFor, registry, contexts } = useFrameInjection();
+    const visible = rows.filter((row) => dashboardRowRenders(row, manifestFor, registry, contexts));
 
     return (
         <div

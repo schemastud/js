@@ -4,6 +4,7 @@ type BadgeCellOptions
 type BadgesCellOptions
 type DateCellOptions
 value FRAME_CONTEXT_KEYWORD
+type FrameContextLender
 value INHERITS
 value KNOWN_ROW_ACTIONS
 type LinkCellOptions
@@ -13,5 +14,6 @@ type RealmDefinition
 type ResolvedForContext
 value STUD_RESOURCE_REF_KEYWORD
 type TextCellOptions
+value lenderFor
 value resolveActions
 value resolveWidgetFor

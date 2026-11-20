@@ -7,6 +7,7 @@ import { FrameActionError } from './actions';
 import { registerCardWidgets, type CardLinkRenderer, type IconResolver } from './cards';
 import { registerColumnLinkKind } from './columnKinds';
 import { FrameProvider, registerFrameWidgets } from './context';
+import { asLookup, createFrameContexts, type FrameContextLookup, type KitContexts } from './contextRegistry';
 import { createHttpTransport } from './httpTransport';
 import { createMemoryUrlState } from './memoryUrlState';
 import { defaultPrimitives } from './primitives';
@@ -27,6 +28,11 @@ import type {
 export interface FrameRegistryOptions {
     /** The host's own registrations; run once, last, on the seeded registry, so a name registered again wins. */
     widgets?: (registry: WidgetRegistry) => void;
+    /**
+     * The host's own render contexts (frame-foundation 91; decision 86): run once, after frame's seven are seeded, so
+     * a name registered again replaces frame's entry in place. Every fallback is checked once, after it returns.
+     */
+    contexts?: KitContexts;
     /** The card set's and the `link` column kind's link renderer (a router link). Absent, each draws a plain anchor. */
     renderLink?: CardLinkRenderer;
     /** The card set's icon resolver. Absent, cards draw no icons. */
@@ -83,6 +89,8 @@ export interface FrameKit<Nav = unknown> {
     /** The transport the kit reads through — the object handed in, never a copy (it is the cache scope). */
     transport: FrameTransport;
     registry: WidgetRegistry;
+    /** The kit's render contexts: frame's seven, then the host's `contexts` (read-only once the kit is built). */
+    contexts: FrameContextLookup;
     /** The socket's manifest, one cache entry per kit. Works inside the `Provider` or above it. */
     useManifest(): UseQueryResult<FrameManifest<Nav>, Error>;
 }
@@ -123,6 +131,9 @@ export function createFrameKit<Nav = unknown>(options: FrameKitOptions = {}): Fr
     // The endpoint is part of the cache key only when the kit knows it: a handed-in transport is its own scope.
     const endpoint = options.transport ? null : manifestUrl;
     const registry = createFrameRegistry(options);
+    // Throws when the host's contexts break the grammar or name a fallback nothing registered: a structural error,
+    // at construction, never at a render (decision 86 Q8).
+    const contexts = asLookup(createFrameContexts(options.contexts));
     const primitives: FramePrimitives = { ...defaultPrimitives, ...options.primitives };
     const listSlots: Partial<ListSlots> = { ...shadcnListSlots, ...options.listSlots };
     const editSlots: Partial<EditSlots> = { ...shadcnEditSlots, ...options.editSlots };
@@ -165,6 +176,7 @@ export function createFrameKit<Nav = unknown>(options: FrameKitOptions = {}): Fr
                 primitives,
                 useUrlState,
                 registry,
+                contexts,
                 schemaFetcher,
                 can,
                 manifestFor: (resource) => manifest?.contexts[resource],
@@ -193,6 +205,6 @@ export function createFrameKit<Nav = unknown>(options: FrameKitOptions = {}): Fr
         );
     }
 
-    const kit: FrameKit<Nav> = { Provider, transport, registry, useManifest };
+    const kit: FrameKit<Nav> = { Provider, transport, registry, contexts, useManifest };
     return kit;
 }

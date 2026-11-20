@@ -33,6 +33,10 @@ value FrameActionError
 type FrameCan
 type FrameColumn
 type FrameContext
+type FrameContextDefinition
+type FrameContextEntry
+type FrameContextLookup
+type FrameContextRegistry
 type FrameCrudTransport
 type FrameHooks
 type FrameInjection
@@ -54,6 +58,8 @@ type GuardRegistry
 type HttpTransportOptions
 type IconResolver
 value KNOWN_CONTEXTS
+type KitContexts
+type KnownFrameContext
 type ListFiltersState
 value ListShell
 type ListShellOptions

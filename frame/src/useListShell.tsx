@@ -404,7 +404,6 @@ function withEditableCells(
         const rowCell = byCtx?.['row-cell'];
         if (!rowCell?.participates) return col;
 
-        const edit = byCtx?.edit;
         // Also flat, and unreachable for a dotted pointer: a JSON Schema nests through a
         // `properties` hop per level, so plain dot-traversal would be the wrong traversal — and a
         // producer that folds a sub-projection onto a row is refused `row-cell` participation
@@ -419,7 +418,7 @@ function withEditableCells(
                     node={node}
                     rootSchema={rootSchema}
                     rowCell={rowCell}
-                    edit={edit}
+                    byCtx={byCtx}
                     value={getPath(record, col.field)}
                     registry={registry}
                     onCommit={(value) => onCellCommit?.(record, col.field, value)}

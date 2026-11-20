@@ -11,15 +11,18 @@ import {
     type WidgetRegistry,
 } from '@schemastud/seam';
 import { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
-import type { NodeParticipation } from './contexts';
+import { useOptionalFrameInjection } from './context';
+import { frameContexts, lenderFor, type FrameContextLookup } from './contextRegistry';
+import type { FrameContext, NodeParticipation } from './contexts';
 
 // =============================================================================
 // EditableCell — the interactive `row-cell` RUNTIME atop the FC-03 resolution.
 //
 // Default is a READ view of the field value. On activation (click / an explicit
 // edit affordance) it mounts the RESOLVED edit widget for the field — obtained
-// through resolveWidgetFor(node, 'row-cell', rowCell, edit, registry), which
-// inherits the `edit` binding per FC-03. The widget edits the single field value
+// through resolveWidgetFor(node, 'row-cell', rowCell, lender, registry, contexts),
+// where the lender is `lenderFor` over the kit's context registry (frame's own
+// edge is row-cell ← edit, FC-03; frame-foundation 91). The widget edits the single field value
 // in place; committing calls `onCommit(value)` (the host wires it to a per-field
 // save / transport.save); Escape or a blur-without-change reverts to the read view.
 //
@@ -42,14 +45,19 @@ export interface EditableCellProps {
     rootSchema: SchemaNode;
     /** The field's `row-cell` participation entry (byNode[field]['row-cell']). */
     rowCell: NodeParticipation | undefined;
-    /** The field's `edit` participation entry — the cascade parent. */
-    edit: NodeParticipation | undefined;
+    /**
+     * The field pointer's participation map (`manifest.byNode[field]`): where the cell finds its lender, the first of the
+     * kit's `row-cell` fallbacks that participates (`lenderFor`; frame's own edge is `edit`). frame-foundation 91.
+     */
+    byCtx: Partial<Record<FrameContext, NodeParticipation>> | undefined;
     /** The current field value. */
     value: unknown;
     /** Host commit hook — wire to a per-field save / transport.save. */
     onCommit: (value: unknown) => void;
     /** Falls back to the seam WidgetRegistryContext when omitted. */
     registry?: WidgetRegistry;
+    /** The kit's context registry. Falls back to the mounted kit's, then frame's own seven. */
+    contexts?: FrameContextLookup;
 }
 
 function scalar(value: unknown): string {
@@ -87,13 +95,16 @@ export function EditableCell({
     node,
     rootSchema,
     rowCell,
-    edit,
+    byCtx,
     value,
     onCommit,
     registry: registryProp,
+    contexts: contextsProp,
 }: EditableCellProps): ReactNode {
     const ctxRegistry = useContext(WidgetRegistryContext);
     const registry = registryProp ?? ctxRegistry;
+    const injection = useOptionalFrameInjection();
+    const contexts = contextsProp ?? injection?.contexts ?? frameContexts();
     if (!registry) {
         throw new Error('[frame] EditableCell requires a WidgetRegistry (prop or WidgetRegistryContext).');
     }
@@ -106,7 +117,8 @@ export function EditableCell({
     // Resolve the row-cell binding, inheriting `edit` per FC-03. Heavyweight parents
     // are suppressed here (resolved.widget stays undefined), so a heavyweight editor
     // can never be inlined into the cell.
-    const resolved: ResolvedForContext = resolveWidgetFor(node, 'row-cell', rowCell, edit, registry);
+    const lender = lenderFor(byCtx, 'row-cell', contexts);
+    const resolved: ResolvedForContext = resolveWidgetFor(node, 'row-cell', rowCell, lender?.entry, registry, contexts);
 
     // A resolved COMPONENT is editable; an RJSF stock name, a miss, a suppressed
     // heavyweight, or a non-participating field falls to the read projection — no

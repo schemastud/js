@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { createWidgetRegistry, type WidgetRegistry } from '@schemastud/seam';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { FrameProvider } from '../src/context';
+import { createFrameContexts } from '../src/contextRegistry';
 import { KNOWN_CONTEXTS, type ContextManifest } from '../src/contexts';
 import { FRAME_CONTEXT_KEYWORD } from '../src/resolveWidgetFor';
 import {
@@ -480,6 +481,30 @@ describe('DashboardCard', () => {
         expect(screen.getByText('Current period · 2026-09')).toBeTruthy();
         expect(screen.getByText('Excludes voided bills')).toBeTruthy();
         expect(container.querySelectorAll('[data-stat-tile]')).toHaveLength(1);
+    });
+
+    it('a kit that gives overview ANOTHER fallback still frames the lent body (frame-foundation 91, review MED-1)', () => {
+        const registry = createWidgetRegistry();
+        registerCardWidgets(registry);
+        const contexts = createFrameContexts((c) => c.register('overview', { fallback: ['detail'] }, 'host/app'));
+        const wrapper = wrap({
+            ...makeInjection(registry, { bills: manifest({ overview: { participates: true }, detail: { participates: true, widget: 'stat-row' } }) }),
+            contexts,
+        });
+        const payload = summary({
+            key: 'bills',
+            label: 'Bills',
+            figures: [{ key: 'open', label: 'Open', value: 3 }],
+            overview: { headline: { key: 'total', label: 'Period total', value: '$1,240' }, items: [], period: 'Current period · 2026-09' },
+        });
+        const { container } = render(
+            <DashboardCard value={row({ resource: 'bills', context: 'overview', summary: payload })} />,
+            { wrapper },
+        );
+
+        expect(container.querySelector('[data-frame-card="overview-frame"]')).toBeTruthy();
+        expect(container.querySelector('[data-frame-card="stat-row"]')).toBeTruthy();
+        expect(screen.getByText('Current period · 2026-09')).toBeTruthy();
     });
 });
 

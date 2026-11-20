@@ -1,7 +1,8 @@
 import { useId, type ReactNode } from 'react';
 import { UnboundWidget, asWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
 import { useFrameInjection } from '../context';
-import { INHERITS, type ContextManifest, type FrameContext, type NodeParticipation } from '../contexts';
+import { frameContexts, lenderFor, type FrameContextLookup } from '../contextRegistry';
+import type { ContextManifest, FrameContext, NodeParticipation } from '../contexts';
 import { isWidgetComponent, resolveWidgetFor, type ResolvedForContext } from '../resolveWidgetFor';
 import { OverviewFrame, ROOT_NODE } from './chrome';
 import { NavTile } from './NavTile';
@@ -27,9 +28,11 @@ export interface DashboardCardResolution extends ResolvedForContext {
     /**
      * WHICH declaration produced this widget — `'overview'` / `'summary'` for a named binding
      * (an overview that merely inherited the summary's name reports `'summary'`, because that
-     * is the widget that will draw), `'default'` for the row context's registry default.
+     * is the widget that will draw), `'default'` for the row context's registry default. A
+     * kit whose context registry gives `overview` another fallback reports the context that
+     * lent (frame-foundation 91).
      */
-    tier: 'overview' | 'summary' | 'default';
+    tier: 'overview' | 'summary' | 'default' | FrameContext;
 }
 
 /**
@@ -38,9 +41,10 @@ export interface DashboardCardResolution extends ResolvedForContext {
  * target participates) → the context DEFAULT for the row's own context (the registry's
  * predicate on the stamped `x-frame-context`, for an unbound node).
  *
- * The cascade parent is derived HERE from the manifest (`byNode['']?.[INHERITS[ctx]]`) —
+ * The cascade parent is derived HERE from the manifest, by the kit's context registry
+ * (`lenderFor(byNode[''], ctx, contexts)`; frame's own edge is `overview ← summary`) —
  * `SchemaView` passes `undefined` for every context, so an `overview` resolved through it
- * never cascades; a card is the one surface where `overview ← summary` has to.
+ * never cascades; a card is the one surface where it has to.
  *
  * ⚠️ A tier whose declared name resolves to NO component STOPS the chain (`bound === false`), it does
  * not fall through. The declaration named something; taking the next tier or the default would
@@ -52,27 +56,32 @@ export function resolveDashboardCard(
     row: DashboardRow,
     manifest: ContextManifest,
     registry: WidgetRegistry,
+    /** The kit's context registry. Absent, frame's own seven. */
+    contexts: FrameContextLookup = frameContexts(),
 ): DashboardCardResolution {
     const root = manifest.byNode[''] ?? {};
     const own: Extract<FrameContext, 'summary' | 'overview'> = row.context === 'overview' ? 'overview' : 'summary';
-    const chain: Extract<FrameContext, 'summary' | 'overview'>[] = own === 'overview' ? ['overview', 'summary'] : ['summary'];
+    // The tiers: the row's own context, then that context's fallbacks from the kit's registry (frame's own: overview ←
+    // summary; summary has none). A tier with no entry here is skipped, so an overview row whose target declares no
+    // overview still draws its fallback's own binding (frame-foundation 91, review LOW-1: no second copy of the edge).
+    const chain: FrameContext[] = [own, ...(contexts.get(own)?.fallback ?? [])];
 
     for (const ctx of chain) {
         const cm = bindingOf(root, ctx);
         if (!cm) continue;
-        const lender = bindingOf(root, INHERITS[ctx]);
-        const resolved = resolveWidgetFor(ROOT_NODE, ctx, cm, lender, registry);
+        const lender = lenderFor(root, ctx, contexts);
+        const resolved = resolveWidgetFor(ROOT_NODE, ctx, cm, lender?.entry, registry, contexts);
         // The resolver's `name` is the name in play: the tier's own, else the one it inherited across the cascade edge.
-        const inherited = cm.widget === undefined && cm.inheritsBinding !== false ? lender?.widget : undefined;
+        const inherited = cm.widget === undefined && cm.inheritsBinding !== false ? lender?.entry.widget : undefined;
         if (resolved.bound === false || isWidgetComponent(resolved.widget)) {
             // A widget the tier only INHERITED is the lender's widget, and it draws the lender's
             // rendering — so the overview chrome is still this row's to supply.
-            return { ...resolved, tier: inherited !== undefined ? (INHERITS[ctx] as 'summary') : ctx };
+            return { ...resolved, tier: inherited !== undefined && lender ? lender.context : ctx };
         }
     }
 
     return {
-        ...resolveWidgetFor(ROOT_NODE, own, { participates: true }, undefined, registry),
+        ...resolveWidgetFor(ROOT_NODE, own, { participates: true }, undefined, registry, contexts),
         tier: 'default',
     };
 }
@@ -88,6 +97,8 @@ export function dashboardRowRenders(
     record: Row,
     manifestFor: ManifestLookup | undefined,
     registry: WidgetRegistry,
+    /** The kit's context registry. Absent, frame's own seven. */
+    contexts: FrameContextLookup = frameContexts(),
 ): boolean {
     const row = record as Partial<DashboardRow>;
     // A welcome row draws exactly when it carries its panel — checked BEFORE the resource test,
@@ -99,7 +110,7 @@ export function dashboardRowRenders(
     const manifest = manifestFor?.(row.resource);
     if (!manifest) return false;
 
-    const resolved = resolveDashboardCard(row as DashboardRow, manifest, registry);
+    const resolved = resolveDashboardCard(row as DashboardRow, manifest, registry, contexts);
     return resolved.bound === false || isWidgetComponent(resolved.widget);
 }
 
@@ -123,7 +134,7 @@ const CARD_FORM_CONTEXT: Record<string, unknown> = {};
  * nodes drop). No log either: in-flight is the common case and would make the warning noise.
  */
 export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>) {
-    const { manifestFor, registry } = useFrameInjection();
+    const { manifestFor, registry, contexts } = useFrameInjection();
     // Before any early return: the card's RJSF registry, on the root node a summary or overview addresses.
     const rjsfRegistry = useRjsfRegistry(ROOT_NODE, CARD_FORM_CONTEXT);
     const id = useId();
@@ -148,7 +159,7 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
     const manifest = resource ? manifestFor?.(resource) : undefined;
     if (!manifest || !resource) return null;
 
-    const resolved = resolveDashboardCard(row, manifest, registry);
+    const resolved = resolveDashboardCard(row, manifest, registry, contexts);
     const cell = (body: ReactNode) => (
         <div data-frame-card="dashboard-card" data-frame-card-resource={resource} data-frame-card-context={row.context}>
             {body}
@@ -189,7 +200,10 @@ export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>)
         />
     );
 
-    if (row.context !== 'overview' || resolved.tier !== 'summary') return cell(body);
+    // An overview row whose widget came from ANOTHER context (frame's own: summary; a kit may lend another) draws that
+    // context's rendering, so the overview chrome is this row's to supply. Its own binding and the default need none
+    // (frame-foundation 91, review MED-1: not the literal 'summary').
+    if (row.context !== 'overview' || resolved.tier === 'overview' || resolved.tier === 'default') return cell(body);
 
     return cell(
         <OverviewFrame

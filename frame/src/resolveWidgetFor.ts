@@ -1,11 +1,15 @@
 import { mergeUiSchema, type SchemaNode, type WidgetRegistry, type ResolvedWidget } from '@schemastud/seam';
-import { INHERITS, type FrameContext, type NodeParticipation } from './contexts';
+import { frameContexts, type FrameContextLookup } from './contextRegistry';
+import type { FrameContext, NodeParticipation } from './contexts';
 
 // =============================================================================
 // The ONE context-aware resolver. Every render surface (SchemaView, EditShell,
 // resolveColumns) folds a node's per-context participation into a schema the seam
-// registry can resolve — including the row-cell←edit and overview←summary binding
-// cascades (the edges live in INHERITS; only row-cell has the heavyweight guard).
+// registry can resolve — including the binding cascades. Which contexts cascade is the
+// kit's context registry's answer (an entry with a non-empty fallback; frame's own two
+// are row-cell←edit and overview←summary), and which entry lends is `lenderFor`'s
+// (frame-foundation 91). Only row-cell has the heavyweight guard, and edit never
+// cascades: both are shell knowledge, not registry data (decision 86 Q1).
 // =============================================================================
 
 /**
@@ -58,8 +62,10 @@ export function resolveWidgetFor(
     node: SchemaNode,
     ctx: FrameContext,
     cm: NodeParticipation | undefined, // byNode[ptr][ctx]
-    parent: NodeParticipation | undefined, // the inherited entry (INHERITS[ctx]: edit for row-cell, summary for overview), when cascading
+    parent: NodeParticipation | undefined, // the lending entry (`lenderFor(byNode[ptr], ctx, contexts)?.entry`), when cascading
     registry: WidgetRegistry,
+    /** The kit's context registry: whether `ctx` cascades at all. Absent, frame's own seven. */
+    contexts: FrameContextLookup = frameContexts(),
 ): ResolvedForContext {
     if (!cm?.participates) return { widget: undefined, participates: false };
     // An OPTED-OUT parent lends nothing. A `participates: false` entry is a declaration that
@@ -67,7 +73,7 @@ export function resolveWidgetFor(
     // options may travel down the cascade edge — an absent parent and a refusing one are the
     // same thing to the child.
     const lender = parent?.participates ? parent : undefined;
-    const cascades = ctx !== 'edit' && cm.inheritsBinding !== false && Boolean(INHERITS[ctx]);
+    const cascades = ctx !== 'edit' && cm.inheritsBinding !== false && (contexts.get(ctx)?.fallback.length ?? 0) > 0;
     const suppressed = ctx === 'row-cell' && cascades && lender?.heavyweight === true; // heavyweight-in-a-cell
     const name = cm.widget ?? (cascades && !suppressed ? lender?.widget : undefined);
     const folded = cascades && !suppressed ? mergeOptions(lender?.options, cm.options) : cm.options;

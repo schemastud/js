@@ -20,8 +20,11 @@ import type { FrameLayoutVariant } from './FrameLayout';
  * "A summary of THIS record" is `list-item`, not a new context. The PHP projector
  * refuses a record or collection context on a property, so the client never sees one
  * under a property pointer.
+ *
+ * These are frame's OWN contexts. A host or package may register more (frame-foundation
+ * 86, 91): see {@link FrameContext} and the kit's context registry (`contextRegistry.ts`).
  */
-export type FrameContext =
+export type KnownFrameContext =
     | 'edit'
     | 'detail'
     | 'list-column'
@@ -29,6 +32,14 @@ export type FrameContext =
     | 'row-cell'
     | 'summary'
     | 'overview';
+
+/**
+ * A render context: one of frame's seven, or any context a host or package registered in
+ * its kit (decision 86, ruling item 6). `string & {}` keeps the seven completing in an
+ * editor while a host context type-checks with no cast. What actually exists at run time
+ * is the kit's context registry, not this type.
+ */
+export type FrameContext = KnownFrameContext | (string & {});
 
 /**
  * Per-node participation entry. `widget` is a NAME only (never a component) —
@@ -140,7 +151,11 @@ export interface ContextManifest {
     collections?: import('./types').ResourceCollectionAddress[];
 }
 
-/** The full context vocabulary, in wire order. */
+/**
+ * Frame's OWN seven contexts, in wire order: the seed of every kit's context registry, and the
+ * `known` a fixture uses for a host that registers nothing (86 Q15). Not the set that exists at
+ * run time: read the kit's context registry for that.
+ */
 export const KNOWN_CONTEXTS: FrameContext[] = [
     'edit',
     'detail',
@@ -159,8 +174,9 @@ export const KNOWN_CONTEXTS: FrameContext[] = [
  *  - `overview` inherits `summary`'s binding unless the node opts out, so a resource
  *    that declares only a summary still renders an honest overview card.
  *
- * The wire `inherits` block carries the same edges as arrays; this is the
- * resolver-facing projection.
+ * The wire `inherits` block carries the same edges as arrays. These are frame's OWN two
+ * edges, seeded into every kit's context registry as one-element fallback lists (86 Q15);
+ * the resolver, the cards and the vocabulary writer read the registry, never this constant.
  */
 export const INHERITS: Partial<Record<FrameContext, FrameContext>> = {
     'row-cell': 'edit',

@@ -14,6 +14,7 @@ import type { FrameHooks } from './hooks';
 import type { SummaryPayload } from './cards/types';
 import type { CreateResultOf, FieldOf, ResourceKey, RowOf } from './resources';
 import type { ContextManifest } from './contexts';
+import type { FrameContextLookup } from './contextRegistry';
 
 // =============================================================================
 // Resource-blind shells and slots consume declared resources through one injected contract.
@@ -221,6 +222,12 @@ export interface FrameInjection {
     primitives: FramePrimitives;
     useUrlState: UseUrlState;
     registry: WidgetRegistry;
+    /**
+     * The kit's context registry (frame-foundation 91): frame's seven plus the host's. A surface reads it to find
+     * which context lends a binding (`lenderFor`). Optional so a hand-built injection still compiles; absent, a
+     * surface reads frame's own seven.
+     */
+    contexts?: FrameContextLookup;
     schemaFetcher: SchemaFetcher;
     can: FrameCan;
     /**

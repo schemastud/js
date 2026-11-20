@@ -103,7 +103,7 @@ const CONTEXTS: ReadonlyArray<readonly [context: string, name: string, draw: () 
         'flavr-cell',
         () =>
             render(
-                <EditableCell node={FLAVOUR} rootSchema={SCHEMA} rowCell={on('flavr-cell')} edit={undefined} value="b" onCommit={() => {}} registry={createWidgetRegistry()} />,
+                <EditableCell node={FLAVOUR} rootSchema={SCHEMA} rowCell={on('flavr-cell')} byCtx={undefined} value="b" onCommit={() => {}} registry={createWidgetRegistry()} />,
             ),
     ],
     [

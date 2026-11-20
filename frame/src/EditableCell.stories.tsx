@@ -62,7 +62,7 @@ function Harness({ rowCell, registry }: { rowCell: NodeParticipation; registry?:
                 node={node}
                 rootSchema={{ type: 'object', properties: { name: node } }}
                 rowCell={rowCell}
-                edit={undefined}
+                byCtx={undefined}
                 value={value}
                 onCommit={setValue}
                 registry={registry ?? boundRegistry()}

@@ -133,10 +133,70 @@ describe('frame vocabulary', () => {
         expect(stale.message).toContain('frame-vocabulary --write');
     });
 
-    it('a registration scoped to a context frame does not know exits 2, naming it', async () => {
+    it('a registration scoped to a context the kit does not register exits 2, naming it and the registered ones', async () => {
         const result = await runVocabulary({ readers: [], widgets: [fixture('kit-nope.tsx')], out: 'vocabulary.json', write: true, cwd: tmpHost(), load });
         expect(result.exitCode).toBe(2);
         expect(result.message).toContain('"nope"');
+        expect(result.message).toContain('edit, detail, list-column, list-item, row-cell, summary, overview');
+    });
+
+    // frame-foundation 91 (decision 86 Q5, Q14, Q16): a kit's contexts ride its --widgets module as a named export.
+    const run = (widgets: string[], host = tmpHost()) =>
+        runVocabulary({ readers: [], widgets, out: 'vocabulary.json', write: true, cwd: host, load }).then((result) => ({
+            result,
+            written: result.exitCode === 0 ? (JSON.parse(readFileSync(join(host, 'vocabulary.json'), 'utf8')) as FrameVocabulary) : undefined,
+        }));
+
+    it('a kit\'s named contexts export adds its context, admits a widget scoped to it, and writes its edges', async () => {
+        const { result, written } = await run([fixture('kit-contexts.tsx')]);
+        expect(result.exitCode, result.message).toBe(0);
+        expect(written!.contexts).toEqual(['edit', 'detail', 'list-column', 'list-item', 'row-cell', 'summary', 'overview', 'kanban']);
+        expect(written!.widgets['kanban-lane']).toEqual([{ contexts: ['kanban'] }]);
+        expect(written!.inherits).toEqual({ 'row-cell': ['edit'], overview: ['summary'], kanban: ['list-item'] });
+        expect(written!.version).toBe(1);
+        expect(written!.reserved).toEqual(['row-actions']);
+    });
+
+    it('a context with no fallback leaves frame\'s edges alone: no inherits key', async () => {
+        const { result, written } = await run([fixture('kit-contexts-plain.tsx')]);
+        expect(result.exitCode, result.message).toBe(0);
+        expect(written!.contexts.at(-1)).toBe('timeline');
+        expect('inherits' in written!).toBe(false);
+    });
+
+    it('a kit that changes one of frame\'s edges writes inherits, even with no context of its own', async () => {
+        const vocabulary = buildVocabulary([{ contexts: (c) => c.register('overview', {}, 'host/app') }]);
+        expect(vocabulary.inherits).toEqual({ 'row-cell': ['edit'] });
+        expect(vocabulary.contexts).toEqual(['edit', 'detail', 'list-column', 'list-item', 'row-cell', 'summary', 'overview']);
+    });
+
+    it('kits that agree on a context share it; kits that disagree exit 2, naming both positions and the context', async () => {
+        const agree = await run([fixture('kit-contexts.tsx'), fixture('kit-contexts.tsx')]);
+        expect(agree.result.exitCode, agree.result.message).toBe(0);
+        expect(agree.written!.contexts.filter((c) => c === 'kanban')).toEqual(['kanban']);
+
+        const disagree = await run([fixture('kit-contexts.tsx'), fixture('kit-contexts-other.tsx')]);
+        expect(disagree.result.exitCode).toBe(2);
+        expect(disagree.result.message).toContain('kits 1 and 2 disagree on the context "kanban"');
+    });
+
+    it('a kit\'s contexts that break the grammar or name an unregistered fallback exit 2, naming the kit', async () => {
+        const bad = await runVocabulary({
+            readers: [], out: 'vocabulary.json', write: true, cwd: tmpHost(), widgets: ['a', 'b'],
+            load: async (specifier) => ({
+                default: () => {},
+                contexts: specifier === 'a' ? () => {} : (c: { register: (n: string, d?: object) => void }) => c.register('kanban', { fallback: ['board'] }),
+            }),
+        });
+        expect(bad.exitCode).toBe(2);
+        expect(bad.message).toContain('kit 2: [frame] context "kanban" falls back to "board", which is not registered');
+
+        const notAFunction = await runVocabulary({
+            readers: [], out: 'vocabulary.json', write: true, cwd: tmpHost(), widgets: ['a'],
+            load: async () => ({ default: () => {}, contexts: ['kanban'] }),
+        });
+        expect(notAFunction.exitCode).toBe(2);
+        expect(notAFunction.message).toContain('exports `contexts`, but not as a function');
     });
 
     it('the built bin resolves an import-only package from the host, and refuses an unexported subpath', () => {

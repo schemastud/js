@@ -105,7 +105,14 @@ export {
 export { useFrameSidePanelStore, type FrameSidePanelEntry } from './frameSidePanel';
 export { resolveRowActions, type RowAction } from './rowActions';
 export { KNOWN_CONTEXTS } from './contexts';
-export type { FrameContext, ContextManifest } from './contexts';
+export type { FrameContext, KnownFrameContext, ContextManifest } from './contexts';
+export type {
+    FrameContextDefinition,
+    FrameContextEntry,
+    FrameContextLookup,
+    FrameContextRegistry,
+    KitContexts,
+} from './contextRegistry';
 
 // Wire types.
 export type {
