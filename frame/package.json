@@ -111,7 +111,7 @@
     "typescript": "^5.7.0",
     "vitest": "^4.1.10",
     "zustand": "^5.0.14",
-    "@schemastud/messages": "^0.1.0"
+    "@schemastud/messages": ">=0.1.0 <1"
   },
   "bin": {
     "frame-vocabulary": "bin/frame-vocabulary.mjs"

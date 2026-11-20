@@ -65,7 +65,7 @@
         "typescript": "^5.7.0",
         "vitest": "^4.1.10",
         "vite": "^8.0.0",
-        "@schemastud/messages": "^0.1.0"
+        "@schemastud/messages": ">=0.1.0 <1"
     },
     "peerDependenciesMeta": {
         "vite": {
