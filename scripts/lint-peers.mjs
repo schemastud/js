@@ -18,14 +18,22 @@
  *     version time changesets rewrites the internal `dependencies` / `devDependencies` / `optionalDependencies` ranges
  *     itself (`updateInternalDependencies`), but a peer only when it leaves range, by forcing a MAJOR on the dependent: the
  *     case to catch first.
- *   - `--release` (the release path: eco's tools/js-release/release-package at the commit it tags, and the tag-push
- *     workflow): ALL four fields, against the MANIFEST versions, exactly what that tree carries and `npm ci` resolves.
+ *   - `--release` (the release path: eco's tools/js-release/release-package on the version commit it releases, and the
+ *     tag-push workflow on the tag's parent): ALL four fields. `dependencies`, `devDependencies` and
+ *     `optionalDependencies` are checked against the MANIFEST versions, which is what `npm ci` resolves them against
+ *     (the workspace, or the registry: c64c712's 404). A PEER is checked against the later of the manifest version and
+ *     the sibling's latest release tag (frame-foundation 81, ruling (3)): consumers resolve a peer from the release line,
+ *     and main's manifest versions lag it because version commits never merge back. Tags: the sibling's own
+ *     `<dir>@x.y.z` prefix (the release tooling tags with the unscoped package name, which equals the directory for every
+ *     package today), semver order, prereleases only for a prerelease manifest. Fails CLOSED: no git, or a checkout
+ *     with no tags, exits 2; `--manifest-only` is the one explicit way to check against manifests alone.
  *     The release path runs it UNSCOPED (the whole workspace must install at a release commit: review M1). `--package
  *     <name>` narrows it to that package's ranges and every sibling's range on it, for diagnosis; a `--package` that is not
  *     a workspace (big-calendar: tracked here, released on its own, not linked by npm) is a note and exits 0 (review H2).
- *   In the default mode the release-mode gaps (all fields, manifest versions) are printed as WARNINGS, not failures: the
- *   release path refuses them; CI shows them early (review M2: eco's release-plan edits only the released package's version
- *   and its own peer ranges, so nothing rewrites a sibling's dependency ranges before a release is cut).
+ *   In the default mode the release-mode gaps are printed as WARNINGS, not failures (ruling (3) is NOT extended to the
+ *   default mode's failures): they read the release tags when the checkout has them, and a note says when they cannot.
+ *   eco's release-plan widens a sibling's dependency ranges on the released package in its version commit
+ *   (frame-foundation 81), so the dependency-field gaps close at release time; a peer gap is a real compatibility claim.
  *
  * Rules (each failure names the package, the field, the dependency, the range and the version):
  *   - `--fields a,b` overrides the mode's fields; OPTIONAL peers are checked like the rest (c64c712's was one);
@@ -43,7 +51,7 @@
  * Runs with nothing installed in `--release` mode when `SEMVER_MODULE` names a `semver` entry file (the release tool passes
  * its own): no install and no writes, only reads of the tree's manifests. Otherwise it imports the workspace's `semver`.
  *
- * usage: node scripts/lint-peers.mjs [--root <workspace root>] [--release [--package <name>]] [--fields <a,b,...>] [--json]
+ * usage: node scripts/lint-peers.mjs [--root <workspace root>] [--release [--package <name>] [--manifest-only]] [--fields <a,b,...>] [--json]
  * exit: 0 every sibling range covered; 1 a range misses (listed); 2 the check could not run.
  */
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
