@@ -42,6 +42,7 @@ const readers = {
     'context-block:actions[].input': ActionButton,
     'context-block:actions[].result': ActionButton,
     'context-block:actions[].destructive': ActionButton,
+    'context-block:actions[].requires': ActionButton,
     'context-block:collections': useListShellOf,
     'context-block:collections[].stem': useListShellOf,
     'context-block:collections[].label': ListShell,

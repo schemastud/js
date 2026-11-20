@@ -147,6 +147,22 @@ export interface ResourceActionDefinition {
     result: 'toast' | 'navigate';
     /** Reads as dangerous; a confirm-only press asks in those words. */
     destructive: boolean;
+    /**
+     * The keys of what must be in place before this action may run, as the server declares them (laravel-frame's
+     * `actions[].requires`). Opaque to frame: it only asks the host's `actionLock` about an action that carries some.
+     * Absent when none.
+     */
+    requires?: string[];
+}
+
+/**
+ * A host's answer that a declared action is locked until the person does something first. `label` says why, in the
+ * host's words, and is exposed as the button's description; `unlock()` runs the host's own step and resolves true
+ * when the action may proceed. Frame knows nothing of what the lock is.
+ */
+export interface ActionLock {
+    label: string;
+    unlock(): Promise<boolean>;
 }
 
 /** What an action's response hands back — the `{ message, data }` of a producer's response envelope. */
@@ -254,6 +270,13 @@ export interface FrameInjection {
      * action's outcome is never silent.
      */
     notify?: (notice: FrameNotice) => void;
+    /**
+     * Ask the host whether a declared action is locked (agreements 06 is one host use). Consulted only for an action
+     * that carries `requires`. A lock draws the button locked before any request, and its `unlock()` runs before the
+     * action's own form or confirmation; nothing is sent until it resolves true. Optional so existing consumers still
+     * compile — absent, or answering null, every action renders exactly as before.
+     */
+    actionLock?: (resource: string, action: ResourceActionDefinition, record?: Row) => ActionLock | null;
 }
 
 /**

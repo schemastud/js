@@ -3,7 +3,7 @@ import { createFormIntentBus } from '@schemastud/seam';
 import type { SchemaNode } from '@schemastud/seam';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { transportScope } from '@schemastud/facets';
-import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { FrameActionError, navigateTarget, resolveActions } from './actions';
 import type { ContextManifest } from './contexts';
@@ -106,11 +106,19 @@ export function ActionButton({
     record?: Row;
     compact?: boolean;
 } & ActionHandlers) {
-    const { primitives, transport, notify } = useFrameInjection();
+    const { primitives, transport, notify, actionLock } = useFrameInjection();
     const { Button } = primitives;
     const { t } = useFrameMessages();
     const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
+    // A host lock (agreements 06): asked only about an action that carries `requires`. Null leaves everything below
+    // exactly as it was, attribute for attribute.
+    const lock =
+        actionLock && action.requires !== undefined && action.requires.length > 0
+            ? actionLock(resource, action, record)
+            : null;
+    const lockLabelId = useId();
+    const [unlocking, setUnlocking] = useState(false);
     const trigger = useRef<HTMLElement | null>(null);
     const close = useCallback(() => {
         setOpen(false);
@@ -164,7 +172,8 @@ export function ActionButton({
                 type="button"
                 data-frame-action={action.key}
                 data-frame-action-scope={action.scope}
-                disabled={invoke.isPending}
+                disabled={invoke.isPending || unlocking}
+                {...(lock !== null ? { 'aria-describedby': lockLabelId, 'data-frame-action-locked': '' } : {})}
                 // On a row, a quiet outline button (a destructive one says so in its text colour, never
                 // as a solid block per row); beside the list, the host's primary or destructive button.
                 variant={compact ? 'outline' : action.destructive ? 'destructive' : undefined}
@@ -174,12 +183,53 @@ export function ActionButton({
                     // On a row, the row itself opens the record; the action must not do both.
                     event?.stopPropagation?.();
                     trigger.current = event.currentTarget ?? null;
-                    invoke.reset();
-                    setOpen(true);
+                    if (lock === null) {
+                        invoke.reset();
+                        setOpen(true);
+                        return;
+                    }
+                    // Locked: the host's step runs first, and nothing is sent until it resolves true. A false answer
+                    // leaves the action as it was; a rejection (or a throw) leaves it locked and is announced.
+                    setUnlocking(true);
+                    let unlocking: Promise<boolean>;
+                    try {
+                        unlocking = Promise.resolve(lock.unlock());
+                    } catch (error) {
+                        unlocking = Promise.reject(error);
+                    }
+                    unlocking
+                        .then((unlocked) => {
+                            if (unlocked === true) {
+                                invoke.reset();
+                                setOpen(true);
+                            }
+                        })
+                        .catch((error: unknown) =>
+                            notice({
+                                tone: 'error',
+                                message:
+                                    error instanceof Error && error.message !== ''
+                                        ? error.message
+                                        : t('schemastud-frame::messages.action_unlock_failed', { label: action.label }),
+                            }),
+                        )
+                        .finally(() => setUnlocking(false));
                 }}
             >
-                {action.label}
+                {lock !== null ? (
+                    <>
+                        <LockGlyph />
+                        {action.label}
+                    </>
+                ) : (
+                    action.label
+                )}
             </Button>
+            {lock !== null ? (
+                <span id={lockLabelId} style={VISUALLY_HIDDEN}>
+                    {lock.label}
+                </span>
+            ) : null}
             {open ? (
                 <ActionDialog
                     resource={resource}
@@ -191,6 +241,38 @@ export function ActionButton({
                 />
             ) : null}
         </>
+    );
+}
+
+/** Read by assistive technology, not drawn: the lock's reason, which the locked button names as its description. */
+const VISUALLY_HIDDEN = {
+    position: 'absolute',
+    width: 1,
+    height: 1,
+    padding: 0,
+    margin: -1,
+    overflow: 'hidden',
+    clip: 'rect(0, 0, 0, 0)',
+    whiteSpace: 'nowrap',
+    border: 0,
+} as const;
+
+/** A small padlock beside a locked action's label; decorative, since the description says why. Inline: no class names. */
+function LockGlyph() {
+    return (
+        <svg
+            aria-hidden="true"
+            focusable="false"
+            width="12"
+            height="12"
+            viewBox="0 0 16 16"
+            style={{ marginInlineEnd: '0.375rem', verticalAlign: '-1px' }}
+        >
+            <path
+                fill="currentColor"
+                d="M4 7V5a4 4 0 1 1 8 0v2h.5A1.5 1.5 0 0 1 14 8.5v5a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13.5v-5A1.5 1.5 0 0 1 3.5 7H4Zm2 0h4V5a2 2 0 1 0-4 0v2Z"
+            />
+        </svg>
     );
 }
 

@@ -143,6 +143,7 @@ export type {
     FormBodySlotProps,
     SaveBarSlotProps,
     ResourceActionDefinition,
+    ActionLock,
     ActionResult,
     FrameNotice,
 } from './types';

@@ -74,6 +74,7 @@ export interface FrameKitOptions extends FrameRegistryOptions {
     notify?: FrameInjection['notify'];
     formResolver?: FormResolver;
     hooks?: FrameHooks;
+    actionLock?: FrameInjection['actionLock'];
 }
 
 export interface FrameKit<Nav = unknown> {
@@ -172,6 +173,7 @@ export function createFrameKit<Nav = unknown>(options: FrameKitOptions = {}): Fr
                 ...(options.notify ? { notify: options.notify } : {}),
                 ...(options.formResolver ? { formResolver: options.formResolver } : {}),
                 ...(options.hooks ? { hooks: options.hooks } : {}),
+                ...(options.actionLock ? { actionLock: options.actionLock } : {}),
             };
         }, [manifest]);
         const body = <FrameProvider value={injection}>{children}</FrameProvider>;

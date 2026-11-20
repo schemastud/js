@@ -106,6 +106,7 @@
         "schemastud-frame::messages.pagination.next_compact": "Next",
         "schemastud-frame::messages.action_done": ":label done.",
         "schemastud-frame::messages.action_failed": ":label failed.",
+        "schemastud-frame::messages.action_unlock_failed": "Could not unlock :label.",
         "schemastud-frame::messages.host_cannot_send_actions": "This host cannot send actions.",
         "schemastud-frame::messages.could_not_load_this_record": "Could not load this record.",
         "schemastud-frame::messages.saved": "Saved",
