@@ -272,8 +272,10 @@ export interface FrameInjection {
     notify?: (notice: FrameNotice) => void;
     /**
      * Ask the host whether a declared action is locked (agreements 06 is one host use). Consulted only for an action
-     * that carries `requires`. A lock draws the button locked before any request, and its `unlock()` runs before the
-     * action's own form or confirmation; nothing is sent until it resolves true. Optional so existing consumers still
+     * that carries `requires`, and on EVERY render of its button, so it must be cheap and pure (read what the host
+     * already holds; never fetch here). A lock draws the button locked before any request, and its `unlock()` runs
+     * before the action's own form or confirmation; nothing is sent until it resolves true, and a second press while it
+     * runs is ignored. A function that throws is treated as answering null. Optional so existing consumers still
      * compile — absent, or answering null, every action renders exactly as before.
      */
     actionLock?: (resource: string, action: ResourceActionDefinition, record?: Row) => ActionLock | null;

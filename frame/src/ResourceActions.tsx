@@ -10,7 +10,7 @@ import type { ContextManifest } from './contexts';
 import { useFrameInjection } from './context';
 import { resourceQueryKey } from './data';
 import { DefaultFormBody } from './slots/defaults';
-import type { ActionResult, FrameNotice, ResourceActionDefinition, Row } from './types';
+import type { ActionLock, ActionResult, FrameNotice, ResourceActionDefinition, Row } from './types';
 
 // =============================================================================
 // Declared ACTIONS (schemastud/laravel-frame ADR-0005): a button per action the manifest declares and
@@ -111,14 +111,22 @@ export function ActionButton({
     const { t } = useFrameMessages();
     const queryClient = useQueryClient();
     const [open, setOpen] = useState(false);
-    // A host lock (agreements 06): asked only about an action that carries `requires`. Null leaves everything below
-    // exactly as it was, attribute for attribute.
-    const lock =
-        actionLock && action.requires !== undefined && action.requires.length > 0
-            ? actionLock(resource, action, record)
-            : null;
+    // A host lock (agreements 06): asked only about an action that carries `requires`, on every render. Null leaves
+    // everything below exactly as it was, attribute for attribute; a lock that throws is treated as null, so a broken
+    // host lock never takes the action bar down with it.
+    let lock: ActionLock | null = null;
+    if (actionLock && action.requires !== undefined && action.requires.length > 0) {
+        try {
+            lock = actionLock(resource, action, record);
+        } catch {
+            lock = null;
+        }
+    }
     const lockLabelId = useId();
-    const [unlocking, setUnlocking] = useState(false);
+    // While the host's unlock() runs the button stays focusable (aria-disabled, never native `disabled`, which drops
+    // focus to <body> and leaves the host's dialog nowhere to return it); the ref ignores a second press.
+    const [unlockPending, setUnlockPending] = useState(false);
+    const unlockInFlight = useRef(false);
     const trigger = useRef<HTMLElement | null>(null);
     const close = useCallback(() => {
         setOpen(false);
@@ -172,8 +180,14 @@ export function ActionButton({
                 type="button"
                 data-frame-action={action.key}
                 data-frame-action-scope={action.scope}
-                disabled={invoke.isPending || unlocking}
-                {...(lock !== null ? { 'aria-describedby': lockLabelId, 'data-frame-action-locked': '' } : {})}
+                disabled={invoke.isPending}
+                {...(lock !== null
+                    ? {
+                          'aria-describedby': lockLabelId,
+                          'data-frame-action-locked': '',
+                          ...(unlockPending ? { 'aria-disabled': 'true' } : {}),
+                      }
+                    : {})}
                 // On a row, a quiet outline button (a destructive one says so in its text colour, never
                 // as a solid block per row); beside the list, the host's primary or destructive button.
                 variant={compact ? 'outline' : action.destructive ? 'destructive' : undefined}
@@ -190,14 +204,16 @@ export function ActionButton({
                     }
                     // Locked: the host's step runs first, and nothing is sent until it resolves true. A false answer
                     // leaves the action as it was; a rejection (or a throw) leaves it locked and is announced.
-                    setUnlocking(true);
-                    let unlocking: Promise<boolean>;
+                    if (unlockInFlight.current) return;
+                    unlockInFlight.current = true;
+                    setUnlockPending(true);
+                    let unlocked: Promise<boolean>;
                     try {
-                        unlocking = Promise.resolve(lock.unlock());
+                        unlocked = Promise.resolve(lock.unlock());
                     } catch (error) {
-                        unlocking = Promise.reject(error);
+                        unlocked = Promise.reject(error);
                     }
-                    unlocking
+                    unlocked
                         .then((unlocked) => {
                             if (unlocked === true) {
                                 invoke.reset();
@@ -213,7 +229,10 @@ export function ActionButton({
                                         : t('schemastud-frame::messages.action_unlock_failed', { label: action.label }),
                             }),
                         )
-                        .finally(() => setUnlocking(false));
+                        .finally(() => {
+                            unlockInFlight.current = false;
+                            setUnlockPending(false);
+                        });
                 }}
             >
                 {lock !== null ? (

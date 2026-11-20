@@ -182,6 +182,41 @@ describe('a host action lock', () => {
         await waitFor(() => expect(transport.invoke).toHaveBeenCalledTimes(1));
     });
 
+    it('while unlocking, keeps the button focusable (aria-disabled, not disabled) and runs unlock() once however often it is pressed', async () => {
+        const transport = makeTransport();
+        const pending = deferred<boolean>();
+        const unlock = vi.fn(() => pending.promise);
+        render(
+            <Harness transport={transport} actionLock={() => ({ label: 'Accept the terms first', unlock })}>
+                <ActionButton resource="vaults" action={GATED} />
+            </Harness>,
+        );
+
+        const button = screen.getByRole('button', { name: /Publish/ }) as HTMLButtonElement;
+        button.focus();
+        fireEvent.click(button);
+        // Native `disabled` would drop focus to <body>, and the host's dialog would return it there (review MED 1).
+        expect(button.disabled).toBe(false);
+        expect(button.getAttribute('aria-disabled')).toBe('true');
+        expect(document.activeElement).toBe(button);
+        fireEvent.click(button);
+        fireEvent.click(button);
+        expect(unlock).toHaveBeenCalledTimes(1);
+
+        await act(async () => pending.resolve(false));
+        expect(button.hasAttribute('aria-disabled')).toBe(false);
+        expect(document.activeElement).toBe(button);
+        expect(transport.invoke).not.toHaveBeenCalled();
+    });
+
+    it('treats a host lock that throws while rendering as no lock: the action bar still renders as today', () => {
+        const today = markup(PUBLISH);
+        const throwing = () => {
+            throw new Error('host lock broke');
+        };
+        expect(markup(GATED, throwing)).toBe(today);
+    });
+
     it('keeps the action locked, sends nothing and surfaces an error when unlock() rejects or throws', async () => {
         for (const unlock of [
             vi.fn(async (): Promise<boolean> => {
