@@ -85,6 +85,10 @@ export {
 export { parseResourcePage } from './resourcePage';
 export { createHttpTransport, type HttpTransportOptions } from './httpTransport';
 export { FrameActionError } from './actions';
+export {
+    getFrameActionTransportDiagnostic,
+    type FrameActionTransportDiagnostic,
+} from './actionDiagnostics';
 export { isNotFound } from './errors';
 
 // Still imported by a host, so still here.

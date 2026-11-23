@@ -2,14 +2,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { useFrameInjection } from '../src/context';
+import { FrameProvider, useFrameInjection } from '../src/context';
 import { KNOWN_CONTEXTS, type ContextManifest } from '../src/contexts';
 import { createFrameKit } from '../src/kit';
 import { ListShell } from '../src/ListShell';
 import { createMemoryTransport } from '../src/testing';
-import type { FrameInjection, FrameManifest, Row } from '../src/types';
+import type { FrameInjection, FrameManifest, ResourceActionDefinition, Row } from '../src/types';
 
-afterEach(cleanup);
+afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+});
 
 // Radix measures itself; jsdom has no ResizeObserver.
 globalThis.ResizeObserver ??= class {
@@ -23,6 +26,17 @@ const MEMBERS: Row[] = [
     { id: '2', name: 'Grace Hopper', email: 'grace@example.test' },
 ];
 
+const PUBLISH_ACTION: ResourceActionDefinition = {
+    key: 'members.publish',
+    label: 'Publish members',
+    scope: 'resource',
+    method: 'POST',
+    url: '/members/publish',
+    input: null,
+    result: 'toast',
+    destructive: false,
+};
+
 function manifestWith(columns: Record<string, string>): FrameManifest {
     const byNode: ContextManifest['byNode'] = {};
     Object.entries(columns).forEach(([field, label], i) => {
@@ -32,6 +46,19 @@ function manifestWith(columns: Record<string, string>): FrameManifest {
         resources: [],
         contexts: { members: { byNode, inherits: {}, known: KNOWN_CONTEXTS } },
     };
+}
+
+function manifestWithActions(): FrameManifest {
+    const manifest = manifestWith({ name: 'Name' });
+    manifest.contexts.members.actions = [PUBLISH_ACTION];
+    manifest.contexts.members.can = { actions: { [PUBLISH_ACTION.key]: true } };
+    return manifest;
+}
+
+function noInvokeTransport(manifest: FrameManifest): ReturnType<typeof createMemoryTransport> {
+    const transport = createMemoryTransport({ rows: { members: MEMBERS }, manifest });
+    delete transport.invoke;
+    return transport;
 }
 
 const headers = () => screen.getAllByRole('columnheader').map((th) => th.textContent?.trim());
@@ -183,5 +210,88 @@ describe('createFrameKit', () => {
         // The same cache entry, so the same object: the kit's own client serves both sides.
         expect(seen.inside).toBe(seen.above);
         expect(getManifest).toHaveBeenCalledTimes(1);
+    });
+
+    it('warns once when a kit context declares actions without an invoking transport', async () => {
+        const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const frame = createFrameKit({ transport: noInvokeTransport(manifestWithActions()), urlState: 'memory' });
+        const view = render(
+            <frame.Provider>
+                <ListShell resource="members" />
+            </frame.Provider>,
+        );
+
+        expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
+        view.rerender(
+            <frame.Provider>
+                <ListShell resource="members" />
+            </frame.Provider>,
+        );
+
+        expect(warning).toHaveBeenCalledTimes(1);
+        expect(warning.mock.calls[0]?.[0]).toContain('members.publish');
+    });
+
+    it('warns for an action-bearing raw FrameProvider mount', async () => {
+        const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const frame = createFrameKit({ transport: noInvokeTransport(manifestWithActions()), urlState: 'memory' });
+        let injection: FrameInjection | undefined;
+        function CaptureInjection() {
+            injection = useFrameInjection();
+            return null;
+        }
+
+        render(
+            <frame.Provider>
+                <CaptureInjection />
+            </frame.Provider>,
+        );
+        await waitFor(() => expect(injection?.manifestFor?.('members')?.actions).toHaveLength(1));
+        const capturedInjection = injection;
+        cleanup();
+        if (!capturedInjection) throw new Error('The kit did not provide its FrameInjection.');
+
+        render(
+            <QueryClientProvider client={new QueryClient()}>
+                <FrameProvider value={capturedInjection}>
+                    <ListShell resource="members" />
+                </FrameProvider>
+            </QueryClientProvider>,
+        );
+
+        expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
+        expect(warning).toHaveBeenCalledTimes(1);
+        expect(warning.mock.calls[0]?.[0]).toContain('members.publish');
+    });
+
+    it('exports a stable diagnostic for an action-bearing context without invoke', async () => {
+        const transport = noInvokeTransport(manifestWithActions());
+        const manifest = manifestWithActions().contexts.members;
+        const getDiagnostic = Reflect.get(await import('../src'), 'getFrameActionTransportDiagnostic') as (
+            transport: Pick<typeof transport, 'invoke'>,
+            manifest: Pick<ContextManifest, 'actions'>,
+        ) => unknown;
+
+        expect(typeof getDiagnostic).toBe('function');
+        expect(getDiagnostic(transport, manifest)).toEqual({
+            code: 'frame.actions.unavailable',
+            actionKeys: ['members.publish'],
+        });
+        expect(getDiagnostic({ invoke: async () => ({}) }, manifest)).toBeNull();
+        expect(getDiagnostic(transport, manifestWith({ name: 'Name' }).contexts.members)).toBeNull();
+    });
+
+    it('does not warn for a context that declares no actions', async () => {
+        const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const frame = createFrameKit({ transport: noInvokeTransport(manifestWith({ name: 'Name' })), urlState: 'memory' });
+
+        render(
+            <frame.Provider>
+                <ListShell resource="members" />
+            </frame.Provider>,
+        );
+
+        expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
+        expect(warning).not.toHaveBeenCalled();
     });
 });

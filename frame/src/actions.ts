@@ -1,8 +1,36 @@
 import type { ContextManifest } from './contexts';
+import { getFrameActionTransportDiagnostic } from './actionDiagnostics';
 import type { FrameTransport, ResourceActionDefinition, Row } from './types';
 
 // FrameActionError lives with the session request (ticket 48), which imports nothing; the root still exports it from here.
 export { FrameActionError } from './session';
+
+// A resource context can be resolved on every render. Keep the warning once per context,
+// with weak keys so neither transports nor manifests are retained by this module.
+const warnedContextsByTransport = new WeakMap<object, WeakSet<ContextManifest>>();
+
+function warnIfActionsCannotBeInvoked(
+    manifest: ContextManifest | undefined,
+    transport: Pick<FrameTransport, 'invoke' | 'getActionSchema'> | undefined,
+): void {
+    if (!manifest || !transport || typeof window === 'undefined') return;
+
+    const diagnostic = getFrameActionTransportDiagnostic(transport, manifest);
+    if (!diagnostic) return;
+
+    let warnedContexts = warnedContextsByTransport.get(transport);
+    if (!warnedContexts) {
+        warnedContexts = new WeakSet<ContextManifest>();
+        warnedContextsByTransport.set(transport, warnedContexts);
+    }
+    if (warnedContexts.has(manifest)) return;
+
+    warnedContexts.add(manifest);
+    console.warn(
+        `@schemastud/frame: declared actions cannot be invoked by this transport (${diagnostic.actionKeys.join(', ')}).`,
+        diagnostic,
+    );
+}
 
 /**
  * The actions of one scope this ACTOR may press, in declared order (ADR-0005).
@@ -20,6 +48,8 @@ export function resolveActions(
     scope: ResourceActionDefinition['scope'],
     transport?: Pick<FrameTransport, 'invoke' | 'getActionSchema'>,
 ): ResourceActionDefinition[] {
+    warnIfActionsCannotBeInvoked(manifest, transport);
+
     const declared = manifest?.actions ?? [];
     const allowed = manifest?.can?.actions ?? {};
 
