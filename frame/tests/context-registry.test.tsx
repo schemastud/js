@@ -119,7 +119,7 @@ describe('a host replaces one of frame\'s seven in place (Supersede)', () => {
         expect(contexts.get('row-cell')?.fallback).toEqual(['detail']);
         expect(contexts.registrant('row-cell')).toBe('host/app');
         expect(contexts.superseded('row-cell')).toEqual([
-            { entry: { name: 'row-cell', fallback: ['edit'], reserved: [] }, by: FRAME_CONTEXT_REGISTRANT, supersededBy: 'host/app' },
+            { entry: { name: 'row-cell', fallback: ['edit'], reserved: [], grain: 'property' }, by: FRAME_CONTEXT_REGISTRANT, supersededBy: 'host/app' },
         ]);
         expect(lenderFor({ edit: part({ widget: 'x' }), detail: part({ widget: 'y' }) }, 'row-cell', contexts)?.context).toBe('detail');
     });
@@ -146,15 +146,19 @@ describe('a host replaces one of frame\'s seven in place (Supersede)', () => {
         const registry = createWidgetRegistry();
         registry.registerWidget('lane-card', Card as never);
         const manifest: ContextManifest = {
-            byNode: { '': { overview: part(), detail: part({ widget: 'lane-card' }) } },
+            byNode: { '': { overview: part(), tiles: part({ widget: 'lane-card' }) } },
             inherits: {},
             known: KNOWN_CONTEXTS,
         };
         const row = { resource: 'things', context: 'overview' } as Parameters<typeof resolveDashboardCard>[0];
-        const contexts = createFrameContexts((c) => c.register('overview', { fallback: ['detail'] }));
+        // frame-foundation 92: a fallback shares its context's grain, so overview (collection) borrows from a host collection context.
+        const contexts = createFrameContexts((c) => {
+            c.register('tiles', { grain: 'collection' });
+            c.register('overview', { fallback: ['tiles'] });
+        });
         const resolved = resolveDashboardCard(row, manifest, registry, contexts);
         expect(resolved.widget).toBe(Card);
-        expect(resolved.tier).toBe('detail');
+        expect(resolved.tier).toBe('tiles');
         expect(resolveDashboardCard(row, manifest, registry).tier).toBe('default');
     });
 });

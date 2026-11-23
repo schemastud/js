@@ -12,8 +12,11 @@ import { INHERITS, KNOWN_CONTEXTS, type FrameContext, type NodeParticipation } f
 // key segment under the kernel's own grammar, the same rule PHP's `Key::SEGMENT_PATTERN` applies, so a name one side
 // accepts the other accepts.
 //
-// A kit entry is `{ name, fallback, reserved }` and carries no grain (86 Q1): no client code reads a grain, because the
-// PHP projector refuses a mis-grained node before the client sees it. The shells' own facts stay in the shells: `edit`
+// A kit entry is `{ name, fallback, reserved, grain? }`. 86 Q1 kept grain off it; frame-foundation 92 (grill part 2)
+// puts PHP's three grains on it (`ContextGrain`: property, record, collection), seeded on frame's seven and optional for
+// a host's. `SchemaView` reads it: a `record` context draws the whole record at pointer `""`. As in PHP, a fallback
+// must share its context's grain (checked where both declare one), and a supersession that names no grain keeps the
+// one it displaces. PHP's projector still decides what may bind. The shells' own facts stay in the shells: `edit`
 // never cascades (`resolveWidgetFor`), and only `row-cell` has the heavyweight guard.
 // =============================================================================
 
@@ -34,12 +37,35 @@ export interface FrameContextEntry {
     readonly fallback: readonly FrameContext[];
     /** Class-level widget names this context admits at pointer `""` that are not registry widgets (`row-actions`). */
     readonly reserved: readonly string[];
+    /**
+     * What the context renders, PHP's `ContextGrain`: one property, one whole record, or a collection. `record`:
+     * `SchemaView` draws the whole record at pointer `""`. Absent (a host registration that names none): the
+     * per-property walk.
+     */
+    readonly grain?: FrameContextGrain;
 }
 
-/** What a registration may say beyond the name. Both default to empty. */
+/** PHP's `ContextGrain`, by value (frame-foundation 92). */
+export type FrameContextGrain = 'property' | 'record' | 'collection';
+
+const GRAINS: readonly FrameContextGrain[] = ['property', 'record', 'collection'];
+
+/** Frame's seven, by grain: PHP's `WidgetContext` registrations for the same names. */
+const SEVEN_GRAINS: Record<string, FrameContextGrain> = {
+    edit: 'property',
+    detail: 'property',
+    'list-column': 'property',
+    'row-cell': 'property',
+    'list-item': 'record',
+    summary: 'collection',
+    overview: 'collection',
+};
+
+/** What a registration may say beyond the name. `fallback` and `reserved` default to empty; `grain` to the displaced entry's, else none. */
 export interface FrameContextDefinition {
     fallback?: readonly FrameContext[];
     reserved?: readonly string[];
+    grain?: FrameContextGrain;
 }
 
 /** The reads every surface needs: a shell, the resolver and the vocabulary writer take only this. */
@@ -122,9 +148,25 @@ export function createFrameContextRegistry(): FrameContextRegistry {
                     throw new Error(`[frame] context "${name}" falls back to itself.`);
                 }
             }
+            if (definition.grain !== undefined && !GRAINS.includes(definition.grain)) {
+                throw new Error(
+                    `[frame] context "${name}" names grain ${describeName(definition.grain)}; a grain is one of ${GRAINS.map((g) => `"${g}"`).join(', ')}.`,
+                );
+            }
+            // A supersession keeps the grain it displaces when it names none, and may not change it (as PHP).
+            const displaced = kernel.has(name) ? kernel.resolve(name).grain : undefined;
+            if (displaced !== undefined && definition.grain !== undefined && definition.grain !== displaced) {
+                throw new Error(`[frame] context "${name}" is ${displaced}-grain; a supersession may not make it ${definition.grain}-grain.`);
+            }
+            const grain = definition.grain ?? displaced;
             kernel.register(
                 name,
-                Object.freeze({ name, fallback: Object.freeze(fallback), reserved: Object.freeze(reserved) }),
+                Object.freeze({
+                    name,
+                    fallback: Object.freeze(fallback),
+                    reserved: Object.freeze(reserved),
+                    ...(grain ? { grain } : {}),
+                }),
                 typeof by === 'string' ? by : null,
             );
         },
@@ -135,6 +177,13 @@ export function createFrameContextRegistry(): FrameContextRegistry {
                     if (!kernel.has(target)) {
                         throw new Error(
                             `[frame] context "${entry.name}" falls back to "${target}", which is not registered (registered: ${names.join(', ')}).`,
+                        );
+                    }
+                    // As PHP's edges check: a fallback shares its context's grain (where both declare one).
+                    const targetGrain = kernel.resolve(target).grain;
+                    if (entry.grain !== undefined && targetGrain !== undefined && entry.grain !== targetGrain) {
+                        throw new Error(
+                            `[frame] context "${entry.name}" is ${entry.grain}-grain but falls back to "${target}", which is ${targetGrain}-grain.`,
                         );
                     }
                 }
@@ -160,7 +209,11 @@ export function createFrameContextRegistry(): FrameContextRegistry {
         const parent = INHERITS[name];
         registry.register(
             name,
-            { fallback: parent ? [parent] : [], reserved: name === 'list-column' ? ['row-actions'] : [] },
+            {
+                fallback: parent ? [parent] : [],
+                reserved: name === 'list-column' ? ['row-actions'] : [],
+                grain: SEVEN_GRAINS[name],
+            },
             FRAME_CONTEXT_REGISTRANT,
         );
     }

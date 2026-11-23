@@ -35,6 +35,7 @@ type FrameColumn
 type FrameContext
 type FrameContextDefinition
 type FrameContextEntry
+type FrameContextGrain
 type FrameContextLookup
 type FrameContextRegistry
 type FrameCrudTransport

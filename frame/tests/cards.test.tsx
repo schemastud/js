@@ -486,9 +486,13 @@ describe('DashboardCard', () => {
     it('a kit that gives overview ANOTHER fallback still frames the lent body (frame-foundation 91, review MED-1)', () => {
         const registry = createWidgetRegistry();
         registerCardWidgets(registry);
-        const contexts = createFrameContexts((c) => c.register('overview', { fallback: ['detail'] }, 'host/app'));
+        // frame-foundation 92: a fallback shares its context's grain, so the other fallback is a host collection context.
+        const contexts = createFrameContexts((c) => {
+            c.register('tiles', { grain: 'collection' }, 'host/app');
+            c.register('overview', { fallback: ['tiles'] }, 'host/app');
+        });
         const wrapper = wrap({
-            ...makeInjection(registry, { bills: manifest({ overview: { participates: true }, detail: { participates: true, widget: 'stat-row' } }) }),
+            ...makeInjection(registry, { bills: manifest({ overview: { participates: true }, tiles: { participates: true, widget: 'stat-row' } }) }),
             contexts,
         });
         const payload = summary({

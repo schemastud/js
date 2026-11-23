@@ -109,6 +109,7 @@ export type { FrameContext, KnownFrameContext, ContextManifest } from './context
 export type {
     FrameContextDefinition,
     FrameContextEntry,
+    FrameContextGrain,
     FrameContextLookup,
     FrameContextRegistry,
     KitContexts,

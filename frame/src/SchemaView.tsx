@@ -12,12 +12,16 @@ import {
     type WidgetRegistry,
 } from '@schemastud/seam';
 import { resolveWidgetFor, type ResolvedForContext } from './resolveWidgetFor';
+import { useOptionalFrameInjection } from './context';
+import { frameContexts, lenderFor, type FrameContextLookup } from './contextRegistry';
 import type { ContextManifest, FrameContext, NodeParticipation } from './contexts';
 
 // =============================================================================
 // SchemaView — the READ-side sibling of SchemaForm. Renders a record for the
-// `detail` context (per-property) or the `list-item` card body (whole-record),
-// resolving each node through resolveWidgetFor. NOT a form: no submit, no edits.
+// `detail` context (per-property) or a record-grain context (whole-record: frame's
+// `list-item`, or a host context registered with `grain: 'record'`, which borrows
+// along its fallback when it binds none), resolving each node through
+// resolveWidgetFor. NOT a form: no submit, no edits.
 //
 // A resolved component mounts read-only with RJSF `WidgetProps`, built by seam's
 // `widgetProps` over an RJSF registry on the record's root schema (ruling 04). A
@@ -31,9 +35,16 @@ export interface SchemaViewProps {
     schema: SchemaNode;
     record: Record<string, unknown>;
     manifest: ContextManifest;
-    context: 'detail' | 'list-item';
+    /**
+     * `detail` walks the properties. A RECORD-grain context (`list-item`, or a host's registered with
+     * `grain: 'record'`) draws the whole record at pointer `""`, borrowing along its fallback when it binds none
+     * (frame-foundation 92).
+     */
+    context: FrameContext;
     /** Falls back to the seam WidgetRegistryContext when omitted. */
     registry?: WidgetRegistry;
+    /** The kit's contexts: defaults to the mounted kit's, else frame's seven. */
+    contexts?: FrameContextLookup;
 }
 
 
@@ -109,6 +120,8 @@ function ViewNode({
     registry,
     rjsfRegistry,
     rootSchema,
+    lender,
+    contexts,
 }: {
     node: SchemaNode;
     /** The property key; `''` at the root. */
@@ -120,9 +133,12 @@ function ViewNode({
     registry: WidgetRegistry;
     rjsfRegistry: Registry;
     rootSchema: SchemaNode;
+    /** The entry that lends along `ctx`'s fallback (`lenderFor`), when one does. */
+    lender?: NodeParticipation;
+    contexts?: FrameContextLookup;
 }): ReactNode {
     const id = useId();
-    const resolved: ResolvedForContext = resolveWidgetFor(node, ctx, cm, undefined, registry);
+    const resolved: ResolvedForContext = resolveWidgetFor(node, ctx, cm, lender, registry, contexts);
 
     // In `detail`, a composite node whose name is the FORM's (the node's own `x-widget`, not this entry's) is the
     // form's field: the detail view shows its structured read (ruling 04 §5), bound here or not.
@@ -163,31 +179,38 @@ function ViewNode({
     );
 }
 
-export function SchemaView({ schema, record, manifest, context, registry: registryProp }: SchemaViewProps): ReactNode {
+export function SchemaView({ schema, record, manifest, context, registry: registryProp, contexts: contextsProp }: SchemaViewProps): ReactNode {
     const ctxRegistry = useContext(WidgetRegistryContext);
     const registry = registryProp ?? ctxRegistry;
+    const injection = useOptionalFrameInjection();
+    const contexts = contextsProp ?? injection?.contexts ?? frameContexts();
     // One RJSF registry for every field, built on the record's root schema (the document a `$ref` points into).
     const rjsfRegistry = useRjsfRegistry(schema, READ_FORM_CONTEXT);
     if (!registry) {
         throw new Error('[frame] SchemaView requires a WidgetRegistry (prop or WidgetRegistryContext).');
     }
 
-    // `list-item` = whole-record; resolve the root node once at pointer "".
-    if (context === 'list-item') {
+    // A record-grain context = whole-record: resolve the root node once at pointer "", with the entry that lends
+    // along the context's fallback. `list-item` has no fallback, so it resolves exactly as before.
+    if (contexts.get(context)?.grain === 'record') {
         const rootNode = schema;
-        const cm = manifest.byNode['']?.['list-item'];
+        const byCtx = manifest.byNode[''];
+        const cm = byCtx?.[context];
+        const lender = lenderFor(byCtx, context, contexts)?.entry;
         return (
-            <div data-frame-view="list-item">
+            <div data-frame-view={context}>
                 <ViewNode
                     node={rootNode}
                     name=""
                     rjsfRegistry={rjsfRegistry}
                     rootSchema={schema}
-                    ctx="list-item"
+                    ctx={context}
                     cm={cm}
                     label={labelize('', cm)}
                     value={record}
                     registry={registry}
+                    lender={lender}
+                    contexts={contexts}
                 />
             </div>
         );
