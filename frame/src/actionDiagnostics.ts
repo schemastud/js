@@ -6,7 +6,7 @@ export interface FrameActionTransportDiagnostic {
     readonly actionKeys: readonly string[];
 }
 
-/** Describe declared actions that this transport cannot invoke, without changing the rendered surface. */
+/** Null means no declared actions need invoking or the transport can invoke them; it does not guarantee every action button renders, since input actions also need getActionSchema. */
 export function getFrameActionTransportDiagnostic(
     transport: Pick<FrameTransport, 'invoke'>,
     manifest: Pick<ContextManifest, 'actions'>,

@@ -247,7 +247,7 @@ export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>)
     // The resource's declared RECORD actions this actor may press (ADR-0005). Rendered by frame BESIDE
     // whatever row-actions slot resolved, never through it: an action is a declaration, and a host's
     // own RowActions slot is presentation that knows nothing about it.
-    const recordActions = resolveActions(manifest, 'record', transport);
+    const recordActions = resolveActions(manifest, resource, 'record', transport);
     const inline = useInlineNotice();
     const onNotice = useCallback(
         (n: FrameNotice) => (notify ? notify(n) : inline.onNotice?.(n)),
@@ -311,7 +311,7 @@ export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>)
     );
 
     // The resource-scope actions, bound and memoized like the row actions so a press is not remounted mid-request.
-    const resourceActionKeys = resolveActions(manifest, 'resource', transport).map((a) => a.key).join(',');
+    const resourceActionKeys = resolveActions(manifest, resource, 'resource', transport).map((a) => a.key).join(',');
     const BoundResourceActions = useMemo(
         () =>
             resourceActionKeys === ''

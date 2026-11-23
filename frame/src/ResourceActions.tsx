@@ -35,7 +35,7 @@ export function ResourceActionBar({
     ...handlers
 }: { resource: string; manifest: ContextManifest | undefined } & ActionHandlers) {
     const { transport } = useFrameInjection();
-    const actions = resolveActions(manifest, 'resource', transport);
+    const actions = resolveActions(manifest, resource, 'resource', transport);
 
     if (actions.length === 0) return null;
 
@@ -66,7 +66,7 @@ export function RecordActionButtons({
     compact?: boolean;
 } & ActionHandlers) {
     const { transport } = useFrameInjection();
-    const actions = resolveActions(manifest, 'record', transport);
+    const actions = resolveActions(manifest, resource, 'record', transport);
 
     if (actions.length === 0 || record.id == null || record.id === '') return null;
 

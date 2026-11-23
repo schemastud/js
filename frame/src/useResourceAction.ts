@@ -48,7 +48,7 @@ export function useResourceAction<K extends ResourceKey = ResourceKey, A extends
     // predicate: that also asks for `getActionSchema`, which only frame's own generated form needs.
     const definition =
         typeof transport.invoke === 'function'
-            ? [...resolveActions(manifest, 'record'), ...resolveActions(manifest, 'resource')].find(
+            ? [...resolveActions(manifest, resource, 'record'), ...resolveActions(manifest, resource, 'resource')].find(
                   (declared) => declared.key === action,
               )
             : undefined;

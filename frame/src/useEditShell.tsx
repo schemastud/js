@@ -264,7 +264,7 @@ export function useEditShellOf<K extends string>(options: EditShellOptionsOf<K>)
 
     // The record actions, bound. The record is read through a ref so a refetched record does not remount the
     // buttons mid-request; the component changes only with the record id, the action keys and the handlers.
-    const recordActions = resolveActions(manifest, 'record', transport);
+    const recordActions = resolveActions(manifest, resource, 'record', transport);
     const recordRef = useRef<Row>({});
     recordRef.current = { ...(record ?? {}), id };
     // The manifest too: a refreshed but equal manifest must not change the component type and close an open dialog.

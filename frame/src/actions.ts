@@ -5,12 +5,13 @@ import type { FrameTransport, ResourceActionDefinition, Row } from './types';
 // FrameActionError lives with the session request (ticket 48), which imports nothing; the root still exports it from here.
 export { FrameActionError } from './session';
 
-// A resource context can be resolved on every render. Keep the warning once per context,
-// with weak keys so neither transports nor manifests are retained by this module.
-const warnedContextsByTransport = new WeakMap<object, WeakSet<ContextManifest>>();
+// A resource can be resolved on every render. Keep the warning once per resource key,
+// with weak transport keys so this module retains neither transports nor their resource sets.
+const warnedResourcesByTransport = new WeakMap<object, Set<string>>();
 
 function warnIfActionsCannotBeInvoked(
     manifest: ContextManifest | undefined,
+    resource: string,
     transport: Pick<FrameTransport, 'invoke' | 'getActionSchema'> | undefined,
 ): void {
     if (!manifest || !transport || typeof window === 'undefined') return;
@@ -18,14 +19,14 @@ function warnIfActionsCannotBeInvoked(
     const diagnostic = getFrameActionTransportDiagnostic(transport, manifest);
     if (!diagnostic) return;
 
-    let warnedContexts = warnedContextsByTransport.get(transport);
-    if (!warnedContexts) {
-        warnedContexts = new WeakSet<ContextManifest>();
-        warnedContextsByTransport.set(transport, warnedContexts);
+    let warnedResources = warnedResourcesByTransport.get(transport);
+    if (!warnedResources) {
+        warnedResources = new Set<string>();
+        warnedResourcesByTransport.set(transport, warnedResources);
     }
-    if (warnedContexts.has(manifest)) return;
+    if (warnedResources.has(resource)) return;
 
-    warnedContexts.add(manifest);
+    warnedResources.add(resource);
     console.warn(
         `@schemastud/frame: declared actions cannot be invoked by this transport (${diagnostic.actionKeys.join(', ')}).`,
         diagnostic,
@@ -45,10 +46,11 @@ function warnIfActionsCannotBeInvoked(
  */
 export function resolveActions(
     manifest: ContextManifest | undefined,
+    resource: string,
     scope: ResourceActionDefinition['scope'],
     transport?: Pick<FrameTransport, 'invoke' | 'getActionSchema'>,
 ): ResourceActionDefinition[] {
-    warnIfActionsCannotBeInvoked(manifest, transport);
+    warnIfActionsCannotBeInvoked(manifest, resource, transport);
 
     const declared = manifest?.actions ?? [];
     const allowed = manifest?.can?.actions ?? {};

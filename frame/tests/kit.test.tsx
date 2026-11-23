@@ -264,6 +264,86 @@ describe('createFrameKit', () => {
         expect(warning.mock.calls[0]?.[0]).toContain('members.publish');
     });
 
+    it('warns once across rerenders when a raw lookup returns fresh context objects', async () => {
+        const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const frame = createFrameKit({ transport: noInvokeTransport(manifestWithActions()), urlState: 'memory' });
+        let captured: FrameInjection | undefined;
+        function CaptureInjection() {
+            captured = useFrameInjection();
+            return null;
+        }
+
+        render(
+            <frame.Provider>
+                <CaptureInjection />
+            </frame.Provider>,
+        );
+        await waitFor(() => expect(captured?.manifestFor?.('members')?.actions).toHaveLength(1));
+        const source = captured;
+        cleanup();
+        if (!source) throw new Error('The kit did not provide its FrameInjection.');
+
+        const context = manifestWithActions().contexts.members;
+        let lookups = 0;
+        const rawInjection: FrameInjection = {
+            ...source,
+            manifestFor: (resource) => {
+                if (resource !== 'members') return undefined;
+                lookups += 1;
+                return { ...context };
+            },
+        };
+        const client = new QueryClient();
+        const tree = () => (
+            <QueryClientProvider client={client}>
+                <FrameProvider value={rawInjection}>
+                    <ListShell resource="members" />
+                </FrameProvider>
+            </QueryClientProvider>
+        );
+        const view = render(tree());
+
+        expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
+        view.rerender(tree());
+
+        expect(lookups).toBeGreaterThan(1);
+        expect(warning).toHaveBeenCalledTimes(1);
+    });
+
+    it('warns once per resource key when a raw lookup shares one context object', async () => {
+        const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const frame = createFrameKit({ transport: noInvokeTransport(manifestWithActions()), urlState: 'memory' });
+        let captured: FrameInjection | undefined;
+        function CaptureInjection() {
+            captured = useFrameInjection();
+            return null;
+        }
+
+        render(
+            <frame.Provider>
+                <CaptureInjection />
+            </frame.Provider>,
+        );
+        await waitFor(() => expect(captured?.manifestFor?.('members')?.actions).toHaveLength(1));
+        const source = captured;
+        cleanup();
+        if (!source) throw new Error('The kit did not provide its FrameInjection.');
+
+        const sharedContext = manifestWithActions().contexts.members;
+        const rawInjection: FrameInjection = { ...source, manifestFor: () => sharedContext };
+        render(
+            <QueryClientProvider client={new QueryClient()}>
+                <FrameProvider value={rawInjection}>
+                    <ListShell resource="members" />
+                    <ListShell resource="teams" />
+                </FrameProvider>
+            </QueryClientProvider>,
+        );
+
+        expect(await screen.findByText('Ada Lovelace')).toBeTruthy();
+        await waitFor(() => expect(warning).toHaveBeenCalledTimes(2));
+    });
+
     it('exports a stable diagnostic for an action-bearing context without invoke', async () => {
         const transport = noInvokeTransport(manifestWithActions());
         const manifest = manifestWithActions().contexts.members;
