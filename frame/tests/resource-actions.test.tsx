@@ -138,19 +138,21 @@ describe('resolveActions', () => {
     it('keeps only declared actions of the scope this actor may press', () => {
         const manifest = manifestOf([RELOAD, ARCHIVE], { reload: true, archive: false });
 
-        expect(resolveActions(manifest, 'resource').map((a) => a.key)).toEqual(['reload']);
-        expect(resolveActions(manifest, 'record')).toEqual([]);
+        expect(resolveActions(manifest, 'credits', 'resource').map((a) => a.key)).toEqual(['reload']);
+        expect(resolveActions(manifest, 'credits', 'record')).toEqual([]);
         // Absent `can.actions` hides everything: deny while unknown.
-        expect(resolveActions(manifestOf([RELOAD, ARCHIVE], undefined), 'resource')).toEqual([]);
-        expect(resolveActions(undefined, 'resource')).toEqual([]);
+        expect(resolveActions(manifestOf([RELOAD, ARCHIVE], undefined), 'credits', 'resource')).toEqual([]);
+        expect(resolveActions(undefined, 'credits', 'resource')).toEqual([]);
     });
 
     it('hides an action the transport cannot send, or whose form it cannot fetch', () => {
         const manifest = manifestOf([RELOAD, ARCHIVE], { reload: true, archive: true });
 
-        expect(resolveActions(manifest, 'resource', {})).toEqual([]);
-        expect(resolveActions(manifest, 'resource', { invoke: vi.fn() })).toEqual([]);
-        expect(resolveActions(manifest, 'record', { invoke: vi.fn() }).map((a) => a.key)).toEqual(['archive']);
+        expect(resolveActions(manifest, 'credits', 'resource', {})).toEqual([]);
+        expect(resolveActions(manifest, 'credits', 'resource', { invoke: vi.fn() })).toEqual([]);
+        expect(resolveActions(manifest, 'credits', 'record', { invoke: vi.fn() }).map((a) => a.key)).toEqual([
+            'archive',
+        ]);
     });
 
     it('fills a record action URL with the encoded id and leaves a resource URL alone', () => {
