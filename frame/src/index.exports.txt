@@ -30,6 +30,7 @@ type FormMode
 type FormResolver
 type FrameAction
 value FrameActionError
+type FrameActionTransportDiagnostic
 type FrameCan
 type FrameColumn
 type FrameContext
@@ -120,6 +121,7 @@ value createResourceTransport
 value createRouteRegistry
 value createShellRegistry
 value createWidgetRegistry
+value getFrameActionTransportDiagnostic
 value isNotFound
 value parseResourcePage
 value registerCardWidgets
