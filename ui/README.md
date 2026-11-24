@@ -57,6 +57,31 @@ package's built `dist` for the utility classes it uses:
 `@radix-ui/react-switch`, `@tanstack/react-table` and `lucide-react` are **peer**
 dependencies — the host provides the single copy.
 
+## Card board
+
+`CardBoard` ships from its own subpath, because its drag comes from `@dnd-kit/core`, an
+**optional** peer that only a host using the board installs. The root entry never imports it.
+
+```tsx
+import { CardBoard } from '@schemastud/ui/card-board';
+
+<CardBoard
+    lanes={[{ key: 'todo', title: 'To do' }, { key: 'done', title: 'Done' }]}
+    cards={tasks}
+    getCardKey={(t) => t.id}
+    getCardLane={(t) => t.status}
+    getCardLabel={(t) => t.title}
+    renderCard={(t) => <TaskSummary task={t} />}
+    onMove={(task, toLane) => save(task, toLane)} // true / nothing, false, { refused: reason }, or a promise of one
+/>;
+```
+
+The board holds no workflow or record type. A card moves by dragging its grip or through its
+visible **Move** control, and both call `onMove`. The caller owns `cards`: a card shows in its
+new lane while `onMove` is pending and stays there only if the caller moves it in `cards`. A
+refusal (or a rejected promise) sends the card back and says why, on the card and in a polite
+live region. Below 48rem of its own width the board scrolls its lanes one at a time.
+
 ## Motion
 
 The motion vocabulary ships as a stylesheet. Import it after Tailwind and `tw-animate-css`:

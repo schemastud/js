@@ -28,6 +28,12 @@
         "schemastud-ui::messages.money.less_than": "less than :amount",
         "schemastud-ui::messages.money.greater_than": "greater than :amount",
         "schemastud-ui::messages.money.less_than_replayed": "less than :amount · replayed",
-        "schemastud-ui::messages.money.greater_than_replayed": "greater than :amount · replayed"
+        "schemastud-ui::messages.money.greater_than_replayed": "greater than :amount · replayed",
+        "schemastud-ui::messages.board.board": "Board",
+        "schemastud-ui::messages.board.move_card": "Move :card",
+        "schemastud-ui::messages.board.move_to": "Move to :lane",
+        "schemastud-ui::messages.board.moved": ":card moved to :lane.",
+        "schemastud-ui::messages.board.refused": ":card was not moved to :lane: :reason",
+        "schemastud-ui::messages.board.refused_no_reason": ":card was not moved to :lane."
     }
 }

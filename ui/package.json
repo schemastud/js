@@ -11,6 +11,10 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/index.js"
         },
+        "./card-board": {
+            "types": "./dist/card-board.d.ts",
+            "import": "./dist/card-board.js"
+        },
         "./motion.css": "./src/motion.css",
         "./messages": "./messages.default.json"
     },
@@ -43,6 +47,7 @@
         "tailwind-merge": "^3.0.0"
     },
     "peerDependencies": {
+        "@dnd-kit/core": "^6.3.0",
         "@radix-ui/react-dialog": "^1.1.0",
         "@radix-ui/react-select": "^2.3.3",
         "@radix-ui/react-separator": "^1.1.0",
@@ -55,7 +60,13 @@
         "react-dom": ">=18",
         "@schemastud/messages": ">=0.1.0 <1"
     },
+    "peerDependenciesMeta": {
+        "@dnd-kit/core": {
+            "optional": true
+        }
+    },
     "devDependencies": {
+        "@dnd-kit/core": "^6.3.1",
         "@radix-ui/react-dialog": "^1.1.0",
         "@radix-ui/react-select": "^2.3.3",
         "@radix-ui/react-separator": "^1.1.2",
