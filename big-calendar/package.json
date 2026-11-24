@@ -1,6 +1,6 @@
 {
     "name": "@schemastud/big-calendar",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "description": "The source-blind, vocab-blind foundation calendar surface: a dumb BigCalendarSurface renderer that wraps react-big-calendar and is driven entirely by injection. It never learns that 'calendar'/'composition'/'channel' exist \u2014 it renders whatever FoundationCalendarEvent[] it is handed, emits generic intents, and delegates all vocabulary + host chrome + transport to four injection kinds (client, notify/onError, four renderX slots, subscribe), each with a dependency-free default. react-big-calendar + date-fns are host-provided peers; the 844-line shadcn RBC theme (retokenized onto host token-vars) and the thin Calendar re-export are vendored-and-owned. The commodity view engine + the owned seam around it (big-calendar-surface PRD \u00a71/\u00a73/\u00a77).",
     "license": "MIT",
     "type": "module",
