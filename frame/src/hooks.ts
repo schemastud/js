@@ -10,7 +10,7 @@ import type { CreateResultOf, ResourceKey, RowOf } from './resources';
 
 /** The submit context handed to an `onSubmitted` handler alongside the saved record. */
 export interface SubmittedContext {
-    resource: string;
+    resource: ResourceKey;
     mode: 'create' | 'edit';
 }
 

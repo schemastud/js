@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { FrameColumn, ResolveColumns, Row } from './types';
+import type { ResourceKey } from './resources';
 import type { ContextManifest, NodeParticipation } from './contexts';
 import { ColumnWidgetCell } from './columnKinds';
 import { getPath } from './getPath';
@@ -45,13 +46,25 @@ const isDev = (): boolean => Boolean((import.meta as any).env?.DEV);
  * pointer, so participation lookup, ordering and the host-column check all match on the dotted
  * string as-is. Depth only matters where the VALUE is read — see `getPath`.
  */
-export const resolveColumns: ResolveColumns = (
-    _resource,
-    _schema,
-    hostColumns,
-    manifest,
-    registry,
-): ReturnType<ResolveColumns> => {
+export const resolveColumns: ResolveColumns = <R = Row,>(
+    resource: ResourceKey,
+    schema: unknown,
+    hostColumns: FrameColumn<R>[],
+    manifest: ContextManifest | undefined,
+    registry: WidgetRegistry,
+): FrameColumn<R>[] =>
+    // Typed by the row at the boundary (frame-foundation 105), as the shells are by the key (ruling 03); the
+    // behaviour reads records as `Row`. A host's columns come back as its own, and a manifest-derived column names
+    // a field of the same row, so the result is the caller's row type either way.
+    resolveRowColumns(resource, schema, hostColumns as unknown as FrameColumn[], manifest, registry) as unknown as FrameColumn<R>[];
+
+function resolveRowColumns(
+    _resource: string,
+    _schema: unknown,
+    hostColumns: FrameColumn[],
+    manifest: ContextManifest | undefined,
+    registry: WidgetRegistry,
+): FrameColumn[] {
     if (!manifest) return hostColumns;
 
     const participation = listColumnParticipation(manifest);
@@ -101,7 +114,7 @@ export const resolveColumns: ResolveColumns = (
         };
         return column;
     });
-};
+}
 
 /**
  * A scalar enum node's value-to-label map, keyed by `String(value)`, for the default cell (frame-foundation 76).

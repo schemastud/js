@@ -39,6 +39,7 @@ const UntypedListShell = ListShell as unknown as ComponentType<ListShellPropsOf<
 import { ShadcnTable, shadcnListSlots } from '../shadcn/list-slots';
 import type { ContextManifest } from '../contexts';
 import type { FrameColumn, FrameInjection, ListShellPropsOf, Row } from '../types';
+import type { ResourceKey } from '../resources';
 import { useListShellOf } from '../useListShell';
 import { resolveRecordPlacement, type RecordPlacement, type ResourcePickerDensity } from './placement';
 import { useListSelectionOf } from './useListSelection';
@@ -77,7 +78,7 @@ import {
 
 export interface ResourceRecordPickerProps {
     /** The resource key whose records are picked. */
-    resource: string;
+    resource: ResourceKey;
     placement?: RecordPlacement;
     density?: ResourcePickerDensity;
     select?: ResourceSelectMode;
@@ -507,7 +508,7 @@ function BrowseBody(body: BodyProps) {
     const shellManifest = useMemo(() => pickerManifest(manifest), [manifest]);
     // The list's behaviour, from the same options the ListShell below renders: one request (the selected
     // collection, the filters, the page), so the count and the serialized set describe exactly the rows on screen.
-    const list = useListShellOf({ resource: props.resource, manifest: shellManifest, columns });
+    const list = useListShellOf<string>({ resource: props.resource, manifest: shellManifest, columns });
     const pick = useListSelectionOf(list, { value: selection, onChange, select, idField: valueField });
     const rows = list.rows as Row[];
     rows.forEach((r) => labels.set(idOf(r, valueField), String(r[labelField] ?? idOf(r, valueField))));

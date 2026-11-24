@@ -120,7 +120,7 @@ export function useListShellOf<K extends string>(options: ListShellOptionsOf<K>)
         onCellCommit,
         slots,
     } = options as unknown as {
-        resource: string;
+        resource: ResourceKey;
         columns?: FrameColumn[];
         manifest?: ContextManifest;
         onOpen?: (record: Row | { id: null }) => void;

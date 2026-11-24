@@ -2,6 +2,7 @@ import { useFrameMessages } from './messages';
 import { useMemo } from 'react';
 import { widgetFormContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
 import { useOptionalFrameInjection } from './context';
+import type { ResourceKey } from './resources';
 import { ResourceRecordPicker } from './resource-picker/RecordPicker';
 import {
     selectionFromValue,
@@ -28,7 +29,7 @@ export const STUD_RESOURCE_REF_KEYWORD = 'x-stud-resource-ref';
 
 /** The config bag frame reads off the schema node (mirror of the PHP-emitted shape). */
 export interface ResourceRefConfig {
-    resource: string;
+    resource: ResourceKey;
     value: string;
     label: string;
     multiple?: boolean;
@@ -54,7 +55,9 @@ export function readResourceRefConfig(schema: SchemaNode | undefined): ResourceR
           ? 'multi'
           : 'single';
     return {
-        resource: bag.resource,
+        // Wire data: the server emits the key from the same resource set the host's map is generated from, so it is
+        // read as a registered key here, once, at the boundary.
+        resource: bag.resource as ResourceKey,
         value: typeof bag.value === 'string' ? bag.value : 'id',
         label: typeof bag.label === 'string' ? bag.label : 'name',
         multiple: select !== 'single',

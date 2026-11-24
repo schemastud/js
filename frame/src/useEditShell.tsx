@@ -117,7 +117,7 @@ export function useEditShellOf<K extends string>(options: EditShellOptionsOf<K>)
         onNavigate,
         slots,
     } = options as unknown as {
-        resource: string;
+        resource: ResourceKey;
         id: string | null;
         readOnly?: boolean;
         schemaPurpose?: SchemaPurpose;

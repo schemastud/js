@@ -1,8 +1,20 @@
 // The registered program's one fixture (ruling 03 slice 1): the real shells, mounted as JSX, against a
 // registered map. Nothing else goes here.
 import './register';
-import { EditShell, ListShell, useResourceAction, type EditShellProps, type FrameColumn, type ListShellProps } from '../../src';
+import { createWidgetRegistry } from '@schemastud/seam';
+import {
+    EditShell,
+    ListShell,
+    resolveColumns,
+    useRemoveResource,
+    useResourceAction,
+    type EditShellProps,
+    type FrameColumn,
+    type ListShellProps,
+    type RowActionsSlotProps,
+} from '../../src';
 import type { WidgetShellProps } from '../../src/subpaths/editor';
+import type { MemberRow } from './register';
 
 const untyped: FrameColumn[] = [{ field: 'name' }];
 
@@ -46,3 +58,21 @@ export function ArchiveDialog() {
     useResourceAction('members', 'delete-forever');
     return null;
 }
+
+// frame-foundation 100: a row-actions slot hands its resource to the typed data hook with no cast.
+export function RemoveMember({ record, resource }: RowActionsSlotProps) {
+    const remove = useRemoveResource(resource);
+    return <button type="button" onClick={() => remove.mutate(String(record.id))} />;
+}
+// @ts-expect-error a slot's resource is a registered key, not any string
+export const unknownSlotKey: RowActionsSlotProps = { record: {}, resource: 'nope', actions: [] };
+
+// frame-foundation 105: a host's row-typed columns pass to resolveColumns with no cast and keep their row type.
+const memberColumns: FrameColumn<MemberRow>[] = [{ field: 'name', cell: (record) => record.email }];
+export const resolvedMembers: FrameColumn<MemberRow>[] = resolveColumns(
+    'members',
+    undefined,
+    memberColumns,
+    undefined,
+    createWidgetRegistry(),
+);

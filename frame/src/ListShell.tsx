@@ -81,7 +81,7 @@ export function ListShell<K extends ResourceKey = ResourceKey>(props: ListShellP
                 </div>
                 {ResourceActions ? <ResourceActions /> : null}
                 <Toolbar
-                    resource={list.resource}
+                    resource={props.resource}
                     canCreate={create.canCreate}
                     framesCreate={create.framesCreate}
                     singularLabel={create.singularLabel}
@@ -107,7 +107,7 @@ export function ListShell<K extends ResourceKey = ResourceKey>(props: ListShellP
                         <Empty />
                     ) : list.view === 'cards' && manifest ? (
                         <Cards
-                            resource={list.resource}
+                            resource={props.resource}
                             rows={rows}
                             manifest={manifest}
                             schema={list.rootSchema}

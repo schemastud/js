@@ -352,14 +352,18 @@ export interface FrameColumn<R = Row> {
 // `manifest` threads the resource's ContextManifest so `list-column` participation
 // (sort/label) folds into the columns and host columns are validated against it; when
 // omitted, the seam is a pure passthrough (zero migration for existing surfaces).
-export type ResolveColumns = (
-    resource: string,
+//
+// Generic over the row type (frame-foundation 105): a host's `FrameColumn<SomeRow>[]` passes with no cast and comes
+// back `FrameColumn<SomeRow>[]`; an untyped caller infers `Row`. `R` is unconstrained, as on `FrameColumn`, because a
+// registered row is often an interface, which `Row` (an index signature) does not accept.
+export type ResolveColumns = <R = Row>(
+    resource: ResourceKey,
     schema: unknown,
-    hostColumns: FrameColumn[],
+    hostColumns: FrameColumn<R>[],
     manifest: import('./contexts').ContextManifest | undefined,
     /** Where a column's kind resolves: frame's kinds are registered here, scoped to `list-column`. */
     registry: import('@schemastud/seam').WidgetRegistry,
-) => FrameColumn[];
+) => FrameColumn<R>[];
 
 // The manifest entry shape frame's shells consume — the frontend projection of the
 // backend `ResourceDefinition`, plus the one frontend overlay (`columns`).
@@ -497,7 +501,7 @@ export interface RealmDefinition {
 // Slot prop contracts
 // =============================================================================
 export interface ToolbarSlotProps {
-    resource: string;
+    resource: ResourceKey;
     onNew?: () => void;
     /**
      * May THIS ACTOR create — the injected `can('create', resource)`, unchanged.
@@ -547,8 +551,8 @@ export interface ToolbarSlotProps {
  */
 export interface RowActionsSlotProps {
     record: Row;
-    /** The resource key, for the delete mutation and the transport's cache invalidation. */
-    resource: string;
+    /** The resource key, for the delete mutation and the transport's cache invalidation; `useRemoveResource` takes it as is. */
+    resource: ResourceKey;
     /**
      * The verbs the RESOURCE declared (`#[RowActions([...])]`), already filtered to the ones
      * frame can render. Empty for every resource that declared nothing — which is why frame's
@@ -569,7 +573,7 @@ export interface CellSlotProps {
  * taken instead of `Table` when the resource's root `list-item` entry resolves a card renderer.
  */
 export interface CardsSlotProps {
-    resource: string;
+    resource: ResourceKey;
     rows: Row[];
     manifest: import('./contexts').ContextManifest;
     /** The root node the `list-item` entry resolved against (the resource's list/filter schema). */
