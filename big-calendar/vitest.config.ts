@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { defineConfig } from 'vitest/config';
@@ -12,11 +13,20 @@ const pkgDir = (id: string) => dirname(require.resolve(`${id}/package.json`));
 const react = pkgDir('react');
 const reactDom = pkgDir('react-dom');
 
+// In the monorepo, test against the sibling messages SOURCE. A single-package room (the
+// js-release build) has no sibling, so fall back to the installed @schemastud/messages.
+const messagesSrc = new URL('../messages/src/', import.meta.url);
+const messagesAlias = existsSync(new URL('index.ts', messagesSrc))
+    ? {
+          '@schemastud/messages/react': new URL('react.tsx', messagesSrc).pathname,
+          '@schemastud/messages': new URL('index.ts', messagesSrc).pathname,
+      }
+    : {};
+
 export default defineConfig({
     resolve: {
         alias: {
-            '@schemastud/messages/react': new URL('../messages/src/react.tsx', import.meta.url).pathname,
-            '@schemastud/messages': new URL('../messages/src/index.ts', import.meta.url).pathname,
+            ...messagesAlias,
             'react/jsx-runtime': join(react, 'jsx-runtime.js'),
             'react/jsx-dev-runtime': join(react, 'jsx-dev-runtime.js'),
             'react-dom/client': join(reactDom, 'client.js'),
@@ -35,7 +45,9 @@ export default defineConfig({
         // which bypasses resolve.alias).
         server: {
             deps: {
-                inline: [/react-big-calendar/, /date-fns/],
+                // @schemastud/messages too: when installed (no sibling), its React hooks must
+                // resolve through the same single-instance aliases.
+                inline: [/react-big-calendar/, /date-fns/, /@schemastud\/messages/],
             },
         },
     },
