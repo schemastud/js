@@ -9,6 +9,9 @@ vi.mock('date-fns/locale', async (original) => {
     return original();
 });
 afterEach(cleanup);
+// The first non-English render imports the whole date-fns/locale table, which vitest transforms
+// (date-fns is inlined). Cold, in a fresh release room, that can outlast waitFor's 1s default.
+const LOCALE_LOAD = { timeout: 5000 };
 function Dates({ locale }: { locale: string }) {
     const localizer = useCalendarLocalizer(locale);
     return <span>{localizer.format(new Date(2026, 6, 15), 'MMMM yyyy', locale)}</span>;
@@ -23,7 +26,7 @@ it('non-English dates load lazily with an English fallback and reuse the chunk',
     const node = screen.getByText('July 2026');
     await waitFor(() => expect(probe.calls).toBe(1));
     probe.release!();
-    await waitFor(() => expect(screen.getByText('Juli 2026')).toBe(node));
+    await waitFor(() => expect(screen.getByText('Juli 2026')).toBe(node), LOCALE_LOAD);
     view.rerender(<Dates locale="fr" />);
     await waitFor(() => expect(screen.getByText('juillet 2026')).toBe(node));
     expect(probe.calls).toBe(1);
