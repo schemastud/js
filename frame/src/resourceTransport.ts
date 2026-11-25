@@ -9,9 +9,10 @@ import type { ActionResult, FrameTransport } from './types';
 import { actionUrl } from './actions';
 import { parseResourcePage } from './resourcePage';
 import type { SummaryPayload } from './cards/types';
+import type { ResourceKey } from './resources';
 
-export type FrameCrudTransport = Pick<
-    FrameTransport,
+export type FrameCrudTransport<Key extends string = ResourceKey> = Pick<
+    FrameTransport<Key>,
     'list' | 'get' | 'getFormSchema' | 'create' | 'save' | 'remove'
 >;
 
@@ -41,10 +42,13 @@ export interface FilterSchemaResponse {
 
 /** Compose resource filter reads and declared saved-view CRUD over the host's client. */
 export function createResourceTransport(
-    crud: FrameCrudTransport,
+    hostCrud: FrameCrudTransport,
     http: ResourceFilterHttp,
     options: ResourceTransportOptions = {},
 ): FrameTransport {
+    // The saved-views resource is named by the server's filter schema, not by the host's map, so the host's CRUD is
+    // called here with the key erased (frame-foundation 100); its implementation takes any key it routes.
+    const crud = hostCrud as FrameCrudTransport<string>;
     // Snapshot explicit host overrides: transport identity is a cache scope, while manifest-selected
     // addresses are carried in each query key and request. Recreate the transport if an override changes.
     const collectionByResource = Object.freeze({ ...options.collectionByResource });

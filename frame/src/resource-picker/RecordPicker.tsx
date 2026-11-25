@@ -31,7 +31,7 @@ import {
     useIsMobile,
 } from '@schemastud/ui';
 import { Check, ChevronsUpDown, ListFilter, Loader2, Search, X } from 'lucide-react';
-import { FrameProvider, useFrameInjection } from '../context';
+import { FrameProvider, useFrameInjection, useFrameWiring } from '../context';
 import { ListShell } from '../ListShell';
 
 // The picker's resource is a runtime key, so it mounts the list untyped, cast once here (ruling 03).
@@ -620,7 +620,7 @@ function useDebounced<T>(value: T, ms = 160): T {
  * field works wherever a FrameProvider is, with or without a QueryClient.
  */
 function useTypeahead(resource: string, params: Record<string, string>) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const key = JSON.stringify(params);
     const [state, setState] = useState<{ rows: Row[]; total: number | null; loading: boolean; error: boolean; key: string }>(
         { rows: [], total: null, loading: true, error: false, key: '' },
@@ -844,7 +844,7 @@ function BrowseSheet({ body, open, onOpenChange }: { body: BodyProps; open: bool
  * the first few only, and only when the pick key IS the id — a `slug` key has no get-by-key.
  */
 function useWarmLabels(resource: string, ids: string[], valueField: string, labelField: string, labels: Map<string, string>) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const [, force] = useState(0);
     const missing = valueField === 'id' ? ids.filter((id) => !labels.has(id)).slice(0, 8) : [];
     const key = missing.join(',');

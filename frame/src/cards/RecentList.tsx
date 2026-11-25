@@ -2,7 +2,7 @@ import { useFrameMessages } from '../messages';
 import { Card, CardContent, CardHeader } from '@schemastud/ui';
 import { useId, type ComponentType } from 'react';
 import { UnboundWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
-import { useFrameInjection } from '../context';
+import { useFrameWiring } from '../context';
 import { listItemRendersCards } from '../listItemRendersCards';
 import { isWidgetComponent, resolveWidgetFor } from '../resolveWidgetFor';
 import { SchemaView } from '../SchemaView';
@@ -38,7 +38,7 @@ const LINE_FORM_CONTEXT: Record<string, unknown> = {};
 
 export function RecentList({ value, options, row }: CardWidgetProps<SummaryPayload>) {
     const { t } = useFrameMessages();
-    const { manifestFor, registry } = useFrameInjection();
+    const { manifestFor, registry } = useFrameWiring();
     const rjsfRegistry = useRjsfRegistry(ROOT_NODE, LINE_FORM_CONTEXT);
     const lineId = useId();
     const resource = row?.resource ?? value?.key;

@@ -7,7 +7,7 @@ import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from 'r
 import { flushSync } from 'react-dom';
 import { FrameActionError, navigateTarget, resolveActions } from './actions';
 import type { ContextManifest } from './contexts';
-import { useFrameInjection } from './context';
+import { useFrameWiring } from './context';
 import { resourceQueryKey } from './data';
 import { DefaultFormBody } from './slots/defaults';
 import type { ActionLock, ActionResult, FrameNotice, ResourceActionDefinition, Row } from './types';
@@ -34,7 +34,7 @@ export function ResourceActionBar({
     manifest,
     ...handlers
 }: { resource: string; manifest: ContextManifest | undefined } & ActionHandlers) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const actions = resolveActions(manifest, resource, 'resource', transport);
 
     if (actions.length === 0) return null;
@@ -65,7 +65,7 @@ export function RecordActionButtons({
     /** Row rendering: quieter buttons that do not open the row behind them. */
     compact?: boolean;
 } & ActionHandlers) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const actions = resolveActions(manifest, resource, 'record', transport);
 
     if (actions.length === 0 || record.id == null || record.id === '') return null;
@@ -106,7 +106,7 @@ export function ActionButton({
     record?: Row;
     compact?: boolean;
 } & ActionHandlers) {
-    const { primitives, transport, notify, actionLock } = useFrameInjection();
+    const { primitives, transport, notify, actionLock } = useFrameWiring();
     const { Button } = primitives;
     const { t } = useFrameMessages();
     const queryClient = useQueryClient();
@@ -316,7 +316,7 @@ function ActionDialog({
     onSubmit: (data: Row | undefined) => void;
 }) {
     const { t } = useFrameMessages();
-    const { primitives, editSlots } = useFrameInjection();
+    const { primitives, editSlots } = useFrameWiring();
     const { Button } = primitives;
     const Dialog = primitives.Dialog;
     const FormBody = editSlots?.FormBody ?? DefaultFormBody;
@@ -424,7 +424,7 @@ function ActionDialog({
 }
 
 function useActionSchema(resource: string, action: ResourceActionDefinition) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
 
     return useQuery<SchemaNode>({
         queryKey: resourceQueryKey(transport, resource, 'action-schema', action.key),
@@ -444,7 +444,7 @@ export function useInlineNotice(): {
     element: ReactNode;
 } {
     const { t } = useFrameMessages();
-    const { notify } = useFrameInjection();
+    const { notify } = useFrameWiring();
     const [notice, setNotice] = useState<FrameNotice | null>(null);
 
     return {

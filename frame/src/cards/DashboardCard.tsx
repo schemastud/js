@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react';
 import { UnboundWidget, asWidget, useRjsfRegistry, widgetProps, type WidgetRegistry } from '@schemastud/seam';
-import { useFrameInjection } from '../context';
+import { useFrameWiring } from '../context';
 import { frameContexts, lenderFor, type FrameContextLookup } from '../contextRegistry';
 import type { ContextManifest, FrameContext, NodeParticipation } from '../contexts';
 import { isWidgetComponent, resolveWidgetFor, type ResolvedForContext } from '../resolveWidgetFor';
@@ -107,7 +107,8 @@ export function dashboardRowRenders(
     if (typeof row.context !== 'string' || typeof row.resource !== 'string') return true;
     if (row.context === 'nav') return true;
 
-    const manifest = manifestFor?.(row.resource);
+    // A dashboard row names its resource as data: the host's lookup is read with the key erased (frame-foundation 100).
+    const manifest = (manifestFor as ManifestLookup<string> | undefined)?.(row.resource);
     if (!manifest) return false;
 
     const resolved = resolveDashboardCard(row as DashboardRow, manifest, registry, contexts);
@@ -134,7 +135,7 @@ const CARD_FORM_CONTEXT: Record<string, unknown> = {};
  * nodes drop). No log either: in-flight is the common case and would make the warning noise.
  */
 export function DashboardCard({ value, options }: CardWidgetProps<DashboardRow>) {
-    const { manifestFor, registry, contexts } = useFrameInjection();
+    const { manifestFor, registry, contexts } = useFrameWiring();
     // Before any early return: the card's RJSF registry, on the root node a summary or overview addresses.
     const rjsfRegistry = useRjsfRegistry(ROOT_NODE, CARD_FORM_CONTEXT);
     const id = useId();

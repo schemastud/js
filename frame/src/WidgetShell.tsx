@@ -2,7 +2,7 @@ import { useFrameMessages } from './messages';
 import { useContext, useEffect, useState, type ComponentType } from 'react';
 import type { ResourceKey } from './resources';
 import { UnboundWidget, WidgetRegistryContext, type SchemaNode, type WidgetRegistry } from '@schemastud/seam';
-import { useFrameInjection } from './context';
+import { useFrameWiring } from './context';
 import {
     EditShellMountProvider,
     useEditShellMountController,
@@ -125,7 +125,7 @@ export function WidgetShell<K extends ResourceKey = ResourceKey>(typed: WidgetSh
     const { t } = useFrameMessages();
     // Typed by the key at the boundary (ruling 03); the shell itself reads records as `Row`.
     const { resource, id, widget, readOnly = false, onSaved } = typed as unknown as WidgetShellPropsOf<string>;
-    const { can } = useFrameInjection();
+    const { can } = useFrameWiring();
     const [formData, setFormData] = useState<Row>({});
     const mount = useEditShellMountController();
 

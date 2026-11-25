@@ -48,42 +48,42 @@ export type SchemaPurpose = 'write' | 'read';
 // a full policy. Frame permits both, requires neither.
 // -----------------------------------------------------------------------------
 export type FrameAction = 'viewAny' | 'view' | 'create' | 'update' | 'delete';
-export type FrameCan = (action: FrameAction, resource: string, record?: unknown) => boolean;
+export type FrameCan<Key extends string = ResourceKey> = (action: FrameAction, resource: Key, record?: unknown) => boolean;
 
 // -----------------------------------------------------------------------------
 // Transport — facets' 5 methods + CRUD. Named-method object (a list/edit surface
 // needs many operations). `getFormSchema`/`create`/`save` reach the server; the host's
 // persist strategy and JsonSchemaGenerator->forRequest() sit BELOW this seam.
 // -----------------------------------------------------------------------------
-export interface FrameTransport extends FacetsTransport {
+export interface FrameTransport<Key extends string = ResourceKey> extends FacetsTransport {
     /** Collection selection is explicit per request; the host map remains an override. */
-    getFilterSchema(resource: string, variant?: string, collection?: string): Promise<FilterSchema>;
-    getFilterVariants(resource: string, collection?: string): Promise<FilterVariants>;
-    getFilterOptions(resource: string, ref: string, search: string, collection?: string): Promise<FilterOption[]>;
-    getSavedFilters(resource: string, variant?: string, collection?: string): Promise<SavedFilter[]>;
+    getFilterSchema(resource: Key, variant?: string, collection?: string): Promise<FilterSchema>;
+    getFilterVariants(resource: Key, collection?: string): Promise<FilterVariants>;
+    getFilterOptions(resource: Key, ref: string, search: string, collection?: string): Promise<FilterOption[]>;
+    getSavedFilters(resource: Key, variant?: string, collection?: string): Promise<SavedFilter[]>;
     saveFilter(
-        resource: string,
+        resource: Key,
         payload: { name: string; queryParameters: SavedFilterQueryParameters },
         collection?: string,
     ): Promise<SavedFilter>;
-    deleteSavedFilter(resource: string, id: string, variant?: string, collection?: string): Promise<void>;
+    deleteSavedFilter(resource: Key, id: string, variant?: string, collection?: string): Promise<void>;
     list<Result = Row>(
-        resource: string,
+        resource: Key,
         params: Record<string, string>,
     ): Promise<ResourcePage<Result>>;
-    summary(resource: string, params: Record<string, string>): Promise<SummaryPayload>;
-    get(resource: string, id: string, params?: Record<string, string>): Promise<Row>;
+    summary(resource: Key, params: Record<string, string>): Promise<SummaryPayload>;
+    get(resource: Key, id: string, params?: Record<string, string>): Promise<Row>;
     /** Omitted purpose retains the write/edit schema. Read requires a purpose-aware producer. */
     getFormSchema(
-        resource: string,
+        resource: Key,
         form: FormMode,
         purpose?: SchemaPurpose,
         params?: Record<string, string>,
     ): Promise<SchemaNode>;
     /** Create returns the resource's declared createResultData, or its ordinary row by default. */
-    create<Result = Row>(resource: string, data: unknown, params?: Record<string, string>): Promise<Result>;
-    save(resource: string, id: string, data: unknown, params?: Record<string, string>): Promise<Row>;
-    remove(resource: string, id: string, params?: Record<string, string>): Promise<void>;
+    create<Result = Row>(resource: Key, data: unknown, params?: Record<string, string>): Promise<Result>;
+    save(resource: Key, id: string, data: unknown, params?: Record<string, string>): Promise<Row>;
+    remove(resource: Key, id: string, params?: Record<string, string>): Promise<void>;
     /**
      * Send a declared ACTION's request to its own URL (schemastud/laravel-frame ADR-0005). The action's
      * URL is the producer's mount — frame does not route it through its socket — so the transport
@@ -103,7 +103,7 @@ export interface FrameTransport extends FacetsTransport {
      * `GET {prefix}/resources/{resource}/actions/{action}/schema`. Optional like `invoke`; an action
      * with an input and no way to fetch its form renders no button.
      */
-    getActionSchema?(resource: string, action: string, params?: Record<string, string>): Promise<SchemaNode>;
+    getActionSchema?(resource: Key, action: string, params?: Record<string, string>): Promise<SchemaNode>;
     /**
      * The socket's manifest — `GET {prefix}/manifest`, or the realm's own manifest URL. Read through
      * the same client and credentials as every other request. Optional: a transport without it has
@@ -210,15 +210,15 @@ export interface FramePrimitives extends FacetsPrimitives {
  * render, never at dispatch time; `undefined` is the normal answer while the manifest query
  * is in flight and for a resource this host does not mount.
  */
-export type ManifestLookup = (resource: string) => import('./contexts').ContextManifest | undefined;
+export type ManifestLookup<Key extends string = ResourceKey> = (resource: Key) => import('./contexts').ContextManifest | undefined;
 
 // -----------------------------------------------------------------------------
 // The one injection bundle carried by <FrameProvider>. Generalizes seam's
 // (schemaFetcher + registry + intent bus) and facets' three seams into one, and
 // adds the injected `can`.
 // -----------------------------------------------------------------------------
-export interface FrameInjection {
-    transport: FrameTransport;
+export interface FrameInjection<Key extends string = ResourceKey> {
+    transport: FrameTransport<Key>;
     primitives: FramePrimitives;
     useUrlState: UseUrlState;
     registry: WidgetRegistry;
@@ -229,7 +229,7 @@ export interface FrameInjection {
      */
     contexts?: FrameContextLookup;
     schemaFetcher: SchemaFetcher;
-    can: FrameCan;
+    can: FrameCan<Key>;
     /**
      * Look up ANOTHER resource's context manifest (realm-dashboards ticket 03). A shell is
      * handed its own manifest as a prop; a card on a dashboard renders a row that names a
@@ -238,7 +238,7 @@ export interface FrameInjection {
      * Optional so every existing consumer still compiles — absent, `dashboard-card` and
      * `recent-list` render nothing for a row that needs it (a drop, never a throw).
      */
-    manifestFor?: ManifestLookup;
+    manifestFor?: ManifestLookup<Key>;
     /**
      * Optional host-side hook bus. When present, frame fires `onSubmitted` after a
      * successful save (see EditShell). Optional so existing consumers still compile;
@@ -285,7 +285,7 @@ export interface FrameInjection {
      * runs is ignored. A function that throws is treated as answering null. Optional so existing consumers still
      * compile — absent, or answering null, every action renders exactly as before.
      */
-    actionLock?: (resource: string, action: ResourceActionDefinition, record?: Row) => ActionLock | null;
+    actionLock?: (resource: Key, action: ResourceActionDefinition, record?: Row) => ActionLock | null;
 }
 
 /**

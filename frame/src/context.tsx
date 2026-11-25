@@ -4,7 +4,7 @@ import { FacetsProvider } from '@schemastud/facets';
 import { WidgetRegistryContext, defaultRegistry, type WidgetRegistry } from '@schemastud/seam';
 import { registerResourceRefWidget } from './ResourceRefWidget';
 import { registerColumnKinds } from './columnKinds';
-import type { FrameInjection } from './types';
+import type { FrameCan, FrameInjection } from './types';
 
 const FrameContext = createContext<FrameInjection | null>(null);
 
@@ -82,7 +82,9 @@ export function FrameProvider({ value, children }: { value: FrameInjection; chil
             transport: value.transport,
             primitives: value.primitives,
             useUrlState: value.useUrlState,
-            can: value.can,
+            // facets asks with the key its shell was handed, one frame's shells gave it: the host's `can`, typed by
+            // its map, is passed on with the key erased (frame-foundation 100).
+            can: value.can as FrameCan<string>,
         }),
         [value.transport, value.primitives, value.useUrlState, value.can]
     );
@@ -119,6 +121,20 @@ export function useFrameInjection(): FrameInjection {
     const injection = useContext(FrameContext);
     if (!injection) throw new Error(MISSING_PROVIDER_MESSAGE);
     return injection;
+}
+
+// frame's own reading of the injection (frame-foundation 100). A host's callbacks are typed by its map at the
+// boundary; inside, frame holds a key as string (from a shell, a route entry or the wire) and reads them with the
+// key erased, as ruling 03 erases the shells. Internal: the index exports only the typed accessors above.
+
+/** The injection with its keys erased; throws outside a provider, as `useFrameInjection` does. */
+export function useFrameWiring(): FrameInjection<string> {
+    return useFrameInjection() as FrameInjection<string>;
+}
+
+/** The injection with its keys erased, or null outside a provider. */
+export function useOptionalFrameWiring(): FrameInjection<string> | null {
+    return useOptionalFrameInjection() as FrameInjection<string> | null;
 }
 
 /** What a raw provider's value and surroundings lack: every missing key, and the query client, together. */

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type UseMutationResult, type UseQueryOptions, type UseQueryResult } from '@tanstack/react-query';
 import { transportScope } from '@schemastud/facets';
 import type { SchemaNode } from '@schemastud/seam';
-import { useFrameInjection } from './context';
+import { useFrameWiring } from './context';
 import type { FormMode, FrameTransport, ResourcePage, Row, SchemaPurpose } from './types';
 import type { CreateResultOf, EditOf, ResourceKey, RowOf } from './resources';
 
@@ -58,7 +58,7 @@ function useResourceQuery<T>(
 }
 
 function useSelectedCollection(): string | undefined {
-    const { useUrlState } = useFrameInjection();
+    const { useUrlState } = useFrameWiring();
     const [params] = useUrlState();
     return params.get('collection') ?? undefined;
 }
@@ -69,7 +69,7 @@ export function useRowList(
     params: Record<string, string>,
     options?: ResourceQueryOptions<ResourcePage<Row>>,
 ) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
 
     return useResourceQuery<ResourcePage<Row>>(transport, resource, {
         queryKey: resourceQueryKey(transport, resource, 'list', params),
@@ -90,7 +90,7 @@ export function useRowRecord(
     id: string | null,
     options?: ResourceQueryOptions<Row>,
 ) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const collection = useSelectedCollection();
 
     return useResourceQuery<Row>(transport, resource, {
@@ -106,7 +106,7 @@ export function useRowRecord(
 
 /** The declared schema; purpose selects request/write or response/read projection. */
 export function useFormSchema(resource: string, form: FormMode, purpose: SchemaPurpose = 'write') {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const collection = useSelectedCollection();
 
     return useQuery<SchemaNode>({
@@ -122,7 +122,7 @@ export function useFormSchema(resource: string, form: FormMode, purpose: SchemaP
 
 /** Save (create when id === null, else update); invalidates the resource's queries. */
 export function useRowSave(resource: string) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const collection = useSelectedCollection();
     const queryClient = useQueryClient();
 
@@ -147,7 +147,7 @@ export function useRowSave(resource: string) {
 
 /** Delete a record; invalidates the resource's queries. */
 export function useRowRemove(resource: string) {
-    const { transport } = useFrameInjection();
+    const { transport } = useFrameWiring();
     const collection = useSelectedCollection();
     const queryClient = useQueryClient();
 

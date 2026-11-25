@@ -21,7 +21,7 @@ export interface FrameHooks {
     /** Register a handler for a resource's successful submit; returns an unregister fn. */
     onSubmitted<K extends ResourceKey = ResourceKey>(resource: K, handler: SubmittedHandler<K>): () => void;
     /** Fire every handler registered for `resource` with the saved record + context. */
-    fireSubmitted(resource: string, record: Row, ctx: SubmittedContext): void;
+    fireSubmitted(resource: ResourceKey, record: Row, ctx: SubmittedContext): void;
 }
 
 /**

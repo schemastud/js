@@ -1,8 +1,9 @@
 import { createElement, type ComponentType } from 'react';
-import { useOptionalFrameInjection } from './context';
+import { useOptionalFrameWiring } from './context';
 import { EditShell } from './EditShell';
 import { ListShell } from './ListShell';
 import type { RouteComponent } from './routes';
+import type { ResourceKey } from './resources';
 import type {
     EditShellPropsOf,
     FormMode,
@@ -103,7 +104,7 @@ export interface MountDispatcherOptions {
      * the manifest already carries. It is **not** the column set (see the docblock above) and its absence
      * no longer disables `list`. Called during the dispatched component's render.
      */
-    columnsFor?: (resource: string) => FrameColumn[] | undefined;
+    columnsFor?: (resource: ResourceKey) => FrameColumn[] | undefined;
 
     /**
      * The resource's context manifest. This is what makes a `list` leaf renderable: its `list-column`
@@ -127,7 +128,7 @@ export interface MountDispatcherOptions {
      * (`(resource) => useManifest(realm).data?.resources[resource]?.form`), so it is called
      * during the dispatched component's render, never at dispatch time.
      */
-    formFor?: (resource: string) => FormMode | undefined;
+    formFor?: (resource: ResourceKey) => FormMode | undefined;
 
     /**
      * Called with the reason whenever a leaf is declined. Not an error channel — a decline is a normal,
@@ -145,6 +146,13 @@ export type MountDispatcher = (entry: RouteContextEntry) => RouteComponent | und
  * route and no realm — it reads the entry it is handed.
  */
 export function createMountDispatcher(options: MountDispatcherOptions = {}): MountDispatcher {
+    // A route entry carries its key as data: the host's lookups, typed by its map at the boundary, are read with the
+    // key erased (frame-foundation 100), as the shells read theirs (ruling 03).
+    const lookups = options as {
+        columnsFor?: (resource: string) => FrameColumn[] | undefined;
+        manifestFor?: ManifestLookup<string>;
+        formFor?: (resource: string) => FormMode | undefined;
+    };
     const decline = (entry: RouteContextEntry, reason: string): undefined => {
         options.onDecline?.(entry, reason);
 
@@ -201,7 +209,7 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
                         // host wired no lookup or the resource is unknown — `undefined` lets
                         // EditShell's own `'enriched'` default stand rather than this dispatcher
                         // restating it, so there is one place the default lives.
-                        form: options.formFor?.(resource),
+                        form: lookups.formFor?.(resource),
                     });
             }
 
@@ -209,12 +217,12 @@ export function createMountDispatcher(options: MountDispatcherOptions = {}): Mou
                 // The manifest lookup defaults to the injection's (a kit supplies it), so a list leaf
                 // always dispatches; whether a given resource has a manifest is decided at render.
                 return function DispatchedList() {
-                    const injected = useOptionalFrameInjection()?.manifestFor;
+                    const injected = useOptionalFrameWiring()?.manifestFor;
                     const onOpen = options.onOpenFor?.(entry);
-                    const manifest = (options.manifestFor ?? injected)?.(resource);
+                    const manifest = (lookups.manifestFor ?? injected)?.(resource);
                     // Zero host columns is the normal case: with a manifest, resolveColumns returns the
                     // whole participating set. Host columns are per-field overrides on top of it.
-                    const columns = options.columnsFor?.(resource) ?? [];
+                    const columns = lookups.columnsFor?.(resource) ?? [];
 
                     if (!manifest && columns.length === 0) {
                         // Not an error — the host's manifest query is usually just still in flight, and
